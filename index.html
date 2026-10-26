@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b1020">
+  <title>Finger Fight</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="stage" class="bg-0"><div id="scenery"></div><div class="scanlines"></div></div>
+
+  <!-- ===== Menu ===== -->
+  <section id="menu" class="screen">
+    <h1 class="logo">FINGER<br>FIGHT</h1>
+    <p class="tag">Guess how many fingers. Land the hit.</p>
+    <label class="field">Your name<input id="nameInput" maxlength="12" autocomplete="off" placeholder="Fighter"></label>
+    <button id="createBtn" class="btn big">Create room</button>
+    <div class="or">or join a friend</div>
+    <div class="row">
+      <input id="codeInput" class="code-input" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="CODE">
+      <button id="joinBtn" class="btn">Join</button>
+    </div>
+    <p id="menuMsg" class="msg" role="status"></p>
+    <button id="muteBtn" class="link">Sound: on</button>
+    <p class="fine">Uses your camera to count your fingers. Photos go straight to your opponent and are never stored.</p>
+  </section>
+
+  <!-- ===== Lobby ===== -->
+  <section id="lobby" class="screen" hidden>
+    <div class="lobby-top">
+      <div class="room-label">ROOM CODE</div>
+      <div id="roomCode" class="room-code">----</div>
+      <div class="row center">
+        <button id="shareBtn" class="btn small">Share link</button>
+        <button id="copyBtn" class="btn small ghost">Copy code</button>
+      </div>
+    </div>
+    <div class="players">
+      <div class="pl"><span class="dot" id="dotHost"></span><span id="nameHost">-</span><em id="stHost"></em></div>
+      <div class="pl"><span class="dot" id="dotGuest"></span><span id="nameGuest">Waiting…</span><em id="stGuest"></em></div>
+    </div>
+    <div class="card" id="settingsCard">
+      <div class="set"><span>Seconds to guess</span>
+        <div class="stepper"><button data-step="seconds:-1" class="step">−</button><b id="valSeconds">5</b><button data-step="seconds:1" class="step">+</button></div></div>
+      <div class="set"><span>Hits to win</span>
+        <div class="stepper"><button data-step="hits:-1" class="step">−</button><b id="valHits">3</b><button data-step="hits:1" class="step">+</button></div></div>
+      <div class="set"><span>Critical gestures</span><button id="critBtn" class="toggle">On</button></div>
+      <div class="set col"><span>Arena</span><div id="bgPicker" class="bg-picker"></div></div>
+    </div>
+    <p id="camStatus" class="msg" role="status"></p>
+    <button id="camBtn" class="btn">Enable camera</button>
+    <button id="startBtn" class="btn big" disabled>Start fight</button>
+    <p id="lobbyMsg" class="msg" role="status"></p>
+    <button id="leaveBtn" class="link">Leave room</button>
+  </section>
+
+  <!-- ===== Game ===== -->
+  <section id="game" class="screen" hidden>
+    <div id="top" class="panel opp">
+      <div class="hud"><span class="pname" id="topName"></span><div class="hp" id="topHp"></div></div>
+      <div class="content" id="topContent"></div>
+      <div class="arena"><div class="fighter" id="topFighter"></div></div>
+    </div>
+    <div id="mid">
+      <div id="roundLabel">ROUND 1</div>
+      <div id="timerWrap"><div id="timerNum">5</div><div id="timerBar"><i></i></div></div>
+      <div id="roleLabel"></div>
+    </div>
+    <div id="bottom" class="panel me">
+      <div class="arena"><div class="fighter" id="bottomFighter"></div></div>
+      <div class="content" id="bottomContent"></div>
+      <div class="hud"><span class="pname" id="botName"></span><div class="hp" id="botHp"></div></div>
+    </div>
+    <div id="banner"></div>
+    <div id="fx"></div>
+  </section>
+
+  <!-- ===== Game over ===== -->
+  <section id="over" class="screen" hidden>
+    <h2 id="overTitle" class="logo small">K.O.</h2>
+    <p id="overText" class="tag"></p>
+    <button id="againBtn" class="btn big">Play again</button>
+    <p id="overMsg" class="msg"></p>
+    <button id="overLeave" class="link">Leave</button>
+  </section>
+
+  <!-- the camera lives here and is moved into the bottom panel when it is your turn to point -->
+  <div id="camBox" hidden>
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="overlayCanvas"></canvas>
+    <div id="camCaption"></div>
+    <div id="liveCount">0</div>
+    <div id="liveGesture"></div>
+    <button id="flipBtn" class="btn small ghost" type="button">Flip</button>
+  </div>
+
+  <script src="vendor/peerjs.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
