@@ -46,25 +46,52 @@ class El {
   fire(type, ev = {}) { for (const f of this.listeners[type] || []) f({ target: this, ...ev }); }
 }
 
+const clone = o => JSON.parse(JSON.stringify(o));
+
 export class Conn {
-  constructor() { this.open = false; this.sent = []; this.h = {}; }
+  constructor() { this.open = false; this.sent = []; this.received = []; this.h = {}; this.remote = null; }
   on(e, f) { (this.h[e] ||= []).push(f); }
-  emit(e, ...a) { if (e === 'open') this.open = true; for (const f of this.h[e] || []) f(...a); }
-  send(o) { this.sent.push(JSON.parse(JSON.stringify(o))); }
-  close() { this.open = false; }
+  emit(e, ...a) {
+    if (e === 'open') this.open = true;
+    if (e === 'data') this.received.push(a[0]);
+    for (const f of this.h[e] || []) f(...a);
+  }
+  send(o) { this.sent.push(clone(o)); if (this.remote) setTimeout(() => this.remote.emit('data', clone(o)), 0); }
+  close() { this.open = false; if (this.remote?.open) { const r = this.remote; this.remote = null; setTimeout(() => { r.open = false; r.emit('close'); }, 0); } }
 }
 
+/** Peers that registered an explicit id, like the PeerJS server's id table. */
+export const network = new Map();
 export const peers = [];
-class FakePeer {
-  constructor(id) { this.id = id; this.h = {}; this.conn = null; peers.push(this); setTimeout(() => this.emit('open', id), 0); }
+export class FakePeer {
+  constructor(id) {
+    this.id = id; this.h = {}; this.conn = null; peers.push(this);
+    setTimeout(() => {
+      if (id && network.has(id) && network.get(id) !== this) { this.emit('error', { type: 'unavailable-id' }); return; }
+      if (id) network.set(id, this);
+      this.emit('open', id);
+    }, 0);
+  }
   on(e, f) { (this.h[e] ||= []).push(f); }
   emit(e, ...a) { for (const f of this.h[e] || []) f(...a); }
-  connect() { this.conn = new Conn(); setTimeout(() => this.conn.emit('open'), 0); return this.conn; }
-  destroy() {} reconnect() {}
+  /** Like PeerJS: connecting to an id nobody holds gives a 'peer-unavailable' error on this peer. */
+  connect(id) {
+    const c = new Conn(); this.conn = c;
+    setTimeout(() => {
+      const target = network.get(id);
+      if (!target) { this.emit('error', { type: 'peer-unavailable' }); return; }
+      const remote = new Conn(); c.remote = remote; remote.remote = c;
+      target.emit('connection', remote);
+      c.emit('open'); remote.emit('open');
+    }, 0);
+    return c;
+  }
+  destroy() { if (this.id && network.get(this.id) === this) network.delete(this.id); }
+  reconnect() {}
 }
 
-/** Installs the fake browser globals. [search] is the page's query string, e.g. '?sim=1'. */
-export function installBrowser(search) {
+/** Installs the fake browser globals. [search] is the page's query string, e.g. '?sim=1'; [hash] the URL fragment. */
+export function installBrowser(search, hash = '') {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const byId = new Map();
   for (const m of html.matchAll(/<(\w+)([^>]*?)\sid="([^"]+)"([^>]*)>/g)) {
@@ -86,11 +113,13 @@ export function installBrowser(search) {
     querySelectorAll: sel => (sel === '.screen' ? screens : []),
     createElement: tag => new El(tag),
   };
-  globalThis.location = { search, origin: 'https://example.test', pathname: '/fingerfight/' };
+  globalThis.location = { search, hash, origin: 'https://example.test', pathname: '/fingerfight/' };
+  globalThis.history = { calls: [], replaceState(...a) { this.calls.push(a); } };
   const mem = new Map();
   globalThis.localStorage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)) };
   Object.defineProperty(globalThis, 'navigator', { value: { clipboard: { writeText: async () => {} } }, configurable: true });
   globalThis.Peer = FakePeer;
+  network.clear();
   return { byId, screens, visible: () => screens.filter(s => !s.hidden).map(s => s.id) };
 }
 

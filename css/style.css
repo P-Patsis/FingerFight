@@ -24,7 +24,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); width: min(100%, 300px); }
 input { font: inherit; color: var(--ink); background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 12px; user-select: text; }
 input:focus { outline: none; border-color: var(--cyan); }
-.code-input { width: 130px; text-align: center; font: 400 30px var(--display); letter-spacing: 6px; text-transform: uppercase; padding: 8px; }
+.code-input { width: 210px; text-align: center; font: 400 18px var(--display); letter-spacing: 1px; text-transform: uppercase; padding: 12px 8px; }
 
 .btn { font: 400 20px var(--display); letter-spacing: 1px; color: #111; background: linear-gradient(#fde047, #f59e0b); border: 0; border-radius: 12px;
   padding: 12px 22px; box-shadow: 0 5px 0 #92400e, 0 8px 14px #0008; cursor: pointer; }
@@ -38,7 +38,7 @@ input:focus { outline: none; border-color: var(--cyan); }
 /* ---------- lobby ---------- */
 .lobby-top { text-align: center; }
 .room-label { font-size: 12px; letter-spacing: 3px; color: var(--muted); }
-.room-code { font: 400 64px var(--display); letter-spacing: 10px; color: var(--gold); text-shadow: 0 3px 0 #000; margin: 2px 0 8px; user-select: text; }
+.room-code { font: 400 26px var(--display); letter-spacing: 2px; color: var(--gold); text-shadow: 0 2px 0 #000; margin: 4px 0 10px; user-select: all; word-break: break-all; max-width: 320px; }
 .players { display: flex; flex-direction: column; gap: 6px; width: min(100%, 320px); }
 .pl { display: flex; align-items: center; gap: 8px; background: #0f172acc; border-radius: 10px; padding: 8px 12px; font-weight: 600; }
 .pl em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--muted); }
@@ -196,3 +196,16 @@ input:focus { outline: none; border-color: var(--cyan); }
   background: linear-gradient(#0000, #000c); text-shadow: 0 2px 0 #000; pointer-events: none; }
 #camCaption.point { color: #fde047; } #camCaption.guess { color: #67e8f9; }
 #liveGesture { bottom: 34px; }
+
+/* reveal style + skins */
+.mode-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mode-picker button { border: 2px solid #475569; background: #1e293b; color: var(--ink); border-radius: 10px; padding: 8px 6px; font-size: 13px; line-height: 1.2; }
+.mode-picker button.sel { border-color: var(--gold); background: #3b2f08; }
+.mode-picker button.real { border-style: dashed; }
+.mode-picker button:disabled { opacity: .35; }
+.skin-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.skin-picker button { padding: 2px; border: 3px solid transparent; border-radius: 10px; background: #0f172a; }
+.skin-picker button.sel { border-color: var(--gold); }
+.skin-picker canvas { width: 100%; height: auto; display: block; border-radius: 6px; }
+.reveal canvas { height: min(15vh, 130px); width: auto; border-radius: 10px; border: 2px solid #fff; }
+#joinPrompt { align-items: center; text-align: center; border: 2px solid var(--gold); }

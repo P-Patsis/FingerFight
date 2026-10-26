@@ -78,6 +78,11 @@ export function describe(result, pointer, me) {
 export const GESTURES = ['middle', 'moutza', 'sideways'];
 const MAX_PHOTO_CHARS = 150_000;
 
+/** How a player's hand is shown to the opponent. The first two never involve camera pixels. */
+export const VIEWS = ['avatar', 'skeleton', 'blur', 'photo-skeleton', 'photo'];
+export const SAFE_VIEWS = ['avatar', 'skeleton'];          // the only ones allowed against a random opponent
+export const RANDOM_SLOTS = 8;                              // shared matchmaking slots (see main.js)
+
 /** A display name: letters, digits, space and _ . - only, at most 12 characters. */
 export function sanitizeName(s) {
   const t = String(s ?? '').replace(/[^\p{L}\p{N} _.\-]/gu, '').trim().slice(0, 12);
@@ -90,14 +95,37 @@ export const validGuess = g => g === null || (Number.isInteger(g) && g >= 0 && g
 export const validPhoto = p => typeof p === 'string'
   && (p === '' || (p.startsWith('data:image/jpeg;base64,') && p.length <= MAX_PHOTO_CHARS));
 
-/** The pointer's answer: {count, gesture, noHand, photo}. */
-export function validReveal(m) {
+const FINGER_KEYS = ['thumb', 'index', 'middle', 'ring', 'pinky'];
+/** At most two hands, each with exactly the five finger flags as booleans. */
+export const validHands = h => Array.isArray(h) && h.length <= 2
+  && h.every(x => !!x && typeof x === 'object' && Object.keys(x).length === 5 && FINGER_KEYS.every(k => typeof x[k] === 'boolean'));
+/** Hand landmarks for the skeleton view: at most two hands of 21 [x, y] points, integers 0..1000. */
+export const validLandmarks = l => l === null || (Array.isArray(l) && l.length <= 2
+  && l.every(hand => Array.isArray(hand) && hand.length === 21
+    && hand.every(p => Array.isArray(p) && p.length === 2 && p.every(v => Number.isInteger(v) && v >= 0 && v <= 1000))));
+
+/**
+ * The picture part of a reveal or a guess: how to show the sender's hand. The finger data (`hands`) is always
+ * present, so the receiver can draw a cartoon hand itself. With [allowPhoto] false (random opponents, or the
+ * receiver chose not to see photos) any message carrying a photo is rejected.
+ */
+export function validPicture(m, allowPhoto) {
+  return !!m && VIEWS.includes(m.view)
+    && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
+    && validHands(m.hands) && validLandmarks(m.lm)
+    && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
+    && validPhoto(m.photo) && (allowPhoto || m.photo === '')
+    && (allowPhoto || SAFE_VIEWS.includes(m.view));
+}
+
+/** The pointer's answer: {count, gesture, noHand} + picture. */
+export function validReveal(m, allowPhoto = true) {
   return !!m && typeof m === 'object'
     && Number.isInteger(m.count) && m.count >= 0 && m.count <= MAX_FINGERS
     && typeof m.noHand === 'boolean'
     && (m.gesture === null || GESTURES.includes(m.gesture))
-    && validPhoto(m.photo);
+    && validPicture(m, allowPhoto);
 }
 
-/** The guesser's answer: their guess is the number of fingers they held up (null = no hand seen), with a photo. */
-export const validGuessMsg = m => !!m && typeof m === 'object' && validGuess(m.guess) && validPhoto(m.photo);
+/** The guesser's answer: their guess is the number of fingers they held up (null = no hand seen) + picture. */
+export const validGuessMsg = (m, allowPhoto = true) => !!m && typeof m === 'object' && validGuess(m.guess) && validPicture(m, allowPhoto);

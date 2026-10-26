@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0b1020">
+  <meta name="referrer" content="no-referrer">
   <title>Finger Fight</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -15,26 +16,34 @@
     <h1 class="logo">FINGER<br>FIGHT</h1>
     <p class="tag">Guess how many fingers. Land the hit.</p>
     <label class="field">Your name<input id="nameInput" maxlength="12" autocomplete="off" placeholder="Fighter"></label>
-    <button id="createBtn" class="btn big">Create room</button>
-    <div class="or">or join a friend</div>
+    <button id="createBtn" class="btn big">Create private match</button>
+    <div class="or">got a friend's code?</div>
     <div class="row">
-      <input id="codeInput" class="code-input" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="CODE">
+      <input id="codeInput" class="code-input" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Paste code">
       <button id="joinBtn" class="btn">Join</button>
     </div>
+    <div class="or">or</div>
+    <button id="randomBtn" class="btn">Find a random opponent</button>
+    <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>
     <button id="muteBtn" class="link">Sound: on</button>
-    <p class="fine">Uses your camera to count your fingers. Photos go straight to your opponent and are never stored.</p>
+    <p class="fine">Uses your camera to count your fingers. Against random opponents only a cartoon or skeleton of your hand is ever shared, never a camera image.</p>
   </section>
 
   <!-- ===== Lobby ===== -->
   <section id="lobby" class="screen" hidden>
-    <div class="lobby-top">
-      <div class="room-label">ROOM CODE</div>
+    <div class="lobby-top" id="privateBox">
+      <div class="room-label">MATCH CODE (send it to your friend)</div>
       <div id="roomCode" class="room-code">----</div>
       <div class="row center">
-        <button id="shareBtn" class="btn small">Share link</button>
-        <button id="copyBtn" class="btn small ghost">Copy code</button>
+        <button id="copyBtn" class="btn small">Copy code</button>
+        <button id="shareBtn" class="btn small ghost">Share link</button>
       </div>
+    </div>
+    <p id="randomNote" class="msg" hidden>Random opponent. Only a cartoon or skeleton of your hand is shared, never a camera image.</p>
+    <div class="card" id="joinPrompt" hidden>
+      <div id="joinText"></div>
+      <div class="row center"><button id="acceptBtn" class="btn small">Accept</button><button id="rejectBtn" class="btn small ghost">Decline</button></div>
     </div>
     <div class="players">
       <div class="pl"><span class="dot" id="dotHost"></span><span id="nameHost">-</span><em id="stHost"></em></div>
@@ -46,13 +55,20 @@
       <div class="set"><span>Hits to win</span>
         <div class="stepper"><button data-step="hits:-1" class="step">−</button><b id="valHits">3</b><button data-step="hits:1" class="step">+</button></div></div>
       <div class="set"><span>Critical gestures</span><button id="critBtn" class="toggle">On</button></div>
+      <div class="set" id="approveRow"><span>Ask before someone joins</span><button id="approveBtn" class="toggle on">On</button></div>
       <div class="set col"><span>Arena</span><div id="bgPicker" class="bg-picker"></div></div>
+    </div>
+    <div class="card" id="styleCard">
+      <div class="set col"><span>What your opponent sees of your hand</span><div id="modePicker" class="mode-picker"></div></div>
+      <div class="set col" id="skinRow"><span>Cartoon hand skin</span><div id="skinPicker" class="skin-picker"></div></div>
+      <div class="set" id="photoRow"><span>Show my opponent's photos</span><button id="photoBtn" class="toggle on">On</button></div>
+      <p id="styleNote" class="fine"></p>
     </div>
     <p id="camStatus" class="msg" role="status"></p>
     <button id="camBtn" class="btn">Enable camera</button>
     <button id="startBtn" class="btn big" disabled>Start fight</button>
     <p id="lobbyMsg" class="msg" role="status"></p>
-    <button id="leaveBtn" class="link">Leave room</button>
+    <button id="leaveBtn" class="link">Leave</button>
   </section>
 
   <!-- ===== Game ===== -->
