@@ -17,7 +17,9 @@ import { classifyHands, loadTuning } from './gestures.js';
 import { createDebugPanel } from './debug.js';
 import { hasRelay } from './ice.js';
 
-const $ = id => document.getElementById(id);
+const missingIds = [];
+/** A missing element must not stop the whole script (every handler after it would stay dead); it is reported on screen instead. */
+const $ = id => document.getElementById(id) || (missingIds.push(id), document.createElement('div'));
 
 /** Anything that goes wrong in the page is written on screen (in whichever message line is visible), so a silent failure can be reported. */
 function showFatal(e) {
@@ -1206,3 +1208,5 @@ const camOff = () => { if (cam && !SIM) { cam.release(); camIndicator(false); co
 document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); else link?.nudge?.(); });
 globalThis.addEventListener?.('pagehide', camOff);
 globalThis.addEventListener?.('online', () => link?.nudge?.());       // wifi / 4G came back: re-open the match link now, not at the next timer
+
+if (missingIds.length) setTimeout(() => showFatal('This page is out of date (missing: ' + [...new Set(missingIds)].join(', ') + '). Reload it, or clear this site\'s data in the browser settings.'), 0);

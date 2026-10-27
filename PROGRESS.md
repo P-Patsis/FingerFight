@@ -14,6 +14,11 @@
 
 Newest first.
 
+## 2026-10-27 (night, later) — Dead buttons: stale cached page vs new script
+- Symptom (user): "cannot set properties of null (setting 'onclick')", Enable camera and Camera test dead. All ids exist in the current index.html (live too), so the phone was running the new main.js with an OLD cached index.html (GitHub Pages sends max-age=600 and the service worker's fetch used that HTTP cache). Cause inferred, not reproduced.
+- Changed: service worker fetches site files with `cache: 'no-cache'` (VERSION ff-v4); `$()` in main.js no longer returns null (a missing element is reported on screen as "This page is out of date (missing: ...)" instead of killing every later handler); new tests/ids.test.js checks every id used exists in the HTML. 104/104.
+- Open: user to reload (clear site data once if it persists) and report.
+
 ## 2026-10-27 (night) — Free TURN relay added; Enable-camera hardening
 - Changed:
   - `js/ice.js`: ExpressTURN free-tier relay added next to the kept STUN servers (direct first, relay as fallback; random matches are relay-only). Probed the host first: UDP 3478 and TCP 3478 answer STUN, so both are listed. Port 443 serves a certificate for a different hostname (no `turns:`), 80 and 5349 gave no STUN reply, so no other endpoints were invented. The credentials are free, revocable and PUBLIC in the client; rotate them in the ExpressTURN dashboard after multiplayer is confirmed.
