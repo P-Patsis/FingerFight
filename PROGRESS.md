@@ -1,5 +1,17 @@
 # Finger Fight: progress
 
+## NEXT / pending decisions (read this first after a crash)
+- Live at https://p-patsis.github.io/FingerFight/ (repo P-Patsis/FingerFight, public; local git remote still says FingerRing, GitHub redirects). Installable as a PWA (Chrome menu, Install app).
+- User's first real test (2026-10-27): "kinda works". Complaints handled: unstable connection (reconnect + resume token), no rejoin (rejoin button), random skins, camera safety. NOT yet re-tested on phones after these changes.
+- Ideas the user raised, status:
+  1. Push notifications for "invite friend": NOT built. Needs a tiny server (web push needs a server that holds anonymous subscriptions and signs pushes with a private key; every app does this, Google/Firebase just hides it). Plan: Cloudflare Workers free tier, anonymous random IDs, no emails. Needs the user to create the account and agree; ask permission model: request notification permission only after a user tap ("Invite friend"), never on load.
+  2. Friends list: local only (phone-stored list of anonymous friend IDs/names, "Challenge" button that opens a private match and shares the invite). Needs no server; invites only arrive by push if (1) exists, else by the Share sheet.
+  3. Leaderboard: user thinks it makes little sense for a vs game; skip. Local win/loss records only.
+  4. Avatar store ("10p per skin", user draws the art): skins are data (sender sends only a skin id, receiver draws from its own copy, so strangers never push images). Fighters (pre-built) + hand skins (puppet for players who don't want to show a camera). Real payments need a server and a payment provider (Stripe, or Play Billing in an APK); client-only unlocks are trivially bypassed. Plan: build the skin/fighter asset format and a free picker first; payments last.
+  5. APK wrapper (WebView, like Lab Calc) instead of PWA: not built; needs the user's yes.
+- Safety rules the user insists on (see DECISIONS.md): camera never left on, no feed or photos to strangers, nothing exploitable after a match, strangers only puppet avatars.
+
+
 Newest first.
 
 ## 2026-10-27 (later) — Safety pass: camera off by default, strangers forfeit on drop, relay-only for strangers (NOT YET TRIED ON PHONES)
