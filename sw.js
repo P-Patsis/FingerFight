@@ -2,7 +2,8 @@
 //  - this site's files: network first (so an update arrives at once), the cached copy when offline
 //  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
 // Match traffic is WebRTC, which a service worker never sees.
-const VERSION = 'ff-v2';
+const VERSION = 'ff-v3';
+const HEAVY_CACHE = 'ff-heavy';           // the 17 MB hand model lives in its own cache, so a site update never makes it download again
 const SHELL = ['./', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
   'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js', 'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js'];
 const HEAVY = ['https://cdn.jsdelivr.net/npm/@mediapipe/', 'https://storage.googleapis.com/mediapipe-models/'];
@@ -11,14 +12,14 @@ self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION && k !== HEAVY_CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = req.url;
   if (HEAVY.some(p => url.startsWith(p))) {
-    e.respondWith(caches.open(VERSION).then(async c => {
+    e.respondWith(caches.open(HEAVY_CACHE).then(async c => {
       const hit = await c.match(req);
       if (hit) return hit;
       const res = await fetch(req);

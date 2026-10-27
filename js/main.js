@@ -18,6 +18,15 @@ import { createDebugPanel } from './debug.js';
 import { hasRelay } from './ice.js';
 
 const $ = id => document.getElementById(id);
+
+/** Anything that goes wrong in the page is written on screen (in whichever message line is visible), so a silent failure can be reported. */
+function showFatal(e) {
+  const text = String(e?.message || e || 'unknown error');
+  if (/ResizeObserver|^Script error/i.test(text)) return;
+  for (const id of ['camStatus', 'lobbyMsg', 'menuMsg', 'calibMsg']) { try { const m = $(id); m.textContent = 'Error: ' + text; m.classList.add('err'); } catch { /* not there */ } }
+}
+globalThis.addEventListener?.('error', ev => showFatal(ev.error || ev.message));
+globalThis.addEventListener?.('unhandledrejection', ev => showFatal(ev.reason));
 const SIM = new URLSearchParams(location.search).has('sim');   // ?sim=1: no camera, set the hand by tapping (for testing)
 const PROTOCOL = 2;
 
@@ -694,14 +703,19 @@ async function enableCamera() {
   status(SIM ? 'Simulator: no camera needed.' : 'Loading the hand model (about 17 MB, once)…');
   cam = cam || (SIM ? new SimCam() : new HandCam($('video'), $('overlayCanvas')));
   hookCamera();
+  const slow = setTimeout(() => status('Still loading the hand model… this is slow. It is a one-time download (about 17 MB); keep this page open.'), 20000);
   try {
     await cam.load();
   } catch (e) {
-    status('Could not load the hand model (' + (e.message || e) + '). Check your internet connection.');
+    clearTimeout(slow);
+    status('Could not load the hand model (' + (e.message || e) + '). Check your internet connection (or a VPN / ad-blocker blocking cdn.jsdelivr.net or storage.googleapis.com).');
     $('camBtn').disabled = false;
     return;
   }
-  const err = await cam.startCamera();
+  clearTimeout(slow);
+  let err;
+  try { err = await cam.startCamera(); } catch (e) { err = 'Could not start the camera (' + (e.message || e) + ').'; }
+  if (err === 'cancelled') { $('camBtn').disabled = false; return; }
   if (err) { status(err); $('camBtn').disabled = false; return; }
   cam.stopCamera();                              // permission and model are checked; the camera stays OFF until a guess window opens
   camReady = true;
