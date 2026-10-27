@@ -103,6 +103,22 @@ export class HandCam {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
+  /** Switches the camera OFF (tracks stopped, so the phone's camera light goes out), not just the analysis. */
+  stopCamera() {
+    try { this.stream?.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
+    this.stream = null;
+    try { this.video.pause(); this.video.srcObject = null; } catch { /* ignore */ }
+  }
+
+  /** Pause + camera off + forget the frames. The camera is opened again (startCamera) only for the next guess window. */
+  release() {
+    this.pause();
+    this.stopCamera();
+    this.samples = [];
+  }
+
+  get cameraOn() { return !!this.stream && this.stream.getTracks().some(t => t.readyState === 'live'); }
+
   /**
    * The answer for this round: the count, any gesture, and how to show the hand. [style] = {mode, skin} where mode is
    * one of VIEWS. Always returns the structured finger data (`hands`, and `lm` landmarks) so the receiver can draw a
@@ -170,6 +186,9 @@ export class SimCam {
   async flip() { return null; }
   run() { this.onFrame?.({ has: !this.sim.noHand, count: this.sim.count, gesture: this.sim.gesture }); }
   pause() {}
+  release() {}
+  stopCamera() {}
+  get cameraOn() { return false; }
   set(patch) { Object.assign(this.sim, patch); this.run(); }
   snap(style = {}) {
     const mode = VIEWS.includes(style.mode) ? style.mode : 'avatar';

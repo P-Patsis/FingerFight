@@ -2,6 +2,19 @@
 
 Newest first.
 
+## 2026-10-27 (later) — Safety pass: camera off by default, strangers forfeit on drop, relay-only for strangers (NOT YET TRIED ON PHONES)
+- Found: the camera stream was opened in the lobby and stayed on (light on) for the whole match; `pause()` only stopped the analysis. Fixed.
+- Changed:
+  - Camera opens only for the guess window of a round, is stopped (tracks ended) at the snap, between rounds, on game over, on Leave, and whenever the page is hidden or closed (visibilitychange / pagehide). A red "CAMERA ON" badge shows exactly while it runs.
+  - Random matches: a drop or quit mid-fight is a forfeit (the other player wins; if MY network is down I lose and am told). The connection is closed when the fight ends, no rematch with strangers.
+  - Random matches connect through the relay only (`iceTransportPolicy: relay`) so a stranger never learns your IP; switch in the menu ("Hide my IP from strangers", default on).
+  - Rejoin: window cut from 20 to 3 minutes; cleared when the fight is over, on Leave, on a failed rejoin; the button never appears for random matches.
+  - After a fight the other phone closing no longer throws you off the result screen; private matches say "Your opponent has left".
+  - CSP meta: no plugins, no `<base>`, no form posts (a stricter script/connect policy is not set: untestable here without breaking the hand model).
+- Verified (automated, Node, 83/83): camera tracks really stopped by release(); relay flag reaches PeerJS; forfeit win and drop-loss; result-screen behaviour; plus all earlier tests.
+- Verified on a device: nothing yet. Needs checking: the camera light goes out at each snap; the relay-only random connection actually connects (PeerJS's free TURN servers may be slow or full).
+- Open: if the relay is unreliable, random matches will fail to connect rather than leak the IP (by design); a server of our own is the real fix.
+
 ## 2026-10-27 — Reconnect, rejoin, installable app, random skins (NOT YET TRIED ON TWO PHONES)
 - Why: first real test: "kinda works", connection unstable, no way back into a lobby.
 - Changed:

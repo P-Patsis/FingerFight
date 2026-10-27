@@ -37,7 +37,11 @@ const PEER_CONFIG = {           // PeerJS's own defaults plus one more STUN serv
   ],
   sdpSemantics: 'unified-plan',
 };
-export const newPeer = id => (id ? new Peer(id, { config: PEER_CONFIG }) : new Peer({ config: PEER_CONFIG }));
+/** [relay]: only ever talk through the relay server, so the other phone never learns this phone's IP address. */
+export const newPeer = (id, relay = false) => {
+  const config = relay ? { ...PEER_CONFIG, iceTransportPolicy: 'relay' } : PEER_CONFIG;
+  return id ? new Peer(id, { config }) : new Peer({ config });
+};
 export const newToken = () => {
   const buf = new Uint32Array(24);
   crypto.getRandomValues(buf);
@@ -47,8 +51,9 @@ export const validToken = t => typeof t === 'string' && /^[A-Z0-9]{24}$/.test(t)
 
 export class Link {
   /** handlers: onOpen(), onMessage(obj), onClose(reason), onStatus(text), onReconnecting(), onReconnected(), canResume() */
-  constructor(handlers) {
+  constructor(handlers, opts = {}) {
     this.h = handlers;
+    this.relay = !!opts.relay;
     this.peer = null;
     this.conn = null;
     this.closed = false;
@@ -69,7 +74,7 @@ export class Link {
   host(peerId) {
     this.role = 'host'; this.roomId = peerId;
     return new Promise((resolve, reject) => {
-      this.peer = newPeer(peerId);
+      this.peer = newPeer(peerId, this.relay);
       this.peer.on('open', () => { this.h.onStatus?.('Room is open. Waiting for a player…'); resolve(peerId); });
       this.peer.on('error', e => {
         if (e.type === 'unavailable-id') reject(new Error('taken'));
@@ -105,7 +110,7 @@ export class Link {
     if (resume) this.setToken(resume);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
-      this.peer = newPeer();
+      this.peer = newPeer(null, this.relay);
       this.peer.on('error', e => {
         clearTimeout(timer);
         if (!this.conn || !this.conn.open) reject(new Error(e.type === 'peer-unavailable' ? 'no-room' : e.type || 'error'));
@@ -219,7 +224,7 @@ export class Link {
     try {
       if (!this.peer || this.peer.destroyed || this.peer.disconnected) {
         try { this.peer?.destroy(); } catch { /* ignore */ }
-        this.peer = newPeer();
+        this.peer = newPeer(null, this.relay);
         this.peer.on('error', () => again());
         this.peer.on('open', () => this.#redial());
         return;

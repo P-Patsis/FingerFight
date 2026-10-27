@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0b1020">
   <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Finger Fight</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -12,6 +13,7 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div id="camLive" class="cam-live" role="status" hidden>● CAMERA ON</div>
   <div id="netBadge" class="net-badge" role="status" hidden></div>
   <div id="stage" class="bg-0"><div id="scenery"></div><div class="scanlines"></div></div>
 
@@ -32,6 +34,7 @@
     <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>
     <button id="muteBtn" class="link">Sound: on</button>
+    <button id="ipBtn" class="link">Hide my IP from strangers: on</button>
     <p class="fine">Uses your camera to count your fingers. Against random opponents only a cartoon or skeleton of your hand is ever shared, never a camera image.</p>
   </section>
 

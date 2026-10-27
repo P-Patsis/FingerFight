@@ -41,6 +41,8 @@ let helloTimer = null;                  // host: drop a connection that never sa
 let searching = false, searchId = 0;    // random matchmaking in progress
 let matchWaiter = null, hostWaiter = null;
 let autoStarted = false;
+let opponentGone = false;               // the other phone closed after the fight was decided
+let hideIp = store_get('ff-hideip') !== '0';   // random matches go through the relay only, so a stranger never sees my IP address
 let guestToken = null;                  // host: the resume token the pending guest offered in hello
 
 const MODE_LABELS = {
@@ -122,6 +124,10 @@ $('muteBtn').onclick = () => {
   $('muteBtn').textContent = 'Sound: ' + (sfx.muted ? 'off' : 'on');
 };
 
+const renderIp = () => { $('ipBtn').textContent = 'Hide my IP from strangers: ' + (hideIp ? 'on' : 'off'); };
+$('ipBtn').onclick = () => { hideIp = !hideIp; store.set('ff-hideip', hideIp ? '1' : '0'); renderIp(); };
+renderIp();
+
 function menuMsg(text, err = false) {
   $('menuMsg').textContent = text;
   $('menuMsg').classList.toggle('err', err);
@@ -150,7 +156,7 @@ function makeLink(quiet = false) {
     onReconnecting: () => netBadge('Connection lost. Reconnecting…'),
     onReconnected: () => onReconnected(),
     onStatus: t => { if (!quiet) menuMsg(t); },
-  });
+  }, { relay: matchKind === 'random' && hideIp });
 }
 
 /** Tears down a link. With [only], a stale search attempt closes just its own link and never touches a newer one. */
@@ -292,16 +298,43 @@ function onLinkOpen() {
 
 function onLinkClosed(reason) {
   if (!me || searching) return;
-  const wasPlaying = inGame;
+  if (game?.over) {                                  // the fight is decided: the other phone closing now is normal, keep the result screen
+    opponentGone = true;
+    $('againBtn').disabled = true;
+    if (matchKind === 'private') $('overMsg').textContent = 'Your opponent has left.';
+    return;
+  }
+  const wasPlaying = inGame && game && !game.over;
+  const randomFight = wasPlaying && matchKind === 'random';
+  const iDropped = reason !== 'left' && globalThis.navigator?.onLine === false;
   clearSession();
+  if (randomFight && !iDropped) { forfeitWin(); return; }       // a stranger who drops or quits the fight loses it
   resetAll();
   show('menu');
-  menuMsg(wasPlaying ? 'Your opponent left the fight.' : 'The connection closed (' + reason + ').', true);
+  menuMsg(randomFight ? 'You lost the match: your connection dropped.'
+    : wasPlaying ? 'Your opponent left the fight.' : 'The connection closed (' + reason + ').', true);
+}
+
+/** Random match: the other player is gone mid-fight. I win; the connection is finished, nothing more is accepted. */
+function forfeitWin() {
+  token++;
+  releaseCamera();
+  round = null;
+  inGame = false;
+  game.over = true; game.winner = me;
+  try { link?.close(); } catch { /* ignore */ }
+  link = null;
+  $('overTitle').textContent = 'YOU WIN!';
+  $('overText').textContent = names[other(me)] + ' disconnected, so you win by forfeit.';
+  $('againBtn').hidden = true;
+  $('overMsg').textContent = 'Random matches end here. Find another opponent from the menu.';
+  show('over');
+  sfx.win();
 }
 
 // ---- reconnecting and rejoining (private matches only)
 const SESSION_KEY = 'ff-session';
-const SESSION_MAX_AGE = 20 * 60 * 1000;
+const SESSION_MAX_AGE = 3 * 60 * 1000;     // long enough to reload the page or switch apps, short enough to never be stale
 function saveSession() {
   if (matchKind !== 'private' || !link?.token || !me) return;
   store.set(SESSION_KEY, JSON.stringify({ role: me, code: roomCodeRaw, token: link.token, names, t: Date.now() }));
@@ -372,7 +405,7 @@ $('rejoinBtn').onclick = async () => {
     else { link.setToken(x.token); await link.rehost(privateId(x.code)); }
   } catch (e) {
     menuMsg(x.role === 'guest' ? 'Could not rejoin. The match may be over.' : 'Could not reopen the match (' + e.message + '). Try again in a minute.', true);
-    resetAll(); updateRejoin();
+    resetAll(); clearSession();
     return;
   }
   $('roomCode').textContent = formatCode(x.code);
@@ -645,9 +678,10 @@ async function enableCamera() {
   }
   const err = await cam.startCamera();
   if (err) { status(err); $('camBtn').disabled = false; return; }
+  cam.stopCamera();                              // permission and model are checked; the camera stays OFF until a guess window opens
   camReady = true;
   ready[me] = true;
-  status('Camera ready.');
+  status('Camera ready. It switches on only while you guess, and off at the snap.');
   $('flipBtn').onclick = async () => { const e = await cam.flip(); if (e) status(e); };
   send({ t: 'ready', ready: true });
   renderLobby();
@@ -663,6 +697,7 @@ $('startBtn').onclick = () => {
 // Game
 // ---------------------------------------------------------------------------------------------
 function startGame() {
+  saveSession();
   token++;
   inGame = true;
   game = newGame(settings);
@@ -719,12 +754,22 @@ function beginRound(n) {
   later(1900, startGuessPhase);
 }
 
-function startGuessPhase() {
+async function startGuessPhase() {
+  const t = token;
   round.phase = 'guess';
-  setupCameraUI();                                                   // both players hold up fingers to their own camera
   contentEl(other(me)).replaceChildren(el('div', 'thinking', '✋ ???'));   // their hand stays hidden until the reveal
+  if (!SIM) {
+    const err = await cam.startCamera();                             // the camera is switched on only now, for this one guess window
+    if (t !== token || !round) { cam.release(); camIndicator(false); return; }
+    if (err) $('camStatus').textContent = err;
+    camIndicator(!err);
+  }
+  setupCameraUI();                                                   // both players hold up fingers to their own camera
   runTimer(settings.seconds);
 }
+
+/** A red "camera on" badge that is visible exactly while the camera is running. */
+function camIndicator(on) { $('camLive').hidden = !on; }
 
 function runTimer(seconds) {
   const t = token;
@@ -779,8 +824,9 @@ function setupCameraUI() {
 
 function releaseCamera() {
   if (!cam || SIM) return;
-  cam.pause();
+  cam.release();
   cam.onFrame = null;
+  camIndicator(false);
   const camBox = $('camBox');
   camBox.hidden = true;
   if (camBox.parentElement !== document.body) document.body.append(camBox);
@@ -930,10 +976,18 @@ function knockout() {
     const won = winner === me;
     $('overTitle').textContent = won ? 'YOU WIN!' : 'YOU LOSE';
     $('overText').textContent = names[winner] + ' wins ' + (game.health[winner]) + ' hit' + (game.health[winner] === 1 ? '' : 's') + ' to ' + game.health[loser] + '.';
-    $('againBtn').hidden = false;
-    $('againBtn').disabled = me !== 'host';
-    $('againBtn').textContent = me === 'host' ? 'Play again' : 'Waiting for host…';
-    $('overMsg').textContent = '';
+    clearSession();                                    // the match is over: nothing to rejoin
+    if (matchKind === 'random') {                      // strangers: the connection ends with the match, no rematch
+      try { link?.close(); } catch { /* ignore */ }
+      link = null;
+      $('againBtn').hidden = true;
+      $('overMsg').textContent = 'Random matches end here. Find another opponent from the menu.';
+    } else {
+      $('againBtn').hidden = false;
+      $('againBtn').disabled = me !== 'host' || opponentGone;
+      $('againBtn').textContent = me === 'host' ? 'Play again' : 'Waiting for host…';
+      $('overMsg').textContent = opponentGone ? 'Your opponent has left.' : '';
+    }
     show('over');
     if (won) sfx.win();
   });
@@ -964,7 +1018,7 @@ function resetAll() {
   cam = null; camReady = false;
   matchKind = null; roomCodeRaw = ''; pendingGuest = null; autoStarted = false;
   clearTimeout(helloTimer);
-  guestToken = null; netBadge('');
+  guestToken = null; opponentGone = false; netBadge(''); camIndicator(false);
   matchWaiter = null; hostWaiter = null;
   if (searching) { searchId++; setSearching(false); }
   $('camBtn').disabled = false;
@@ -981,3 +1035,8 @@ updateRejoin();
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => { /* not fatal */ });
 }
+
+// The camera must never stay on in the background: leave the page (home button, app switch, screen off) and it goes dark.
+const camOff = () => { if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; } };
+document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); });
+globalThis.addEventListener?.('pagehide', camOff);

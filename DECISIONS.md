@@ -32,3 +32,10 @@
 - Push notifications (web push needs a server holding subscriptions and keys), friends lists, leaderboards, accounts and moderation all need a backend that stores data. The game has none on purpose (no accounts, no photos stored). A "friends" list that lives only on the phone and a custom-fighter editor do not need one.
 - PWA first; a real APK wrapper (WebView, as Lab Calc does) is the next step if wanted.
 
+## 2026-10-27 — Safety rules for camera + strangers (the project's hard rules)
+- The only things that cross the network are small JSON messages (finger states, landmarks, numbers). No media track is ever added to the WebRTC connection, so there is no live camera feed to hijack.
+- Photos exist only in private matches (friends who chose that style); the receiver draws everything for strangers and rejects any photo message. Nothing in the protocol lets a peer ask for a picture; round messages are accepted only for the current round.
+- The camera is on only inside a guess window and is stopped at the snap (not just paused). Hidden page = camera off.
+- Random matches end when the fight ends (the connection is closed, no rematch) and route through the relay (no IP exposure). A drop is a loss.
+- Rejoin exists for private matches only, behind a 24-char secret, for 3 minutes.
+

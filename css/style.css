@@ -214,3 +214,6 @@ input:focus { outline: none; border-color: var(--cyan); }
   background: #b4281e; color: #fff; padding: 6px 14px; border-radius: 999px; font: 600 13px system-ui, sans-serif; }
 .net-badge[hidden] { display: none; }
 .skin-picker .dice { font-size: 26px; }
+.cam-live { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); right: 8px; z-index: 50;
+  background: #b4281e; color: #fff; padding: 4px 10px; border-radius: 999px; font: 700 12px system-ui, sans-serif; }
+.cam-live[hidden] { display: none; }
