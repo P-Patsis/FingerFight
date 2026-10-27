@@ -610,6 +610,7 @@ function renderLobby() {
   $('stGuest').textContent = names.guest ? (ready.guest ? 'ready' : 'camera off') : '';
   $('valSeconds').textContent = settings.seconds;
   $('valHits').textContent = settings.hits;
+  $('valMax').textContent = settings.maxFingers;
   $('approveBtn').textContent = requireApproval ? 'On' : 'Off';
   $('approveBtn').classList.toggle('on', requireApproval);
   $('approveRow').hidden = !(matchKind === 'private' && me === 'host');
@@ -750,14 +751,16 @@ function beginRound(n) {
   const pointer = pointerFor(n);
   round = { n, pointer, phase: 'intro', reveal: null, guessMsg: null, resolved: false };
   $('roundLabel').textContent = 'ROUND ' + n;
-  $('roleLabel').textContent = pointer === me ? 'You point' : 'You guess';
+  const pointing = pointer === me;
+  $('mid').className = pointing ? 'point' : 'guess';
+  $('roleLabel').replaceChildren(el('b', '', pointing ? 'YOU POINT' : 'YOU GUESS'), el('small', '', pointing ? 'hold up fingers; they guess' : 'guess how many they hold'));
   $('timerNum').textContent = settings.seconds;
   $('timerWrap').classList.remove('urgent');
   $('timerBar').firstElementChild.style.transform = 'scaleX(1)';
   for (const side of ['host', 'guest']) { contentEl(side).replaceChildren(); fighterEl(side).className = 'fighter idle'; }
   releaseCamera();
   showBanner('ROUND ' + n, '', 1000);
-  later(1100, () => { showBanner('FIGHT!', pointer === me ? 'Hold up your fingers!' : 'Show your GUESS with your fingers!', 900); sfx.fight(); });
+  later(1100, () => { showBanner(pointer === me ? 'YOU POINT' : 'YOU GUESS', pointer === me ? 'Hold up your fingers! They will guess the number.' : 'Show your guess with your fingers!', 1000); sfx.fight(); });
   later(1900, startGuessPhase);
 }
 
@@ -798,7 +801,8 @@ function runTimer(seconds) {
 //      the guesser's fingers are the guess.
 function setupCameraUI() {
   const pointing = round.pointer === me;
-  const caption = pointing ? 'POINT: hold up your fingers' : 'GUESS: show the number with your fingers';
+  const lim = settings.maxFingers < 10 ? ' (max ' + settings.maxFingers + ')' : '';
+  const caption = (pointing ? 'POINT: hold up your fingers' : 'GUESS: show the number with your fingers') + lim;
   const box = contentEl(me);
   if (SIM) {
     const wrap = el('div', 'sim');
@@ -809,7 +813,7 @@ function setupCameraUI() {
       for (const b of wrap.querySelectorAll('[data-g]')) b.classList.toggle('sel', (b.dataset.g || null) === cam.sim.gesture);
       wrap.querySelector('[data-nohand]').classList.toggle('sel', cam.sim.noHand);
     };
-    for (let c = 0; c <= 10; c++) { const b = btn(String(c), () => { cam.set({ count: c }); refresh(); }); b.dataset.count = c; wrap.append(b); }
+    for (let c = 0; c <= settings.maxFingers; c++) { const b = btn(String(c), () => { cam.set({ count: c }); refresh(); }); b.dataset.count = c; wrap.append(b); }
     if (pointing) for (const g of ['', 'middle', 'moutza', 'sideways']) { const b = btn(g || 'no gesture', () => { cam.set({ gesture: g || null }); refresh(); }); b.dataset.g = g; wrap.append(b); }
     const nh = btn('hide hand', () => { cam.set({ noHand: !cam.sim.noHand }); refresh(); }); nh.dataset.nohand = '1'; wrap.append(nh);
     box.replaceChildren(wrap);
@@ -822,7 +826,7 @@ function setupCameraUI() {
   $('camCaption').textContent = caption;
   $('camCaption').className = pointing ? 'point' : 'guess';
   cam.onFrame = s => {
-    $('liveCount').textContent = s.count;
+    $('liveCount').textContent = Math.min(s.count, settings.maxFingers);
     // gestures never score; the label is shown only to the pointer and only if the rude-gesture filter is off
     $('liveGesture').textContent = pointing && s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : '';
   };
@@ -863,7 +867,12 @@ function tryResolve() {
   if (!round || round.resolved || !round.reveal || !round.guessMsg) return;
   round.resolved = true;
   round.phase = 'result';
-  const { pointer, reveal, guessMsg } = round;
+  const { pointer } = round;
+  // quicker matches: anything above the limit counts as the limit (and is drawn as a plain hand of that many fingers)
+  const max = settings.maxFingers;
+  const plain = (m, n) => ({ ...m, view: 'avatar', photo: '', lm: null, gesture: null, hands: statesFromCount(n) });
+  const reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
+  const guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
   const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, noHand: reveal.noHand });
   const before = { ...game.health };
   game = applyResult(game, result);

@@ -3,8 +3,8 @@
 // A round: one player is the POINTER (holds up fingers), the other is the GUESSER (guesses the total number
 // of fingers). Roles swap every round. Both sides run resolveRound() on the same inputs, so both get the same answer.
 
-export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, background: 0 });
-export const LIMITS = Object.freeze({ seconds: [3, 20], hits: [1, 10] });
+export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 10, background: 0 });
+export const LIMITS = Object.freeze({ seconds: [3, 20], hits: [1, 10], maxFingers: [1, 10] });
 export const MAX_FINGERS = 10;
 
 /** Gestures the camera can recognise. They never score; they are only shown (or filtered out) at the reveal. */
@@ -23,6 +23,7 @@ export function normalizeSettings(s = {}) {
   return {
     seconds: clamp(n('seconds'), LIMITS.seconds),
     hits: clamp(n('hits'), LIMITS.hits),
+    maxFingers: clamp(n('maxFingers'), LIMITS.maxFingers),   // quicker matches: both players only use 0..maxFingers
     background: Math.max(0, Math.min(4, Math.round(Number(s.background) || 0))),
   };
 }

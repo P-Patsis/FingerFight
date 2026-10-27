@@ -22,7 +22,7 @@ test('every element id used by the scripts exists in index.html', () => {
 });
 
 test('data-step buttons name real settings', () => {
-  for (const m of html.matchAll(/data-step="(\w+):(-?\d)"/g)) assert.ok(['seconds', 'hits'].includes(m[1]), m[1]);
+  for (const m of html.matchAll(/data-step="(\w+):(-?\d)"/g)) assert.ok(['seconds', 'hits', 'maxFingers'].includes(m[1]), m[1]);
 });
 
 test('imports resolve to files', () => {

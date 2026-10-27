@@ -14,6 +14,18 @@
 
 Newest first.
 
+## 2026-10-27 (night) — Clearer turns, max-fingers limit, finger detection tweak (NOT YET TRIED ON DEVICES)
+- User feedback: it works; the laptop could not connect because the UNIVERSITY NETWORK blocks it (not a bug; the new join errors name a blocked link); not clear whose turn it is; finger detection "isn't great"; wants a max-fingers option for quicker matches.
+- Changed:
+  - Turn clarity: the middle bar now shows a big coloured "YOU POINT" (gold) or "YOU GUESS" (cyan) with a one-line explanation, and the bar's border takes the same colour; the round banner says the same. (Both players use their camera every round; only the roles differ.)
+  - New lobby setting "Max fingers" (1-10, default 10; 5 = one hand), set by the host like seconds and hits, sent to the guest. Anything above the limit counts as the limit on both phones (and is drawn as a plain hand); the live count, the simulator buttons and the camera caption respect it.
+  - Finger detection: distances now use the landmark depth (z), so a finger pointing at the camera is not read as folded, and a finger must be clearly extended (tip 5% farther from the wrist than its middle joint) so half-bent fingers stop flickering up/down. Thumb rule unchanged (a stricter thumb rule broke the synthetic tests and could not be justified without real hands).
+- Verified (automated, Node, 84/84, run 3 times): all earlier tests plus max-fingers setting limits; one flaky random-host test fixed (it checked a message before it arrived).
+- Verified on a device: nothing yet. The detection change is NOT tuned on real hands; the max-fingers clamp is covered only by the settings test, not an end-to-end round.
+- Open:
+  - Detection: need specifics (which finger, over- or under-count, which camera/distance/lighting) to tune. Candidate next steps: stricter thumb rule from real data, smoothing over more frames, a higher camera resolution, lower hand-detection confidence.
+  - Decide whether hiding your hand should still give the guesser a free hit.
+
 ## 2026-10-27 (evening) — Only correct guesses score; rude-gesture filter; scrollable menu/lobby (NOT YET TRIED ON DEVICES)
 - Why: user feedback after trying it: score only when you guess correctly; keep it PG; the menu is not scrollable and "Copy code" is hidden; a laptop could not connect.
 - Changed:

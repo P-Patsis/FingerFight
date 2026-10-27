@@ -59,7 +59,7 @@ test('health never goes below zero', () => {
 test('settings are cleaned', () => {
   assert.deepEqual(normalizeSettings({}), DEFAULTS);
   const s = normalizeSettings({ seconds: '99', hits: 0, background: 9 });
-  assert.deepEqual(s, { seconds: 20, hits: 1, background: 4 });
+  assert.deepEqual(s, { seconds: 20, hits: 1, maxFingers: 10, background: 4 });
   assert.equal(normalizeSettings({ seconds: 'abc' }).seconds, 5);
 });
 
@@ -140,4 +140,12 @@ test('guess messages are checked', () => {
   assert.ok(!validGuessMsg({ guess: 4, ...pic({ view: 'photo', photo: 'data:image/jpeg;base64,AAAA' }) }, false));
   assert.ok(!validGuessMsg(null));
   assert.ok(validPhoto('') && !validPhoto(5) && !validPhoto('data:text/html;base64,AAAA'));
+});
+
+test('max fingers is a clamped setting (default 10, 5 = one hand)', () => {
+  assert.equal(DEFAULTS.maxFingers, 10);
+  assert.equal(normalizeSettings({ maxFingers: 5 }).maxFingers, 5);
+  assert.equal(normalizeSettings({ maxFingers: 0 }).maxFingers, 1);
+  assert.equal(normalizeSettings({ maxFingers: 99 }).maxFingers, 10);
+  assert.equal(normalizeSettings({ maxFingers: 'x' }).maxFingers, 10);
 });

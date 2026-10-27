@@ -9,7 +9,7 @@ const b = installBrowser('?sim=1', '#room=ABCD-EFGH-JKLM-NPQR');
 const $ = id => b.byId.get(id);
 await import('../js/main.js');
 
-const SETTINGS = { seconds: 3, hits: 1, background: 2 };
+const SETTINGS = { seconds: 3, hits: 1, maxFingers: 10, background: 2 };
 const simButton = (sel, value) => $('bottomContent').querySelectorAll(sel).find(x => Object.values(x.dataset)[0] === value);
 const picture = (over = {}) => ({ view: 'avatar', skin: 'gold', hands: [{ thumb: false, index: true, middle: true, ring: true, pinky: true }], lm: null, ar: 1.333, photo: '', ...over });
 

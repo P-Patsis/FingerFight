@@ -6,17 +6,21 @@
 // [aspect] = image width / height, so distances and angles are measured in real proportions.
 
 const FINGER_IDS = { index: [5, 6, 8], middle: [9, 10, 12], ring: [13, 14, 16], pinky: [17, 18, 20] };
-const P = (lm, i, aspect) => ({ x: lm[i].x * aspect, y: lm[i].y });
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+// Points carry depth (z, in MediaPipe the same scale as x) so a finger pointing at the camera is not mistaken for a folded one.
+const P = (lm, i, aspect) => ({ x: lm[i].x * aspect, y: lm[i].y, z: (lm[i].z || 0) * aspect });
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0));
 const unit = (a, b) => { const d = dist(a, b) || 1; return { x: (b.x - a.x) / d, y: (b.y - a.y) / d }; };
 const angleBetween = (u, v) => (Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.y * v.y))) * 180) / Math.PI;
+
+/** A finger counts as up only when its tip is clearly farther from the wrist than its middle joint (a half-bent finger is "down"). */
+export const FINGER_EXTEND = 1.05;
 
 /** Which fingers are up: {thumb, index, middle, ring, pinky}. */
 export function fingerStates(lm, aspect = 1) {
   const wrist = P(lm, 0, aspect);
   const s = { thumb: dist(P(lm, 4, aspect), P(lm, 17, aspect)) > dist(P(lm, 3, aspect), P(lm, 17, aspect)) };
   for (const [name, [, pip, tip]] of Object.entries(FINGER_IDS)) {
-    s[name] = dist(P(lm, tip, aspect), wrist) > dist(P(lm, pip, aspect), wrist);
+    s[name] = dist(P(lm, tip, aspect), wrist) > dist(P(lm, pip, aspect), wrist) * FINGER_EXTEND;
   }
   return s;
 }
