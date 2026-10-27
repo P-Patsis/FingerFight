@@ -2,9 +2,9 @@
 //  - this site's files: network first (so an update arrives at once), the cached copy when offline
 //  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
 // Match traffic is WebRTC, which a service worker never sees.
-const VERSION = 'ff-v1';
+const VERSION = 'ff-v2';
 const SHELL = ['./', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
-  'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js', 'js/gestures.js', 'js/audio.js'];
+  'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js', 'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js'];
 const HEAVY = ['https://cdn.jsdelivr.net/npm/@mediapipe/', 'https://storage.googleapis.com/mediapipe-models/'];
 
 self.addEventListener('install', e => {
@@ -28,6 +28,16 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (new URL(url).origin !== self.location.origin) return;
+  if (url.includes('/assets/audio/')) {                       // music never changes under the same name: cache first, download once
+    e.respondWith(caches.open(VERSION).then(async c => {
+      const hit = await c.match(req);
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok) c.put(req, res.clone());
+      return res;
+    }));
+    return;
+  }
   e.respondWith(fetch(req).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
     return res;

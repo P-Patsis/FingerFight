@@ -34,7 +34,9 @@
     <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>
     <button id="muteBtn" class="link">Sound: on</button>
+    <label class="vol">Volume <input id="volSlider" type="range" min="0" max="100" step="5" value="70" aria-label="Volume"></label>
     <button id="ipBtn" class="link">Hide my IP from strangers: on</button>
+    <button id="calibBtn" class="link">Camera test &amp; finger calibration</button>
     <p class="fine">Uses your camera to count your fingers. Against random opponents only a cartoon or skeleton of your hand is ever shared, never a camera image.</p>
   </section>
 
@@ -102,10 +104,19 @@
     <div id="fx"></div>
   </section>
 
-  <!-- ===== Game over ===== -->
+  <!-- ===== Camera test / calibration (not part of a match) ===== -->
+  <section id="calib" class="screen" hidden>
+    <h2 class="logo small">CAMERA TEST</h2>
+    <p id="calibMsg" class="msg" role="status"></p>
+    <div id="calibBox" class="calib-box"></div>
+    <button id="calibDone" class="btn">Done (camera off)</button>
+  </section>
+
+  <!-- ===== Game over =====
   <section id="over" class="screen" hidden>
     <h2 id="overTitle" class="logo small">K.O.</h2>
     <p id="overText" class="tag"></p>
+    <div id="collage" class="collage" hidden></div>
     <button id="againBtn" class="btn big">Play again</button>
     <p id="overMsg" class="msg"></p>
     <button id="overLeave" class="link">Leave</button>
@@ -119,6 +130,7 @@
     <div id="liveCount">0</div>
     <div id="liveGesture"></div>
     <button id="flipBtn" class="btn small ghost" type="button">Flip</button>
+    <button id="dbgBtn" class="btn small ghost" type="button">Debug</button>
   </div>
 
   <script src="vendor/peerjs.min.js"></script>

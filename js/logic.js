@@ -35,14 +35,16 @@ export function newGame(settings) {
 
 /**
  * Outcome of one round. Only a correct guess scores.
- *  - pointer hides their hand  -> the guesser hits them (forfeit: there was nothing to guess)
- *  - guess is right            -> the guesser hits the pointer for 1
- *  - anything else (wrong guess, no guess) -> a miss, nobody takes damage
+ *  - a closed fist is a real 0 (a hand was seen with no fingers up) and can be guessed like any number
+ *  - NO HAND AT ALL is "no answer" (pointer) or "no guess" (guesser): the round is a miss, nobody takes damage
+ *  - guess equals the pointer's count -> the guesser hits the pointer for 1
+ *  - anything else                    -> a miss
  * @returns {{target: 'host'|'guest'|null, damage: number, reason: string}}
  */
 export function resolveRound({ pointer, count, guess, noHand }) {   // gestures are deliberately not an input: they never score
-  if (noHand) return { target: pointer, damage: 1, reason: 'nohand' };
-  if (guess !== null && guess !== undefined && guess === count) return { target: pointer, damage: 1, reason: 'correct' };
+  if (noHand) return { target: null, damage: 0, reason: 'nohand' };                              // nothing to guess
+  if (guess === null || guess === undefined) return { target: null, damage: 0, reason: 'noguess' };   // nothing guessed
+  if (guess === count) return { target: pointer, damage: 1, reason: 'correct' };
   return { target: null, damage: 0, reason: 'miss' };
 }
 
@@ -59,8 +61,9 @@ export function describe(result, pointer, me) {
   const guesser = other(pointer);
   const iAmPointer = pointer === me;
   switch (result.reason) {
-    case 'nohand': return iAmPointer ? 'No hand seen. You forfeit the round!' : 'They hid their hand. Free hit!';
     case 'correct': return iAmPointer ? 'They guessed it!' : 'You guessed it!';
+    case 'nohand': return iAmPointer ? 'No hand seen. No answer, no damage.' : 'No hand to guess from. No damage.';
+    case 'noguess': return guesser === me ? 'No hand seen: no guess, no damage.' : 'They made no guess.';
     default: return guesser === me ? 'Wrong guess. No damage.' : 'They missed.';
   }
 }
@@ -120,5 +123,5 @@ export function validReveal(m, allowPhoto = true) {
     && validPicture(m, allowPhoto);
 }
 
-/** The guesser's answer: their guess is the number of fingers they held up (null = no hand seen) + picture. */
+/** The guesser's answer: their guess is the number of fingers they held up (null = no hand seen: no guess) + picture. */
 export const validGuessMsg = (m, allowPhoto = true) => !!m && typeof m === 'object' && validGuess(m.guess) && validPicture(m, allowPhoto);

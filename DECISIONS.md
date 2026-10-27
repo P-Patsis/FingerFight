@@ -51,3 +51,12 @@
 - **Roles, not turns:** both players use the camera every round, so the UI says "YOU POINT" / "YOU GUESS", never "your turn / their turn".
 - **Finger up = tip clearly farther from the wrist than the middle joint (x1.05, 3D).** The margin is a guess; 1.1 broke the sideways-gesture geometry. Re-tune on real hands before changing the thumb rule.
 - **University/corporate networks can block WebRTC.** "Found the match but could not open a direct link" means a network, VPN or firewall is blocking peer connections, not a bug.
+
+## 2026-10-27 (late night) — Audio, effects, relay, calibration
+- **Fist = 0, no hand = no guess/no answer = miss.** A hidden hand is never scored for or against anyone.
+- **Music is CC0 only, from OpenGameArt, credited in assets/audio/CREDITS.md.** Missing/undecodable file = no music for that arena, silently. Never add a track whose licence is not confirmed on its source page. Keep the folder under 4 MB. No re-encoding tool is installed here, so files are used as published.
+- **Sound effects are synthesised, never files.** Music plays after the first user tap (browser rule) and only on the lobby/game/result screens.
+- **Visual effects are code-drawn only and always optional.** Every public effect is wrapped so a failure cannot break a match; reduced motion disables shake/flash/wipe/confetti.
+- **Relay servers live in js/ice.js and are EMPTY on purpose.** The PeerJS default TURN hosts are dead (no DNS), and no free relay works without an account. Random matches hide the IP through a relay, so without one they are refused with an explanation rather than hanging or silently exposing the IP. Do not paste a TURN credential into chat logs; it is public once it is in the page, so use a revocable one.
+- **Thresholds are data (`TUNING`), not constants.** Change defaults only after looking at real numbers from the debug panel.
+- **Never name a module variable `history`, `location`, `name` etc.** (it shadows the browser global; this broke the address-bar cleanup once).

@@ -37,7 +37,7 @@ test('a stranger connects and is accepted at once (no approval, no typed name); 
   conn = stranger.connect('ffight-r-0');
   conn.on('data', m => got.push(m));
   conn.on('open', () => conn.send({ t: 'hello', v: 2, kind: 'random', name: 'Fighter 4242' }));
-  await until(() => b.visible()[0] === 'lobby', 'matched: lobby');
+  await until(() => b.visible()[0] === 'lobby' && got.some(m => m.t === 'welcome'), 'matched: lobby and welcome sent');
   const welcome = got.find(m => m.t === 'welcome');
   assert.equal(welcome.kind, 'random');
   assert.match(welcome.name, /^Fighter \d{4}$/, 'strangers get generated names, not typed ones');

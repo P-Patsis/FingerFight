@@ -5,6 +5,8 @@
 //   private: 'ffight-p-' + a 16-character random code (80 bits: not guessable), shared by the host with friends
 //   random:  'ffight-r-' + slot number, a few well-known slots where strangers find each other (see main.js)
 
+import { STUN_SERVERS, turnServers } from './ice.js';
+
 const PRIVATE = 'ffight-p-';
 const RANDOM = 'ffight-r-';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 32 symbols, no 0/O/1/I
@@ -29,17 +31,13 @@ export const randomId = slot => RANDOM + slot;
 const PING_MS = 3000;           // heartbeat: a silent link is declared dead after DEAD_MS and re-dialled
 const DEAD_MS = 10000;
 const GRACE_MS = 45000;         // how long a dropped link keeps trying before the match is given up
-const PEER_CONFIG = {           // PeerJS's own defaults plus one more STUN server (passing `config` replaces the defaults)
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' },
-  ],
-  sdpSemantics: 'unified-plan',
-};
-/** [relay]: only ever talk through the relay server, so the other phone never learns this phone's IP address. */
+/** [relay]: only ever talk through a TURN relay, so the other phone never learns this phone's IP address. */
 export const newPeer = (id, relay = false) => {
-  const config = relay ? { ...PEER_CONFIG, iceTransportPolicy: 'relay' } : PEER_CONFIG;
+  const config = {
+    iceServers: [...STUN_SERVERS, ...turnServers()],       // see ice.js: the relay list lives there
+    sdpSemantics: 'unified-plan',
+    ...(relay ? { iceTransportPolicy: 'relay' } : {}),
+  };
   return id ? new Peer(id, { config }) : new Peer({ config });
 };
 export const newToken = () => {
@@ -218,8 +216,20 @@ export class Link {
     this.#lost(reason);
   }
 
+  /**
+   * The network just came back, or the page woke up: don't wait for the next timer. Re-opens the signalling socket if it died,
+   * re-dials at once while the match is in its grace period, and pings so a dead link is noticed quickly.
+   */
+  nudge() {
+    if (this.closed) return;
+    this.#softReconnectPeer();
+    if (this.grace) { if (Date.now() - (this.lastRedial || 0) > 2000) this.#redial(); }
+    else if (this.conn?.open) { try { this.conn.send({ t: 'ping' }); } catch { /* ignore */ } }
+  }
+
   #redial() {
     if (this.closed || !this.grace) return;
+    this.lastRedial = Date.now();
     const again = () => { if (this.grace && !this.closed) this.timers.push(setTimeout(() => this.#redial(), 3000)); };
     try {
       if (!this.peer || this.peer.destroyed || this.peer.disconnected) {

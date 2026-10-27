@@ -3,7 +3,8 @@
 // A round: the POINTER holds up fingers while the GUESSER guesses the total. When the timer ends the pointer's phone
 // snaps a photo + the count + any gesture and sends it; the guesser's phone sends the guess. Each side then runs
 // resolveRound() on the same inputs, so both screens show the same result. The host starts every round.
-import { sfx } from './audio.js';
+import { sfx, music } from './audio.js';
+import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
 import { SKINS, drawAvatar, drawFromMessage, statesFromCount, skinById } from './avatars.js';
@@ -12,7 +13,9 @@ import {
   sanitizeName, validGuessMsg, validReveal, VIEWS, SAFE_VIEWS, RANDOM_SLOTS,
 } from './logic.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
-import { classifyHands } from './gestures.js';
+import { classifyHands, loadTuning } from './gestures.js';
+import { createDebugPanel } from './debug.js';
+import { hasRelay } from './ice.js';
 
 const $ = id => document.getElementById(id);
 const SIM = new URLSearchParams(location.search).has('sim');   // ?sim=1: no camera, set the hand by tapping (for testing)
@@ -29,6 +32,8 @@ let ready = { host: false, guest: false };   // camera + hand model ready on tha
 let cam = null, camReady = false;
 let game = null;                        // see logic.js newGame()
 let round = null;                       // the round in progress
+let streak = { side: null, n: 0 };      // consecutive landed hits by one side (combo pulse)
+let fightLog = [];                       // every resolved round of this game, for the final collage
 let inGame = false;
 let token = 0;                          // bumped to cancel pending timeouts from an old round or game
 let bannerTimer = null;
@@ -69,7 +74,8 @@ const store = {
 // ---------------------------------------------------------------------------------------------
 function show(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
-  if (id === 'menu') updateRejoin();
+  if (id === 'menu') { updateRejoin(); music.stop(); }
+  else if (currentBg >= 0) music.setArena(currentBg);      // lobby / game / result: the arena's loop (lazy, silent if the file is missing)
 }
 
 let currentBg = -1;
@@ -78,6 +84,7 @@ function setBackground(i) {
   currentBg = i;
   $('stage').className = 'bg-' + i;
   $('scenery').innerHTML = backgroundHTML(i);      // fixed artwork, no user text
+  if ($('menu').hidden) music.setArena(i);
 }
 
 function later(ms, fn) {
@@ -121,10 +128,15 @@ $('nameInput').value = store.get('ff-name') || '';
   }
 }
 $('codeInput').addEventListener('input', e => { e.target.value = formatCode(cleanCode(e.target.value)); });
-$('muteBtn').onclick = () => {
-  sfx.setMuted(!sfx.muted);
-  $('muteBtn').textContent = 'Sound: ' + (sfx.muted ? 'off' : 'on');
-};
+const renderSound = () => { $('muteBtn').textContent = 'Sound: ' + (sfx.muted ? 'off' : 'on'); };
+$('muteBtn').onclick = () => { sfx.unlock(); sfx.setMuted(!sfx.muted); renderSound(); };
+$('volSlider').value = String(Math.round(sfx.volume * 100));
+$('volSlider').oninput = e => { sfx.unlock(); sfx.setVolume(Number(e.target.value) / 100); if (sfx.muted && Number(e.target.value) > 0) { sfx.setMuted(false); renderSound(); } };
+$('volSlider').onchange = () => sfx.ui();
+renderSound();
+// every button gets a small tap sound (capture phase, so it also covers buttons built later)
+document.addEventListener?.('click', e => { if (e.target?.closest?.('button')) { sfx.unlock(); sfx.ui(); } }, true);
+fx.initFx($('game'));
 
 const renderIp = () => { $('ipBtn').textContent = 'Hide my IP from strangers: ' + (hideIp ? 'on' : 'off'); };
 $('ipBtn').onclick = () => { hideIp = !hideIp; store.set('ff-hideip', hideIp ? '1' : '0'); renderIp(); };
@@ -210,7 +222,7 @@ $('joinBtn').onclick = async () => {
   } catch (e) {
     const why = {
       'no-room': 'There is no match with that code (or the host already left).',
-      timeout: 'Found the match but could not open a direct link in 15 s. One of the two networks (a VPN, school/work wifi or a strict firewall) is probably blocking it. Try the other device on mobile data or without the VPN.',
+      timeout: 'Found the match but could not open a direct link in 15 s. One of the two networks (a VPN, school/work wifi or a strict firewall) is probably blocking it. Try the other device on mobile data or without the VPN.' + (hasRelay() ? '' : ' (No relay server is set up for this game yet, so blocked networks cannot work around it.)'),
       network: 'Could not reach the matchmaking server (0.peerjs.com). Check this device\'s internet, VPN or ad-blocker.',
       'server-error': 'The matchmaking server did not answer. Try again in a minute.',
       'socket-error': 'Could not reach the matchmaking server. Check internet, VPN or ad-blocker.',
@@ -268,6 +280,10 @@ async function tryHostRandom(i, name, active) {
 
 $('randomBtn').onclick = async () => {
   sfx.unlock();
+  if (hideIp && !hasRelay()) {      // relay-only needs a TURN relay (see ice.js); without one a random match could never connect
+    menuMsg('Random matches hide your IP behind a relay server, and none is set up yet. Turn off "Hide my IP from strangers" to play random opponents directly (they could then see your IP address), or invite a friend with a private match.', true);
+    return;
+  }
   resetAll();
   matchKind = 'random';
   const id = ++searchId;
@@ -290,7 +306,7 @@ $('randomBtn').onclick = async () => {
   setSearching(false);
   if (matched) { enterLobby(); return; }
   cleanupLink(); matchKind = null;
-  menuMsg('No opponent found right now. Try again in a minute.', true);
+  menuMsg('No opponent found right now. Try again in a minute.' + (hideIp ? ' (If this keeps happening, the relay may be blocked on this network.)' : ''), true);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -676,7 +692,8 @@ async function enableCamera() {
   $('camBtn').disabled = true;
   const status = t => { $('camStatus').textContent = t; };
   status(SIM ? 'Simulator: no camera needed.' : 'Loading the hand model (about 17 MB, once)…');
-  cam = SIM ? new SimCam() : new HandCam($('video'), $('overlayCanvas'));
+  cam = cam || (SIM ? new SimCam() : new HandCam($('video'), $('overlayCanvas')));
+  hookCamera();
   try {
     await cam.load();
   } catch (e) {
@@ -710,6 +727,7 @@ function startGame() {
   inGame = true;
   game = newGame(settings);
   round = null;
+  fightLog = []; streak = { side: null, n: 0 };
   setBackground(settings.background);
   for (const side of ['host', 'guest']) {
     const f = fighterEl(side);
@@ -759,8 +777,9 @@ function beginRound(n) {
   $('timerBar').firstElementChild.style.transform = 'scaleX(1)';
   for (const side of ['host', 'guest']) { contentEl(side).replaceChildren(); fighterEl(side).className = 'fighter idle'; }
   releaseCamera();
+  fx.wipe();
   showBanner('ROUND ' + n, '', 1000);
-  later(1100, () => { showBanner(pointer === me ? 'YOU POINT' : 'YOU GUESS', pointer === me ? 'Hold up your fingers! They will guess the number.' : 'Show your guess with your fingers!', 1000); sfx.fight(); });
+  later(1100, () => { showBanner(pointer === me ? 'YOU POINT' : 'YOU GUESS', pointer === me ? 'Hold up your fingers! They will guess the number.' : 'Show your guess with your fingers!', 1000); sfx.roundStart(); });
   later(1900, startGuessPhase);
 }
 
@@ -825,7 +844,9 @@ function setupCameraUI() {
   camBox.hidden = false;
   $('camCaption').textContent = caption;
   $('camCaption').className = pointing ? 'point' : 'guess';
+  if (debugWanted) { cam.debug = true; debugPanel().show(true); }
   cam.onFrame = s => {
+    dbg?.update(s);
     $('liveCount').textContent = Math.min(s.count, settings.maxFingers);
     // gestures never score; the label is shown only to the pointer and only if the rude-gesture filter is off
     $('liveGesture').textContent = pointing && s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : '';
@@ -833,10 +854,74 @@ function setupCameraUI() {
   cam.run();
 }
 
+// ---------------------------------------------------------------------------------------------
+// Debug panel + camera test (calibration) + camera safety hooks
+// ---------------------------------------------------------------------------------------------
+loadTuning();                                   // thresholds the player adjusted earlier (saved on this phone)
+let dbg = null;                                 // the debug panel, built on first use
+const debugPanel = () => (dbg = dbg || createDebugPanel(document.body));
+
+/** If the camera stops by itself (permission taken away, another app, unplugged) the badge must go out and the player is told. */
+function hookCamera() {
+  if (!cam || SIM) return;
+  cam.onLost = () => {
+    camIndicator(false);
+    const b = $('camBox'); b.hidden = true;
+    if (round && round.phase === 'guess') showBanner('CAMERA STOPPED', 'Check the camera permission. No hand = no guess.', 2500);
+    if (!$('calib').hidden) $('calibMsg').textContent = 'The camera stopped. Check the browser camera permission, then tap Done and try again.';
+    dbg?.show(false);
+  };
+}
+
+let debugWanted = false;                        // the player's choice for in-match debugging; the panel is re-shown each round
+$('dbgBtn').onclick = () => {
+  if (!cam || SIM) return;
+  debugWanted = !debugWanted;
+  debugPanel().show(debugWanted);
+  cam.debug = debugWanted;
+};
+
+async function openCalib() {
+  sfx.unlock();
+  show('calib');
+  if (SIM) { $('calibMsg').textContent = 'The simulator has no camera.'; return; }
+  const msg = t => { $('calibMsg').textContent = t; };
+  msg('Loading the hand model (about 17 MB, once)…');
+  cam = cam || new HandCam($('video'), $('overlayCanvas'));
+  hookCamera();
+  try { await cam.load(); } catch (e) { msg('Could not load the hand model (' + (e.message || e) + ').'); return; }
+  if ($('calib').hidden) return;                                   // the player already left
+  const err = await cam.startCamera();
+  if (err === 'cancelled' || $('calib').hidden) { if (err !== 'cancelled') closeCalib(); return; }
+  if (err) { msg(err); return; }
+  const box = $('camBox');
+  $('calibBox').replaceChildren(box);
+  box.hidden = false;
+  $('camCaption').textContent = 'Hold up fingers. Numbers are below.';
+  $('camCaption').className = 'guess';
+  camIndicator(true);
+  cam.debug = true;
+  const p = debugPanel(); p.show(true);
+  cam.onFrame = s => { p.update(s); $('liveCount').textContent = s.count; $('liveGesture').textContent = s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : ''; };
+  msg('Camera on (it switches off when you tap Done). Try each finger and watch the ratios.');
+  cam.run();
+}
+function closeCalib() {
+  if (cam && !SIM) { cam.release(); cam.onFrame = null; cam.debug = false; }
+  camIndicator(false);
+  const box = $('camBox'); box.hidden = true; if (box.parentElement !== document.body) document.body.append(box);
+  dbg?.show(false);
+  show('menu');
+}
+$('calibBtn').onclick = openCalib;
+$('calibDone').onclick = closeCalib;
+
 function releaseCamera() {
   if (!cam || SIM) return;
   cam.release();
   cam.onFrame = null;
+  cam.debug = false;
+  dbg?.show(false);
   camIndicator(false);
   const camBox = $('camBox');
   camBox.hidden = true;
@@ -854,7 +939,7 @@ function endGuessPhase() {
     contentEl(me).replaceChildren(el('div', 'hint', 'Snap! Waiting for their guess…'));
     send({ t: 'reveal', n: round.n, ...round.reveal });
   } else {
-    // the guess is the number of fingers you held up; no hand seen = no guess
+    // the guess is the number of fingers you held up (a closed fist is 0); no hand at all = no guess
     round.guessMsg = { guess: snap.noHand ? null : snap.count, ...pictureOf(snap) };
     contentEl(me).replaceChildren(el('div', 'hint', snap.noHand ? 'Time! No hand seen, so no guess.' : 'Locked in: ' + snap.count));
     send({ t: 'guess', n: round.n, ...round.guessMsg });
@@ -874,6 +959,7 @@ function tryResolve() {
   const reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
   const guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
   const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, noHand: reveal.noHand });
+  fightLog.push({ n: round.n, pointer, reveal, guessMsg, reason: result.reason });
   const before = { ...game.health };
   game = applyResult(game, result);
   showReveal(pointer, reveal, guessMsg, result);
@@ -945,57 +1031,85 @@ function centerOf(side) {
   return { x: r.left + r.width / 2 - g.left, y: r.top + r.height / 2 - g.top };
 }
 
-function spark(side, crit, damage) {
+function spark(side, strong, damage) {
   const p = centerOf(side);
-  const s = el('div', 'spark' + (crit ? ' crit' : ''));
+  const s = el('div', 'spark' + (strong ? ' crit' : ''));
   s.style.left = p.x + 'px'; s.style.top = p.y + 'px';
   $('fx').append(s);
   setTimeout(() => s.remove(), 700);
-  const d = el('div', 'dmg' + (crit ? ' crit' : ''), '-' + damage);
+  const d = el('div', 'dmg' + (strong ? ' crit' : ''), '-' + damage);
   d.style.left = p.x + 'px'; d.style.top = p.y + 'px';
   $('fx').append(d);
   setTimeout(() => d.remove(), 1200);
 }
 
-function shake(big) {
-  const g = $('game');
-  g.classList.remove('shake', 'shake-big', 'flash');
-  void g.offsetWidth;                               // restart the animation
-  g.classList.add(big ? 'shake-big' : 'shake');
-  if (big) g.classList.add('flash');
-  setTimeout(() => g.classList.remove('shake', 'shake-big', 'flash'), 700);
-}
-
 function playResult(result, reveal, before) {
   const text = describe(result, round.pointer, me);
   if (!result.target) {
-    sfx.miss();
+    streak = { side: null, n: 0 };
+    // a wrong guess is a BLOCK (the pointer defended); no hand / no guess is a plain miss
+    if (result.reason === 'miss') { sfx.block(); const p = centerOf(round.pointer); fx.burst(p.x, p.y, { color: '#93c5fd', power: 0.5 }); }
+    else sfx.miss();
     fighterEl(round.pointer).classList.add('taunt');
-    later(500, () => showBanner('MISS', text, 1500));
+    later(500, () => showBanner(result.reason === 'miss' ? 'BLOCKED' : 'MISS', text, 1500));
     return finishRound(1800);
   }
   const target = result.target, attacker = other(target);
   later(500, () => { fighterEl(attacker).classList.add('punch'); sfx.whoosh(); });
   later(850, () => {
     fighterEl(target).classList.add('hit');
-    spark(target, false, result.damage);
-    shake(false);
-    sfx.hit();
-    if (navigator.vibrate) navigator.vibrate(50);
+    // strength: 1 for a normal hit, more when it takes the last hit point, and a little more along a streak
+    streak = streak.side === attacker ? { side: attacker, n: streak.n + 1 } : { side: attacker, n: 1 };
+    const lethal = game.health[target] === 0;
+    const strength = lethal ? 2 : 1 + Math.min(0.6, (streak.n - 1) * 0.25);
+    const p = centerOf(target);
+    spark(target, lethal, result.damage);
+    fx.burst(p.x, p.y, { color: lethal ? '#f43f5e' : '#fde047', power: strength });
+    fx.shake(strength); fx.flash(strength);
+    sfx.hit(strength);
+    if (navigator.vibrate) navigator.vibrate(lethal ? [60, 40, 90] : 50);
     renderHp(target, before[target]);
-    if (result.reason === 'nohand') {
-      showBanner('NO HAND!', text, 1500, 'good');
-    } else {
-      showBanner('HIT!', text, 1300, 'good');
-    }
+    if (streak.n >= 2) { fx.combo(streak.n, centerOf(attacker).x, centerOf(attacker).y); }
+    showBanner('HIT!', text, 1300, 'good');
   });
   later(1700, () => { for (const s of ['host', 'guest']) fighterEl(s).classList.remove('punch', 'hit', 'taunt', 'crit-fx'); });
   finishRound(2600);
 }
 
 function finishRound(ms) {
+  later(Math.max(0, ms - 500), () => sfx.roundEnd());
   if (game.over) { later(ms, knockout); return; }
   if (me === 'host') later(ms + 1500, nextRound);
+}
+
+/** The final screen: every round as a column, player 1's hand above and player 2's below. A correct guess is tinted green. */
+function renderCollage() {
+  const box = $('collage');
+  box.replaceChildren();
+  box.hidden = fightLog.length === 0;
+  if (!fightLog.length) return;
+  const grid = el('div', 'cg');
+  const lab = el('div', 'cg-lab');
+  lab.append(el('div', 'cg-n', ''), el('div', 'cg-name', names.host + (me === 'host' ? ' (you)' : '')), el('div', 'cg-name', names.guest + (me === 'guest' ? ' (you)' : '')));
+  grid.append(lab);
+  const tile = (msg, isPointer, h) => {
+    const none = isPointer ? msg.noHand : msg.guess === null;
+    const correct = !isPointer && h.reason === 'correct';
+    const t = el('div', 'cg-tile' + (correct ? ' ok' : ''));
+    t.append(none ? el('div', 'cg-none', 'no hand') : buildPicture(filtered(msg)));
+    const value = isPointer ? (msg.noHand ? '?' : msg.count) : (msg.guess === null ? '–' : msg.guess);
+    t.append(el('div', 'cg-cap', (isPointer ? 'showed ' : 'guessed ') + value));
+    if (correct) t.append(el('div', 'cg-ok', 'GUESSED IT!'));
+    return t;
+  };
+  for (const h of fightLog) {
+    const col = el('div', 'cg-col');
+    col.append(el('div', 'cg-n', 'Round ' + h.n));
+    const hostPoints = h.pointer === 'host';
+    col.append(tile(hostPoints ? h.reveal : h.guessMsg, hostPoints, h), tile(hostPoints ? h.guessMsg : h.reveal, !hostPoints, h));
+    grid.append(col);
+  }
+  box.append(grid);
 }
 
 function knockout() {
@@ -1003,6 +1117,7 @@ function knockout() {
   fighterEl(loser).classList.remove('idle'); fighterEl(loser).classList.add('ko');
   fighterEl(winner).classList.remove('idle'); fighterEl(winner).classList.add('win');
   sfx.ko();
+  { const p = centerOf(loser); fx.burst(p.x, p.y, { color: '#f43f5e', power: 2 }); fx.shake(2.2); fx.flash(2); }
   showBanner('K.O.', '', 2200, 'crit');
   later(2600, () => {
     inGame = false;
@@ -1021,8 +1136,9 @@ function knockout() {
       $('againBtn').textContent = me === 'host' ? 'Play again' : 'Waiting for host…';
       $('overMsg').textContent = opponentGone ? 'Your opponent has left.' : '';
     }
+    renderCollage();
     show('over');
-    if (won) sfx.win();
+    if (won) { sfx.win(); fx.confetti(); } else { sfx.lose(); fx.rain(); }
   });
 }
 
@@ -1040,6 +1156,8 @@ function resetAll() {
   inGame = false;
   round = null;
   game = null;
+  fightLog = []; streak = { side: null, n: 0 };
+  fx.clearFx();
   releaseCamera();
   if (link) { link.closed = true; try { link.close(); } catch { /* ignore */ } }
   link = null;
@@ -1070,6 +1188,7 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 }
 
 // The camera must never stay on in the background: leave the page (home button, app switch, screen off) and it goes dark.
-const camOff = () => { if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; } };
-document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); });
+const camOff = () => { if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; if (!$('calib').hidden) { $('calibMsg').textContent = 'Camera switched off (the page was hidden). Tap Camera test again.'; dbg?.show(false); } } };
+document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); else link?.nudge?.(); });
 globalThis.addEventListener?.('pagehide', camOff);
+globalThis.addEventListener?.('online', () => link?.nudge?.());       // wifi / 4G came back: re-open the match link now, not at the next timer

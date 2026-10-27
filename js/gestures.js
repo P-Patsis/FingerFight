@@ -12,17 +12,56 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0))
 const unit = (a, b) => { const d = dist(a, b) || 1; return { x: (b.x - a.x) / d, y: (b.y - a.y) / d }; };
 const angleBetween = (u, v) => (Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.y * v.y))) * 180) / Math.PI;
 
-/** A finger counts as up only when its tip is clearly farther from the wrist than its middle joint (a half-bent finger is "down"). */
-export const FINGER_EXTEND = 1.05;
+// ---- TUNING: every threshold that decides a finger count or a gesture lives here, so it can be adjusted live (debug panel)
+// and saved on the phone. The defaults are guesses from geometry, not tuned on real hands.
+export const DEFAULT_TUNING = Object.freeze({
+  extend: 1.05,     // a finger is UP when its tip is this many times farther from the wrist than its middle joint (1.0 = just farther)
+  thumb: 1.0,       // the thumb is UP when its tip is this many times farther from the pinky base than its own joint
+  minScore: 0,      // ignore a detected hand whose model confidence is below this (0 = accept everything)
+  frames: 7,        // how many of the latest camera frames vote on the answer at the snap
+  moutza: 22,       // degrees of spread between index and pinky for the open-palm gesture
+  sideMin: 60,      // the sideways gesture: angle range (degrees) between the middle finger and the other raised fingers
+  sideMax: 120,
+});
+/** [min, max, step] for each value, used to clamp loaded values and to build the sliders. */
+export const TUNING_RANGES = Object.freeze({
+  extend: [1.0, 1.5, 0.01], thumb: [0.8, 1.3, 0.01], minScore: [0, 0.95, 0.05], frames: [3, 15, 1],
+  moutza: [10, 40, 1], sideMin: [30, 89, 1], sideMax: [91, 150, 1],
+});
+export const TUNING = { ...DEFAULT_TUNING };
+const TUNE_KEY = 'ff-tune';
+
+/** Applies [patch] (unknown keys ignored, values clamped), and returns the live TUNING. */
+export function setTuning(patch = {}) {
+  for (const [k, [lo, hi]] of Object.entries(TUNING_RANGES)) {
+    const v = Number(patch[k]);
+    if (patch[k] !== undefined && Number.isFinite(v)) TUNING[k] = Math.min(hi, Math.max(lo, v));
+  }
+  return TUNING;
+}
+export function resetTuning() { Object.assign(TUNING, DEFAULT_TUNING); try { localStorage.removeItem(TUNE_KEY); } catch { /* ignore */ } return TUNING; }
+export function saveTuning() { try { localStorage.setItem(TUNE_KEY, JSON.stringify(TUNING)); } catch { /* private mode */ } }
+export function loadTuning() { try { const j = JSON.parse(localStorage.getItem(TUNE_KEY) || 'null'); if (j && typeof j === 'object') setTuning(j); } catch { /* ignore */ } return TUNING; }
 
 /** Which fingers are up: {thumb, index, middle, ring, pinky}. */
 export function fingerStates(lm, aspect = 1) {
   const wrist = P(lm, 0, aspect);
-  const s = { thumb: dist(P(lm, 4, aspect), P(lm, 17, aspect)) > dist(P(lm, 3, aspect), P(lm, 17, aspect)) };
+  const s = { thumb: dist(P(lm, 4, aspect), P(lm, 17, aspect)) > dist(P(lm, 3, aspect), P(lm, 17, aspect)) * TUNING.thumb };
   for (const [name, [, pip, tip]] of Object.entries(FINGER_IDS)) {
-    s[name] = dist(P(lm, tip, aspect), wrist) > dist(P(lm, pip, aspect), wrist) * FINGER_EXTEND;
+    s[name] = dist(P(lm, tip, aspect), wrist) > dist(P(lm, pip, aspect), wrist) * TUNING.extend;
   }
   return s;
+}
+
+/** The raw numbers behind fingerStates, for the debug panel: per finger the measured ratio, the threshold, and the verdict. */
+export function fingerDebug(lm, aspect = 1) {
+  const wrist = P(lm, 0, aspect);
+  const out = { thumb: { ratio: dist(P(lm, 4, aspect), P(lm, 17, aspect)) / (dist(P(lm, 3, aspect), P(lm, 17, aspect)) || 1), threshold: TUNING.thumb } };
+  for (const [name, [, pip, tip]] of Object.entries(FINGER_IDS)) {
+    out[name] = { ratio: dist(P(lm, tip, aspect), wrist) / (dist(P(lm, pip, aspect), wrist) || 1), threshold: TUNING.extend };
+  }
+  for (const v of Object.values(out)) v.up = v.ratio > v.threshold;
+  return out;
 }
 
 export const countHand = (lm, aspect = 1) => Object.values(fingerStates(lm, aspect)).filter(Boolean).length;
@@ -35,12 +74,10 @@ const dirOf = (lm, name, aspect) => { const [mcp, , tip] = FINGER_IDS[name]; ret
 /**
  * One hand's gesture: 'sideways' | 'moutza' | 'middle' | null.
  *  - middle:   only the middle finger is up (thumb ignored)
- *  - moutza:   all five up AND fanned wide (index-to-pinky angle over MOUTZA_SPREAD), the open-palm insult
+ *  - moutza:   all five up AND fanned wide (index-to-pinky angle over TUNING.moutza), the open-palm insult
  *  - sideways: middle finger up and at roughly 90 degrees to the other raised fingers (at least two of them)
  * The camera can't tell palm from back of hand, so moutza is "open and spread" either way.
  */
-export const MOUTZA_SPREAD = 22;
-export const SIDEWAYS_RANGE = [60, 120];
 
 export function classify(lm, aspect = 1) {
   const f = fingerStates(lm, aspect);
@@ -51,10 +88,10 @@ export function classify(lm, aspect = 1) {
     const mean = others.map(n => dirOf(lm, n, aspect)).reduce((a, v) => ({ x: a.x + v.x, y: a.y + v.y }), { x: 0, y: 0 });
     const len = Math.hypot(mean.x, mean.y) || 1;
     const a = angleBetween(m, { x: mean.x / len, y: mean.y / len });
-    if (a >= SIDEWAYS_RANGE[0] && a <= SIDEWAYS_RANGE[1]) return 'sideways';
+    if (a >= TUNING.sideMin && a <= TUNING.sideMax) return 'sideways';
   }
   if (f.thumb && f.index && f.middle && f.ring && f.pinky) {
-    if (angleBetween(dirOf(lm, 'index', aspect), dirOf(lm, 'pinky', aspect)) >= MOUTZA_SPREAD) return 'moutza';
+    if (angleBetween(dirOf(lm, 'index', aspect), dirOf(lm, 'pinky', aspect)) >= TUNING.moutza) return 'moutza';
   }
   if (f.middle && !f.index && !f.ring && !f.pinky) return 'middle';
   return null;

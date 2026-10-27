@@ -14,6 +14,23 @@
 
 Newest first.
 
+## 2026-10-27 (late night) — Music, sound, effects, final collage, calibration panel, robustness audit (NOT YET TRIED ON PHONES)
+- User decisions: a closed fist is a real 0; NO HAND AT ALL = "no guess" (the round is a miss, nobody takes damage; a hidden pointer hand is "no answer", also a miss). The old "hide your hand = free hit for the guesser" is gone.
+- Changed:
+  - MUSIC: one CC0 loop per arena (Dojo, Neon Street, Rooftop Sunset, Volcano Arena, Space Station) in `assets/audio/*.ogg`, 2.3 MB total, credited in `assets/audio/CREDITS.md` (OpenGameArt pages read, CC0 confirmed). Lazy-loaded after the first tap, looped, crossfaded on arena change, silent if a file is missing; cached by the service worker (cache first).
+  - SOUND: effects are synthesised (Web Audio): UI tap, countdown tick, round start, round end, punch whoosh, hit (scaled by strength), block, miss, KO, win, lose. Master volume slider + mute in the menu, remembered in localStorage. Every note disconnects itself when it ends.
+  - EFFECTS (all code-drawn): particle burst on a hit (capped at 140, rAF only while particles exist), white flash, screen shake scaled by hit strength (bigger on the last hit point and along a streak), COMBO xN pulse, a wipe between rounds, confetti on a win, rain on a loss; a wrong guess is a BLOCK (blue sparks, block sound), no hand / no guess is a plain miss. Reduced motion (device setting): no shake, flash, wipe, confetti or rain, a few slow particles only; the CSS media query switches the animations off too.
+  - FINAL COLLAGE: the result screen lists every round as a column, player 1's hand on top and player 2's below, scrolling sideways. The guesser's picture of a correct guess is tinted green with "GUESSED IT!". Pictures go through the same rude-gesture filter and photo rules as the reveal.
+  - CALIBRATION: the menu has "Camera test & finger calibration" (camera on with a badge, off with Done), and the camera box has a Debug button during a match. The panel shows count, hands, gesture, fps, the model's confidence per hand, and per finger the measured ratio against its threshold, with sliders for every threshold (`TUNING` in gestures.js, saved on the phone), Copy numbers and Reset.
+  - ROBUSTNESS (what I found): (1) REAL BUG, relay: the TURN hosts PeerJS ships (eu-0 / us-0.turn.peerjs.com) have no DNS records any more, and openrelay.metered.ca resolves to a reserved test address, so relay-only random matches could never connect and private matches had no relay fallback. Removed the dead hosts; relays now live in `js/ice.js` (empty until the user adds a free-tier TURN account). With no relay, a random search says so instead of hanging. (2) REAL BUG, camera: a camera that finished starting AFTER release() stayed on (light on, nobody owning it); HandCam now cancels it. (3) GAP, camera: a camera ended by the OS / revoked permission left the CAMERA ON badge lit; now `onLost` hides it and tells the player. (4) GAP, reconnect: `Link.nudge()` re-opens the signalling socket and re-dials at once on the browser's `online` event and when the page becomes visible. Already fine: camera tracks are really stopped by release() (existing test), the grace period and resume token.
+  - Fixed on the way: a module variable named `history` shadowed the browser's `history` (broke clearing the room code from the address bar); caught by the tests.
+- Verified (automated, Node, 102/102, repeated runs): everything above except what needs a browser; includes tests for the audio module, track files and credits, the effects under reduced motion, tuning clamps/persistence, debug text, the camera races, relay config and the no-relay message.
+- Verified on a device: nothing. Not seen on a screen: the effects, the collage layout, the debug panel. Not heard: the music (loop seams unchecked) and the synthesised sounds.
+- Open:
+  - NEEDS THE USER: a TURN relay account for random matches and for university-type networks (see js/ice.js). Free tiers exist (Metered, ExpressTURN, Cloudflare Calls); the live servers I probed answered but need credentials.
+  - The Space Station track is 134 s: decoded it is about 47 MB of memory (stereo float); fine on most phones, shorten it if the game stutters there.
+  - Finger detection still untuned on real hands: use the new panel and Copy numbers.
+
 ## 2026-10-27 (night) — Clearer turns, max-fingers limit, finger detection tweak (NOT YET TRIED ON DEVICES)
 - User feedback: it works; the laptop could not connect because the UNIVERSITY NETWORK blocks it (not a bug; the new join errors name a blocked link); not clear whose turn it is; finger detection "isn't great"; wants a max-fingers option for quicker matches.
 - Changed:

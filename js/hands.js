@@ -1,6 +1,6 @@
 // Camera + hand tracking, and a camera-free simulator with the same interface (?sim=1) for testing.
 // The MediaPipe runtime and hand model are loaded from the CDN, as in the original fingers app (about 17 MB, once).
-import { countHands, classifyHands, fingerStates } from './gestures.js';
+import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './gestures.js';
 import { skinById, statesFromCount, annotate, FINGERS, TIP_ID } from './avatars.js';
 import { VIEWS } from './logic.js';
 
@@ -8,7 +8,7 @@ const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 const CONN = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12],
   [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
-const SAMPLES = 9;          // frames kept for the snap
+const SAMPLES = 15;         // frames kept for the snap (TUNING.frames of them vote)
 const PHOTO_WIDTH = 240;
 
 /** Most common value; ties go to the most recent. */
@@ -42,9 +42,14 @@ export class HandCam {
     this.landmarker = null; this.stream = null;
     this.samples = []; this.running = false; this.lastTime = -1;
     this.onFrame = null;
+    this.onLost = null;        // called if the camera stops by itself (permission revoked, another app took it, unplugged)
+    this.gen = 0;              // bumped by every start/stop, so a camera that arrives after it was cancelled is switched off again
+    this.debug = false;        // when true, every sample also carries the raw numbers behind the decision
+    this.fps = 0; this.frameTimes = [];
   }
 
   async load() {
+    if (this.landmarker) return;
     const mod = await import(MP + '/vision_bundle.mjs');
     const fileset = await mod.FilesetResolver.forVisionTasks(MP + '/wasm');
     const make = delegate => mod.HandLandmarker.createFromOptions(fileset, {
@@ -56,13 +61,23 @@ export class HandCam {
   async startCamera() {
     if (this.stream) this.stream.getTracks().forEach(t => t.stop());
     if (!navigator.mediaDevices?.getUserMedia) return 'The camera needs a secure page (https, or localhost).';
+    const gen = ++this.gen;
+    let stream;
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: this.facing }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
     } catch (e) {
       return e.name === 'NotAllowedError' || e.name === 'SecurityError'
         ? 'Camera permission denied. Allow the camera in the browser site settings, then reload.'
         : 'Could not open the camera (' + e.name + ').';
+    }
+    if (gen !== this.gen) {                    // released (or restarted) while the permission prompt / camera start was pending
+      try { stream.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
+      return 'cancelled';
+    }
+    this.stream = stream;
+    for (const t of stream.getVideoTracks?.() || stream.getTracks()) {
+      t.addEventListener?.('ended', () => { if (this.stream === stream) { this.stopCamera(); this.pause(); this.onLost?.(); } });
     }
     this.video.srcObject = this.stream;
     await this.video.play();
@@ -84,9 +99,21 @@ export class HandCam {
       if (v.readyState >= 2 && v.currentTime !== this.lastTime) {
         this.lastTime = v.currentTime;
         if (this.canvas.width !== v.videoWidth) { this.canvas.width = v.videoWidth; this.canvas.height = v.videoHeight; }
-        const hands = this.landmarker.detectForVideo(v, performance.now()).landmarks || [];
+        const res = this.landmarker.detectForVideo(v, performance.now());
+        let hands = res.landmarks || [];
+        const handed = res.handednesses || res.handedness || [];
+        // the model's own confidence for each detected hand (the "raw landmark confidence"), and which hand it thinks it is
+        let scores = hands.map((_, i) => ({ score: handed[i]?.[0]?.score ?? null, side: handed[i]?.[0]?.categoryName ?? '?' }));
+        if (TUNING.minScore > 0) {                       // drop hands the model is not sure about
+          const keep = hands.map((_, i) => scores[i].score === null || scores[i].score >= TUNING.minScore);
+          hands = hands.filter((_, i) => keep[i]); scores = scores.filter((_, i) => keep[i]);
+        }
         const aspect = v.videoWidth / v.videoHeight;
-        const s = { has: hands.length > 0, count: countHands(hands, aspect), gesture: classifyHands(hands, aspect), hands };
+        const now = performance.now();
+        this.frameTimes.push(now); if (this.frameTimes.length > 20) this.frameTimes.shift();
+        if (this.frameTimes.length > 1) this.fps = (this.frameTimes.length - 1) * 1000 / (now - this.frameTimes[0]);
+        const s = { has: hands.length > 0, count: countHands(hands, aspect), gesture: classifyHands(hands, aspect), hands, scores, fps: this.fps };
+        if (this.debug) s.dbg = hands.map(lm => fingerDebug(lm, aspect));
         this.samples.push(s);
         if (this.samples.length > SAMPLES) this.samples.shift();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -105,6 +132,7 @@ export class HandCam {
 
   /** Switches the camera OFF (tracks stopped, so the phone's camera light goes out), not just the analysis. */
   stopCamera() {
+    this.gen++;                                  // cancels a camera start that is still pending
     try { this.stream?.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
     this.stream = null;
     try { this.video.pause(); this.video.srcObject = null; } catch { /* ignore */ }
@@ -126,7 +154,7 @@ export class HandCam {
    */
   snap(style = {}) {
     const mode = VIEWS.includes(style.mode) ? style.mode : 'avatar';
-    const recent = this.samples.slice(-7);
+    const recent = this.samples.slice(-Math.round(TUNING.frames));
     const seen = recent.filter(s => s.has);
     const noHand = recent.length === 0 || seen.length * 2 < recent.length;
     const count = noHand ? 0 : mode_(seen.map(s => s.count)).value;

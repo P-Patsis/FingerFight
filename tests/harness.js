@@ -1,5 +1,6 @@
 // A tiny fake browser (DOM + PeerJS + storage) so js/main.js can run in plain Node. Only what the game uses.
 import fs from 'node:fs';
+import { setTurnServers } from '../js/ice.js';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -120,6 +121,7 @@ export function installBrowser(search, hash = '') {
   globalThis.localStorage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
   Object.defineProperty(globalThis, 'navigator', { value: { clipboard: { writeText: async () => {} } }, configurable: true });
   globalThis.Peer = FakePeer;
+  setTurnServers([{ urls: 'turn:relay.test.invalid:3478', username: 'u', credential: 'c' }]);   // a configured relay, so random matches are allowed
   network.clear();
   return { byId, screens, visible: () => screens.filter(s => !s.hidden).map(s => s.id) };
 }

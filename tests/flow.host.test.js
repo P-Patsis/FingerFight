@@ -102,6 +102,8 @@ test('game 1: the host points, the guesser is right, the host loses', async () =
   await until(() => b.visible()[0] === 'over', 'game over screen', 20000);
   assert.equal($('overTitle').textContent, 'YOU LOSE');
   assert.ok($('botHp').children[0].classList.contains('lost'));
+  assert.equal($('collage').hidden, false, 'the final screen shows the collage');
+  assert.equal($('collage').children[0].children.length, 2, 'a label column plus one column for the one round played');
   assert.equal($('againBtn').disabled, false);
 });
 

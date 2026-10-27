@@ -33,7 +33,7 @@ test('imports resolve to files', () => {
 });
 
 test('CSS classes the scripts add are defined', () => {
-  const wanted = ['idle', 'punch', 'hit', 'ko', 'win', 'taunt', 'crit-fx', 'shake', 'shake-big', 'flash', 'spark', 'dmg', 'reveal', 'badge', 'sim', 'hint', 'thinking', 'urgent', 'locked', 'sel', 'mode-picker', 'skin-picker', 'real', 'lost', 'on', 'mirror', 'crit', 'good'];
+  const wanted = ['idle', 'punch', 'hit', 'ko', 'win', 'taunt', 'crit-fx', 'shake', 'flash', 'combo', 'wipe', 'collage', 'cg-tile', 'cg-ok', 'spark', 'dmg', 'reveal', 'badge', 'sim', 'hint', 'thinking', 'urgent', 'locked', 'sel', 'mode-picker', 'skin-picker', 'real', 'lost', 'on', 'mirror', 'crit', 'good'];
   for (const c of wanted) assert.ok(new RegExp('\\.' + c.replace('-', '\\-') + '\\b').test(css), 'missing CSS for .' + c);
   for (let i = 0; i < 5; i++) { assert.ok(css.includes('.bg-' + i), 'bg-' + i); assert.ok(css.includes('.thumb-' + i), 'thumb-' + i); }
 });

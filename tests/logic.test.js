@@ -15,7 +15,7 @@ test('correct guess hits the pointer for 1', () => {
 
 test('wrong guess, no gesture: a miss', () => {
   assert.deepEqual(R({ guess: 3 }), { target: null, damage: 0, reason: 'miss' });
-  assert.equal(R({ guess: null }).reason, 'miss', 'no guess counts as wrong');
+  assert.equal(R({ guess: null }).reason, 'noguess', 'no hand seen: no guess, still no damage');
 });
 
 test('gestures never score: a rude gesture with a wrong guess is just a miss', () => {
@@ -29,13 +29,16 @@ test('a right guess scores exactly 1, whatever the gesture', () => {
   assert.deepEqual(R({ guess: 4, gesture: 'sideways' }), { target: 'host', damage: 1, reason: 'correct' });
 });
 
-test('only a correct guess scores: a missing guess gives the pointer nothing', () => {
-  assert.equal(R({ guess: null }).target, null);
-  assert.equal(R({ guess: undefined }).damage, 0);
+test('a closed fist is a real 0 and can be guessed', () => {
+  assert.deepEqual(R({ count: 0, guess: 0 }), { target: 'host', damage: 1, reason: 'correct' });
+  assert.equal(R({ count: 0, guess: 1 }).target, null);
 });
 
-test('hiding the hand forfeits the round', () => {
-  assert.deepEqual(R({ noHand: true, guess: 9 }), { target: 'host', damage: 1, reason: 'nohand' });
+test('no hand at all: no guess scores nothing, and no answer scores nothing', () => {
+  assert.deepEqual(R({ guess: null }), { target: null, damage: 0, reason: 'noguess' });
+  assert.equal(R({ guess: undefined }).damage, 0);
+  assert.deepEqual(R({ noHand: true, guess: 0 }), { target: null, damage: 0, reason: 'nohand' });
+  assert.equal(R({ noHand: true, guess: 9 }).target, null);
 });
 
 test('a game plays to the end', () => {
