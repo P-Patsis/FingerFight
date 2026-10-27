@@ -55,3 +55,11 @@ test('the camera test screen opens and closes without a camera (simulator), leav
   assert.deepEqual(b.visible(), ['menu']);
   assert.equal($('camLive').hidden, true, 'the CAMERA ON badge is off');
 });
+
+test('the shipped config has STUN plus a TURN relay, so random matches are allowed', async () => {
+  const fresh = await import('../js/ice.js?fresh');
+  assert.ok(fresh.hasRelay());
+  assert.ok(fresh.STUN_SERVERS.length >= 2);
+  const urls = fresh.turnServers().flatMap(s => [].concat(s.urls));
+  assert.ok(urls.includes('turn:free.expressturn.com:3478') && urls.includes('turn:free.expressturn.com:3478?transport=tcp'));
+});

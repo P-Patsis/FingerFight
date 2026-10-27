@@ -14,6 +14,14 @@
 
 Newest first.
 
+## 2026-10-27 (night) — Free TURN relay added; Enable-camera hardening
+- Changed:
+  - `js/ice.js`: ExpressTURN free-tier relay added next to the kept STUN servers (direct first, relay as fallback; random matches are relay-only). Probed the host first: UDP 3478 and TCP 3478 answer STUN, so both are listed. Port 443 serves a certificate for a different hostname (no `turns:`), 80 and 5349 gave no STUN reply, so no other endpoints were invented. The credentials are free, revocable and PUBLIC in the client; rotate them in the ExpressTURN dashboard after multiplayer is confirmed.
+  - Random match no longer refuses with "no relay" (`hasRelay()` is now true by default); new test checks STUN + both TURN URLs ship.
+  - Enable camera: the 17 MB hand model now lives in its own `ff-heavy` cache that survives site updates (the 'ff-v2' bump had wiped it, so the button waited on a re-download); slow-load message after 20 s; errors in the camera path or anywhere on the page are written on screen.
+- Verified: automated 103/103. NOT verified on a device: an actual relayed connection (credentials checked only by endpoint reachability, not an authenticated allocation), the camera button on the phone.
+- Open: test a random match and a university-network match; then rotate the TURN credentials.
+
 ## 2026-10-27 (late night) — Music, sound, effects, final collage, calibration panel, robustness audit (NOT YET TRIED ON PHONES)
 - User decisions: a closed fist is a real 0; NO HAND AT ALL = "no guess" (the round is a miss, nobody takes damage; a hidden pointer hand is "no answer", also a miss). The old "hide your hand = free hit for the guesser" is gone.
 - Changed:
