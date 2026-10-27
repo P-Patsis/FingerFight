@@ -14,6 +14,10 @@
 
 Newest first.
 
+## 2026-10-27 (night, final) — The real cause of the dead buttons: an unclosed HTML comment
+- User saw "out of date (missing: overLeave, againBtn)" even on a fresh load. Cause: `<!-- ===== Game over =====` in index.html had no `-->`, so browsers swallowed the whole result screen up to the next comment end. This was introduced with the collage commit; it was the REAL cause of the dead Enable camera / Camera test buttons too (the missing-element crash), not (only) a stale cache. My Node fake DOM does not parse comments, so the tests missed it.
+- Fixed: comment closed; tests/ids.test.js now checks every comment is closed and ignores ids inside comments (verified it fails on the old file). SW VERSION ff-8470d479. 106/106.
+
 ## 2026-10-27 (night, last) — Self-updating service worker
 - User: camera works after the reload. Changed: see DECISIONS.md "Service worker must self-update". New: tools/stamp.mjs (VERSION = hash of the shell files, now ff-ac696c68), tests/sw.test.js, update handling in main.js (auto reload on the menu, banner during a match). 106/106.
 - Verified: automated only. NOT verified: a real update cycle in a browser (needs one more deploy after this one, then reload twice).

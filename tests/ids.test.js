@@ -5,7 +5,9 @@ import { readFileSync } from 'node:fs';
 
 test('every $(\'id\') in main.js exists in index.html', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  const ids = new Set([...html.matchAll(/id="([^"]+)"/g)].map(m => m[1]));
+  assert.equal((html.match(/<!--/g) || []).length, (html.match(/-->/g) || []).length, 'every HTML comment is closed (an open one hides the page below it)');
+  const live = html.replace(/<!--[\s\S]*?-->/g, '');
+  const ids = new Set([...live.matchAll(/id="([^"]+)"/g)].map(m => m[1]));
   const used = new Set([...readFileSync(new URL('../js/main.js', import.meta.url), 'utf8').matchAll(/\$\('([^']+)'\)/g)].map(m => m[1]));
   assert.deepEqual([...used].filter(u => !ids.has(u)), []);
 });
