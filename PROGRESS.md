@@ -2,6 +2,19 @@
 
 Newest first.
 
+## 2026-10-27 — Reconnect, rejoin, installable app, random skins (NOT YET TRIED ON TWO PHONES)
+- Why: first real test: "kinda works", connection unstable, no way back into a lobby.
+- Changed:
+  - Link: heartbeat (ping every 3 s, silent 10 s = dead, only once the peer has pinged), then a 45 s grace period in which the guest re-dials and the host holds the seat. The seat is taken back only with a resume token (24 random chars offered in `hello`, over the encrypted channel); strangers and wrong tokens get `full`.
+  - Fight resync: the host replays an unfinished round and sends `sync` (hit points, round); a dropped connection never costs a hit.
+  - "Rejoin your last match" button (private matches, saved 20 min in localStorage, cleared on Leave). Host re-claims the same room id; guest re-dials with the token.
+  - Extra STUN server (Cloudflare) alongside PeerJS's defaults. Red "Reconnecting…" badge.
+  - Installable PWA: manifest, icons (scripts/make_icons.py), service worker (site files network-first, hand model cached once).
+  - Random cartoon skin by default (dice button = a new random skin each match; picking one still pins it).
+- Verified (automated, Node, 69/69): grace period, stranger and forged token refused, real guest taken back, mid-fight resync and round replay, session cleared on Leave, token offered in hello.
+- Verified on a device: nothing yet. Not exercised: real network drops (wifi to 4G), the service worker, installing.
+- Open: random matches have no resume (strangers, no token). Push notifications, friends, leaderboards and a custom fighter need a server (see DECISIONS.md).
+
 ## 2026-10-26 (later) — Private/random matchmaking, privacy hardening, reveal styles (NOT YET TRIED ON REAL CAMERAS / PHONES)
 - Changed:
   - Menu: Create private match (16-char code, copy/share), Join with a pasted code, Find a random opponent (with Cancel).

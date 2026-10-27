@@ -65,6 +65,7 @@ export const network = new Map();
 export const peers = [];
 export class FakePeer {
   constructor(id) {
+    if (id && typeof id === 'object') id = undefined;      // like PeerJS: new Peer(options) with no id
     this.id = id; this.h = {}; this.conn = null; peers.push(this);
     setTimeout(() => {
       if (id && network.has(id) && network.get(id) !== this) { this.emit('error', { type: 'unavailable-id' }); return; }
@@ -116,7 +117,7 @@ export function installBrowser(search, hash = '') {
   globalThis.location = { search, hash, origin: 'https://example.test', pathname: '/fingerfight/' };
   globalThis.history = { calls: [], replaceState(...a) { this.calls.push(a); } };
   const mem = new Map();
-  globalThis.localStorage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)) };
+  globalThis.localStorage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
   Object.defineProperty(globalThis, 'navigator', { value: { clipboard: { writeText: async () => {} } }, configurable: true });
   globalThis.Peer = FakePeer;
   network.clear();

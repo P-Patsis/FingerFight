@@ -22,3 +22,13 @@
 - **Random-match names are generated** ("Fighter 4821") so strangers can't use offensive names.
 - **Corrected earlier claim:** PeerJS ships public TURN relays by default (traffic is encrypted, relays can't read it), so blocked networks fall back to relaying rather than just failing.
 - **Not done on purpose:** a Content-Security-Policy meta (untestable here; a wrong one would break the camera/hand model silently), moderation / blocking, unlockable skins ("hands store" is a plain skin picker).
+
+## 2026-10-27 — Reconnect = resume token, not "whoever has the code"
+- Anyone with the match code can connect, so during a dropped connection the seat can't go to whoever shows up first. The guest invents a random token in `hello`; the host keeps the seat for 45 s for the connection that presents it. Random matches offer no token, so they never resume.
+- PeerJS `config` replaces its default ICE list, so net.js repeats PeerJS's defaults (Google STUN, PeerJS TURN) and adds Cloudflare STUN.
+- Heartbeat only enforced once the peer has pinged (older clients stay compatible).
+
+## 2026-10-27 — Features that need a server are not built
+- Push notifications (web push needs a server holding subscriptions and keys), friends lists, leaderboards, accounts and moderation all need a backend that stores data. The game has none on purpose (no accounts, no photos stored). A "friends" list that lives only on the phone and a custom-fighter editor do not need one.
+- PWA first; a real APK wrapper (WebView, as Lab Calc does) is the next step if wanted.
+

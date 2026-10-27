@@ -45,6 +45,8 @@ test('joining: the guest says hello and waits for the host to accept; a decline 
   await $('joinBtn').onclick();
   assert.deepEqual(b.visible(), ['lobby']);
   await until(() => hello, 'hello reaches the host');
+  assert.match(hello.token, /^[A-Z0-9]{24}$/, 'a resume token is offered');
+  delete hello.token;
   assert.deepEqual(hello, { t: 'hello', v: 2, kind: 'private', name: 'Gina' });
   assert.equal($('lobbyMsg').textContent, 'Waiting for the host to accept you…');
   hostConn.send({ t: 'rejected' });

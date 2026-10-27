@@ -1,0 +1,35 @@
+// Finger Fight service worker: lets the game install as an app and start without a network.
+//  - this site's files: network first (so an update arrives at once), the cached copy when offline
+//  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
+// Match traffic is WebRTC, which a service worker never sees.
+const VERSION = 'ff-v1';
+const SHELL = ['./', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
+  'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js', 'js/gestures.js', 'js/audio.js'];
+const HEAVY = ['https://cdn.jsdelivr.net/npm/@mediapipe/', 'https://storage.googleapis.com/mediapipe-models/'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = req.url;
+  if (HEAVY.some(p => url.startsWith(p))) {
+    e.respondWith(caches.open(VERSION).then(async c => {
+      const hit = await c.match(req);
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok) c.put(req, res.clone());
+      return res;
+    }));
+    return;
+  }
+  if (new URL(url).origin !== self.location.origin) return;
+  e.respondWith(fetch(req).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
+    return res;
+  }).catch(() => caches.match(req).then(r => r || caches.match('index.html'))));
+});

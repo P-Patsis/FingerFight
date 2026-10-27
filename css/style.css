@@ -209,3 +209,8 @@ input:focus { outline: none; border-color: var(--cyan); }
 .skin-picker canvas { width: 100%; height: auto; display: block; border-radius: 6px; }
 .reveal canvas { height: min(15vh, 130px); width: auto; border-radius: 10px; border: 2px solid #fff; }
 #joinPrompt { align-items: center; text-align: center; border: 2px solid var(--gold); }
+
+.net-badge { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); left: 50%; transform: translateX(-50%); z-index: 50;
+  background: #b4281e; color: #fff; padding: 6px 14px; border-radius: 999px; font: 600 13px system-ui, sans-serif; }
+.net-badge[hidden] { display: none; }
+.skin-picker .dice { font-size: 26px; }

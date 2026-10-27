@@ -6,9 +6,13 @@
   <meta name="theme-color" content="#0b1020">
   <meta name="referrer" content="no-referrer">
   <title>Finger Fight</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div id="netBadge" class="net-badge" role="status" hidden></div>
   <div id="stage" class="bg-0"><div id="scenery"></div><div class="scanlines"></div></div>
 
   <!-- ===== Menu ===== -->
@@ -23,6 +27,7 @@
       <button id="joinBtn" class="btn">Join</button>
     </div>
     <div class="or">or</div>
+    <button id="rejoinBtn" class="btn" hidden>Rejoin your last match</button>
     <button id="randomBtn" class="btn">Find a random opponent</button>
     <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>

@@ -4,7 +4,7 @@
 // snaps a photo + the count + any gesture and sends it; the guesser's phone sends the guess. Each side then runs
 // resolveRound() on the same inputs, so both screens show the same result. The host starts every round.
 import { sfx } from './audio.js';
-import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN } from './net.js';
+import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
 import { SKINS, drawAvatar, drawFromMessage, statesFromCount, skinById } from './avatars.js';
 import {
@@ -41,13 +41,19 @@ let helloTimer = null;                  // host: drop a connection that never sa
 let searching = false, searchId = 0;    // random matchmaking in progress
 let matchWaiter = null, hostWaiter = null;
 let autoStarted = false;
+let guestToken = null;                  // host: the resume token the pending guest offered in hello
 
 const MODE_LABELS = {
   avatar: 'Cartoon hand', skeleton: 'Skeleton', blur: 'Blurred photo + skeleton', 'photo-skeleton': 'Photo + skeleton', photo: 'Photo (real camera)',
 };
 // what I show my opponent: a view mode and a cartoon skin (remembered on this phone)
-let style = { mode: VIEWS.includes(store_get('ff-mode')) ? store_get('ff-mode') : 'avatar', skin: skinById(store_get('ff-skin')).id };
+let style = { mode: VIEWS.includes(store_get('ff-mode')) ? store_get('ff-mode') : 'avatar', skin: initialSkin() };
 
+/** The skin I draw with: the one I picked, or (default / 'random') a different random skin every time I start. */
+function initialSkin() {
+  const saved = store_get('ff-skin');
+  return saved && saved !== 'random' && SKINS.some(s => s.id === saved) ? saved : SKINS[Math.floor(Math.random() * SKINS.length)].id;
+}
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
 const store = {
   get: store_get,
@@ -59,6 +65,7 @@ const store = {
 // ---------------------------------------------------------------------------------------------
 function show(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+  if (id === 'menu') updateRejoin();
 }
 
 let currentBg = -1;
@@ -139,6 +146,9 @@ function makeLink(quiet = false) {
     onOpen: onLinkOpen,
     onMessage: onMessage,
     onClose: reason => onLinkClosed(reason),
+    canResume: () => !searching && !!names.host && !!names.guest,
+    onReconnecting: () => netBadge('Connection lost. Reconnecting…'),
+    onReconnected: () => onReconnected(),
     onStatus: t => { if (!quiet) menuMsg(t); },
   });
 }
@@ -187,6 +197,7 @@ $('joinBtn').onclick = async () => {
   menuMsg('Connecting…');
   link = makeLink();
   try {
+    link.setToken(newToken());
     await link.join(privateId(code));
   } catch (e) {
     const why = { 'no-room': 'There is no match with that code (or the host already left).', timeout: 'Could not connect. The other phone may be on a network that blocks connections.' }[e.message];
@@ -272,7 +283,7 @@ const allowPhotos = () => matchKind === 'private';          // random opponents 
 const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
-  if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest });
+  if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, token: link?.token || undefined });
   if (me === 'host') {                                     // a connection that never says hello must not hog the room
     clearTimeout(helloTimer);
     helloTimer = setTimeout(() => { if (me === 'host' && !names.guest && !pendingGuest) link?.dropGuest(); }, 8000);
@@ -282,14 +293,100 @@ function onLinkOpen() {
 function onLinkClosed(reason) {
   if (!me || searching) return;
   const wasPlaying = inGame;
+  clearSession();
   resetAll();
   show('menu');
   menuMsg(wasPlaying ? 'Your opponent left the fight.' : 'The connection closed (' + reason + ').', true);
 }
 
+// ---- reconnecting and rejoining (private matches only)
+const SESSION_KEY = 'ff-session';
+const SESSION_MAX_AGE = 20 * 60 * 1000;
+function saveSession() {
+  if (matchKind !== 'private' || !link?.token || !me) return;
+  store.set(SESSION_KEY, JSON.stringify({ role: me, code: roomCodeRaw, token: link.token, names, t: Date.now() }));
+}
+function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ } updateRejoin(); }
+function loadSession() {
+  try {
+    const x = JSON.parse(store.get(SESSION_KEY) || 'null');
+    if (!x || (x.role !== 'host' && x.role !== 'guest') || x.code?.length !== CODE_LEN || !validToken(x.token) || Date.now() - x.t > SESSION_MAX_AGE) return null;
+    return { role: x.role, code: cleanCode(x.code), token: x.token, names: { host: sanitizeName(x.names?.host), guest: sanitizeName(x.names?.guest) } };
+  } catch { return null; }
+}
+function updateRejoin() {
+  const x = loadSession();
+  $('rejoinBtn').hidden = !x;
+  if (x) $('rejoinBtn').textContent = 'Rejoin your last match (' + (x.role === 'host' ? x.names.guest || 'friend' : x.names.host || 'host') + ')';
+}
+
+function netBadge(text) {
+  $('netBadge').textContent = text;
+  $('netBadge').hidden = !text;
+}
+
+function onReconnected() {
+  netBadge('');
+  showBanner('RECONNECTED', '', 1200);
+  send({ t: 'ready', ready: ready[me] });
+  if (me !== 'host') return;
+  send({ t: 'settings', settings });
+  if (inGame && game && !game.over) {
+    // an unresolved round is replayed from scratch: nobody loses a hit because of a dropped connection
+    if (!round?.resolved) game.round = Math.max(0, (round?.n || game.round) - 1);
+    token++;
+    round = null; releaseCamera();
+    send({ t: 'sync', health: game.health, round: game.round });
+    later(1500, nextRound);
+  } else if (inGame && game?.over) {
+    send({ t: 'sync', health: game.health, round: game.round, over: true, winner: game.winner });
+  }
+}
+
+function applySync(m) {
+  const max = settings.hits;
+  const hp = v => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
+  const h = hp(m.health?.host), g = hp(m.health?.guest);
+  if (h === null || g === null || !Number.isInteger(m.round) || m.round < 0 || m.round > 999) return;
+  game.health = { host: h, guest: g };
+  game.round = m.round;
+  renderHp('host'); renderHp('guest');
+  if (m.over && (m.winner === 'host' || m.winner === 'guest') && !game.over) {
+    game.over = true; game.winner = m.winner;
+    token++; knockout();
+    return;
+  }
+  if (!m.over) { token++; round = null; releaseCamera(); }
+}
+
+$('rejoinBtn').onclick = async () => {
+  sfx.unlock();
+  const x = loadSession();
+  if (!x) { updateRejoin(); return; }
+  resetAll();
+  matchKind = 'private'; me = x.role; names = { ...x.names }; roomCodeRaw = x.code;
+  menuMsg('Rejoining…');
+  link = makeLink();
+  try {
+    if (x.role === 'guest') await link.join(privateId(x.code), 20000, x.token);
+    else { link.setToken(x.token); await link.rehost(privateId(x.code)); }
+  } catch (e) {
+    menuMsg(x.role === 'guest' ? 'Could not rejoin. The match may be over.' : 'Could not reopen the match (' + e.message + '). Try again in a minute.', true);
+    resetAll(); updateRejoin();
+    return;
+  }
+  $('roomCode').textContent = formatCode(x.code);
+  enterLobby();
+  if (x.role === 'guest') { send({ t: 'ready', ready: ready.guest }); }
+  else menuMsg('');
+  saveSession();
+};
+
 function acceptGuest(name) {
   pendingGuest = null;
   names.guest = name;
+  link?.setToken(guestToken);
+  saveSession();
   send({ t: 'welcome', v: PROTOCOL, kind: matchKind, name: names.host, settings, ready: ready.host });
   hostWaiter?.(true);
   renderLobby();
@@ -321,6 +418,7 @@ function onMessage(m) {
       if (me !== 'host' || names.guest || pendingGuest) break;
       if (m.v !== PROTOCOL || m.kind !== matchKind) { send({ t: 'rejected' }); link?.dropGuest(); break; }
       clearTimeout(helloTimer);
+      guestToken = validToken(m.token) ? m.token : null;
       if (matchKind === 'private' && requireApproval) { pendingGuest = sanitizeName(m.name); renderLobby(); }
       else acceptGuest(sanitizeName(m.name));
       break;
@@ -330,6 +428,7 @@ function onMessage(m) {
       settings = normalizeSettings(m.settings);
       ready.host = m.ready === true;
       send({ t: 'ready', ready: ready.guest });
+      saveSession();
       matchWaiter?.(true);
       renderLobby();
       break;
@@ -347,6 +446,10 @@ function onMessage(m) {
       if (me !== 'guest' || !names.host) break;
       settings = normalizeSettings(m.settings);
       startGame();
+      break;
+    case 'sync':                                    // guest: the host's view of the fight after a reconnect
+      if (me !== 'guest' || !inGame || !game) break;
+      applySync(m);
       break;
     case 'round':
       if (me === 'guest' && inGame && Number.isInteger(m.n) && m.n === game.round + 1) beginRound(m.n);
@@ -418,6 +521,11 @@ function buildStyleCard() {
     b.onclick = () => { style.skin = sk.id; store.set('ff-skin', sk.id); renderStyle(); };
     skins.append(b);
   }
+  const dice = el('button', 'dice', '🎲');
+  dice.type = 'button'; dice.title = 'A random skin every match';
+  dice.dataset.skin = 'random';
+  dice.onclick = () => { store.set('ff-skin', 'random'); style.skin = initialSkin(); renderStyle(); };
+  skins.append(dice);
   $('photoBtn').onclick = () => { showPhotos = !showPhotos; renderStyle(); };
   renderStyle();
 }
@@ -429,7 +537,8 @@ function renderStyle() {
     b.classList.toggle('sel', b.dataset.mode === style.mode);
     b.disabled = random && !SAFE_VIEWS.includes(b.dataset.mode);
   }
-  for (const b of $('skinPicker').children) b.classList.toggle('sel', b.dataset.skin === style.skin);
+  const randomPick = store.get('ff-skin') === 'random' || !store.get('ff-skin');
+  for (const b of $('skinPicker').children) b.classList.toggle('sel', b.dataset.skin === 'random' ? randomPick : (!randomPick && b.dataset.skin === style.skin));
   $('skinRow').hidden = style.mode !== 'avatar';
   $('photoRow').hidden = random;
   $('photoBtn').textContent = showPhotos ? 'On' : 'Off';
@@ -514,6 +623,7 @@ $('camBtn').onclick = enableCamera;
 
 function leave() {
   send({ t: 'bye' });
+  clearSession();
   resetAll();
   show('menu');
   menuMsg('');
@@ -854,6 +964,7 @@ function resetAll() {
   cam = null; camReady = false;
   matchKind = null; roomCodeRaw = ''; pendingGuest = null; autoStarted = false;
   clearTimeout(helloTimer);
+  guestToken = null; netBadge('');
   matchWaiter = null; hostWaiter = null;
   if (searching) { searchId++; setSearching(false); }
   $('camBtn').disabled = false;
@@ -864,3 +975,9 @@ function resetAll() {
 
 setBackground(0);
 show('menu');
+updateRejoin();
+
+// Installable app + offline start (needs HTTPS, so not on the plain-http dev server)
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* not fatal */ });
+}
