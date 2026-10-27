@@ -12,6 +12,7 @@ import {
   sanitizeName, validGuessMsg, validReveal, VIEWS, SAFE_VIEWS, RANDOM_SLOTS,
 } from './logic.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
+import { classifyHands } from './gestures.js';
 
 const $ = id => document.getElementById(id);
 const SIM = new URLSearchParams(location.search).has('sim');   // ?sim=1: no camera, set the hand by tapping (for testing)
@@ -36,6 +37,7 @@ let matchKind = null;                   // 'private' (friends, long code) | 'ran
 let roomCodeRaw = '';                   // the private match code, without dashes
 let pendingGuest = null;                // private match: a guest waiting for the host to accept
 let requireApproval = true;             // host: ask before someone joins a private match
+let hideRude = store_get('ff-rude') !== '0';   // default ON: never show a rude gesture, only the number (my own choice, on my phone)
 let showPhotos = true;                  // private match: display a friend's real photo if they send one
 let helloTimer = null;                  // host: drop a connection that never says hello
 let searching = false, searchId = 0;    // random matchmaking in progress
@@ -206,7 +208,16 @@ $('joinBtn').onclick = async () => {
     link.setToken(newToken());
     await link.join(privateId(code));
   } catch (e) {
-    const why = { 'no-room': 'There is no match with that code (or the host already left).', timeout: 'Could not connect. The other phone may be on a network that blocks connections.' }[e.message];
+    const why = {
+      'no-room': 'There is no match with that code (or the host already left).',
+      timeout: 'Found the match but could not open a direct link in 15 s. One of the two networks (a VPN, school/work wifi or a strict firewall) is probably blocking it. Try the other device on mobile data or without the VPN.',
+      network: 'Could not reach the matchmaking server (0.peerjs.com). Check this device\'s internet, VPN or ad-blocker.',
+      'server-error': 'The matchmaking server did not answer. Try again in a minute.',
+      'socket-error': 'Could not reach the matchmaking server. Check internet, VPN or ad-blocker.',
+      'socket-closed': 'The matchmaking connection was closed. Try again.',
+      webrtc: 'This browser could not set up the peer link (WebRTC).',
+      'browser-incompatible': 'This browser does not support the peer link (WebRTC).',
+    }[e.message];
     menuMsg(why || 'Could not connect (' + e.message + ').', true);
     resetAll();
     return;
@@ -560,6 +571,7 @@ function buildStyleCard() {
   dice.onclick = () => { store.set('ff-skin', 'random'); style.skin = initialSkin(); renderStyle(); };
   skins.append(dice);
   $('photoBtn').onclick = () => { showPhotos = !showPhotos; renderStyle(); };
+  $('rudeBtn').onclick = () => { hideRude = !hideRude; store.set('ff-rude', hideRude ? '1' : '0'); renderStyle(); };
   renderStyle();
 }
 
@@ -576,6 +588,8 @@ function renderStyle() {
   $('photoRow').hidden = random;
   $('photoBtn').textContent = showPhotos ? 'On' : 'Off';
   $('photoBtn').classList.toggle('on', showPhotos);
+  $('rudeBtn').textContent = hideRude ? 'On' : 'Off';
+  $('rudeBtn').classList.toggle('on', hideRude);
   const real = !SAFE_VIEWS.includes(style.mode);
   $('styleNote').textContent = random
     ? 'Random opponent: only drawn data is shared. Your camera image never leaves this phone.'
@@ -596,8 +610,6 @@ function renderLobby() {
   $('stGuest').textContent = names.guest ? (ready.guest ? 'ready' : 'camera off') : '';
   $('valSeconds').textContent = settings.seconds;
   $('valHits').textContent = settings.hits;
-  $('critBtn').textContent = settings.crits ? 'On' : 'Off';
-  $('critBtn').classList.toggle('on', settings.crits);
   $('approveBtn').textContent = requireApproval ? 'On' : 'Off';
   $('approveBtn').classList.toggle('on', requireApproval);
   $('approveRow').hidden = !(matchKind === 'private' && me === 'host');
@@ -606,6 +618,7 @@ function renderLobby() {
   $('settingsCard').hidden = random;
   $('settingsCard').classList.toggle('locked', me !== 'host');
   $('joinPrompt').hidden = !pendingGuest;
+  if (pendingGuest) $('joinPrompt').scrollIntoView?.({ block: 'nearest' });
   if (pendingGuest) $('joinText').textContent = pendingGuest + ' wants to join your match.';
   $('camBtn').hidden = camReady;
   const canStart = me === 'host' && link?.open && !!names.guest && ready.host && ready.guest;
@@ -630,12 +643,6 @@ $('settingsCard').addEventListener('click', e => {
   send({ t: 'settings', settings });
   renderLobby();
 });
-$('critBtn').onclick = () => {
-  if (me !== 'host') return;
-  settings = normalizeSettings({ ...settings, crits: !settings.crits });
-  send({ t: 'settings', settings });
-  renderLobby();
-};
 $('approveBtn').onclick = () => { if (me === 'host') { requireApproval = !requireApproval; renderLobby(); } };
 
 $('copyBtn').onclick = async () => {
@@ -816,8 +823,8 @@ function setupCameraUI() {
   $('camCaption').className = pointing ? 'point' : 'guess';
   cam.onFrame = s => {
     $('liveCount').textContent = s.count;
-    // only the pointer's gestures score, so only show the gesture label to the pointer
-    $('liveGesture').textContent = pointing && s.gesture ? GESTURE_NAMES[s.gesture] : '';
+    // gestures never score; the label is shown only to the pointer and only if the rude-gesture filter is off
+    $('liveGesture').textContent = pointing && s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : '';
   };
   cam.run();
 }
@@ -857,7 +864,7 @@ function tryResolve() {
   round.resolved = true;
   round.phase = 'result';
   const { pointer, reveal, guessMsg } = round;
-  const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, gesture: reveal.gesture, noHand: reveal.noHand, crits: settings.crits });
+  const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, noHand: reveal.noHand });
   const before = { ...game.health };
   game = applyResult(game, result);
   showReveal(pointer, reveal, guessMsg, result);
@@ -882,14 +889,34 @@ function buildPicture(msg) {
   return c;
 }
 
+/** Does this picture show a rude gesture? Uses the sender's gesture flag, the hand landmarks, and the finger flags. */
+function looksRude(msg) {
+  if (msg.gesture) return true;
+  if (Array.isArray(msg.hands) && msg.hands.some(h => h.middle && !h.index && !h.ring && !h.pinky)) return true;   // only the middle finger up
+  if (Array.isArray(msg.lm) && msg.lm.length) {
+    const hands = msg.lm.map(h => h.map(([x, y]) => ({ x: x / 1000, y: y / 1000 })));
+    if (classifyHands(hands, msg.ar || 1)) return true;
+  }
+  return false;
+}
+
+/** With the filter on, a rude picture is replaced by a plain drawn hand with the same number of fingers. */
+function filtered(msg) {
+  if (!hideRude || !looksRude(msg)) return msg;
+  const n = Array.isArray(msg.hands) ? msg.hands.reduce((a, h) => a + Object.values(h).filter(Boolean).length, 0) : 0;
+  return { ...msg, gesture: null, view: 'avatar', photo: '', lm: null, hands: statesFromCount(Math.min(10, Number.isInteger(msg.count) ? msg.count : n)) };
+}
+
 function showReveal(pointer, reveal, guessMsg, result) {
-  // the pointer's side: picture, number, gesture
+  reveal = filtered(reveal);
+  guessMsg = guessMsg.guess === null ? guessMsg : filtered(guessMsg);
+  // the pointer's side: picture, number
   const card = el('div', 'reveal');
   if (!reveal.noHand) card.append(buildPicture(reveal));
   const big = el('div', 'big', reveal.noHand ? '?' : String(reveal.count));
   big.append(el('small', '', reveal.noHand ? 'no hand seen' : 'fingers'));
   card.append(big);
-  if (reveal.gesture && settings.crits) card.append(el('span', 'badge', GESTURE_NAMES[reveal.gesture]));
+  if (reveal.gesture && !hideRude) card.append(el('span', 'badge', GESTURE_NAMES[reveal.gesture]));   // shown, never scored
   contentEl(pointer).replaceChildren(card);
   // the guesser's side: their fingers, the guess, and whether it was right
   const g = el('div', 'reveal');
@@ -942,15 +969,12 @@ function playResult(result, reveal, before) {
   later(500, () => { fighterEl(attacker).classList.add('punch'); sfx.whoosh(); });
   later(850, () => {
     fighterEl(target).classList.add('hit');
-    spark(target, result.crit, result.damage);
-    shake(result.crit);
-    (result.crit ? sfx.crit : sfx.hit).call(sfx);
-    if (navigator.vibrate) navigator.vibrate(result.crit ? [60, 40, 90] : 50);
+    spark(target, false, result.damage);
+    shake(false);
+    sfx.hit();
+    if (navigator.vibrate) navigator.vibrate(50);
     renderHp(target, before[target]);
-    if (result.crit) {
-      fighterEl(attacker).classList.add('crit-fx');
-      showBanner('CRITICAL!', GESTURE_NAMES[reveal.gesture] + ' (−' + result.damage + ')', 1700, 'crit');
-    } else if (result.reason === 'nohand') {
+    if (result.reason === 'nohand') {
       showBanner('NO HAND!', text, 1500, 'good');
     } else {
       showBanner('HIT!', text, 1300, 'good');

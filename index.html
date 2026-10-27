@@ -44,8 +44,8 @@
       <div class="room-label">MATCH CODE (send it to your friend)</div>
       <div id="roomCode" class="room-code">----</div>
       <div class="row center">
-        <button id="copyBtn" class="btn small">Copy code</button>
-        <button id="shareBtn" class="btn small ghost">Share link</button>
+        <button id="copyBtn" class="btn">Copy code</button>
+        <button id="shareBtn" class="btn ghost">Share link</button>
       </div>
     </div>
     <p id="randomNote" class="msg" hidden>Random opponent. Only a cartoon or skeleton of your hand is shared, never a camera image.</p>
@@ -62,13 +62,13 @@
         <div class="stepper"><button data-step="seconds:-1" class="step">−</button><b id="valSeconds">5</b><button data-step="seconds:1" class="step">+</button></div></div>
       <div class="set"><span>Hits to win</span>
         <div class="stepper"><button data-step="hits:-1" class="step">−</button><b id="valHits">3</b><button data-step="hits:1" class="step">+</button></div></div>
-      <div class="set"><span>Critical gestures</span><button id="critBtn" class="toggle">On</button></div>
       <div class="set" id="approveRow"><span>Ask before someone joins</span><button id="approveBtn" class="toggle on">On</button></div>
       <div class="set col"><span>Arena</span><div id="bgPicker" class="bg-picker"></div></div>
     </div>
     <div class="card" id="styleCard">
       <div class="set col"><span>What your opponent sees of your hand</span><div id="modePicker" class="mode-picker"></div></div>
       <div class="set col" id="skinRow"><span>Cartoon hand skin</span><div id="skinPicker" class="skin-picker"></div></div>
+      <div class="set"><span>Hide rude gestures (show only the number)</span><button id="rudeBtn" class="toggle on">On</button></div>
       <div class="set" id="photoRow"><span>Show my opponent's photos</span><button id="photoBtn" class="toggle on">On</button></div>
       <p id="styleNote" class="fine"></p>
     </div>

@@ -39,3 +39,9 @@
 - Random matches end when the fight ends (the connection is closed, no rematch) and route through the relay (no IP exposure). A drop is a loss.
 - Rejoin exists for private matches only, behind a 24-char secret, for 3 minutes.
 
+
+## 2026-10-27 (evening) — Scoring and the rude-gesture filter
+- **Only a correct guess scores.** No critical hits, no points for the pointer when the guesser is wrong or does not guess. Gestures are never an input to `resolveRound`.
+- **Gestures are detected but filtered, default ON.** The filter is the VIEWER's choice (stored on their phone), applied when drawing a reveal: a rude picture becomes a plain hand with the same finger count, so the number is all you see. It is not a setting the sender can force on or off for the other player.
+- **Old clients stay compatible:** `validReveal` still accepts a `gesture` field (known values or null/absent) and ignores it; unknown values are still rejected.
+- **Screens must scroll from the top:** never combine `justify-content:center` with `overflow:auto` on a screen; use auto margins on the first/last child.

@@ -14,6 +14,20 @@
 
 Newest first.
 
+## 2026-10-27 (evening) — Only correct guesses score; rude-gesture filter; scrollable menu/lobby (NOT YET TRIED ON DEVICES)
+- Why: user feedback after trying it: score only when you guess correctly; keep it PG; the menu is not scrollable and "Copy code" is hidden; a laptop could not connect.
+- Changed:
+  - Scoring: critical hits are gone. A right guess hits the pointer for 1; a wrong or missing guess is a miss for everyone. (A pointer hiding their hand still forfeits the round: unchanged, see Open.) The lobby's "Critical gestures" setting and the CRITICAL banner/sound path were removed; `crits` is ignored if an old client sends it.
+  - Gestures (middle finger, moutza, sideways) are still DETECTED and sent, but never score. New per-player setting "Hide rude gestures (show only the number)", default ON, saved on the phone (`ff-rude`). With it on, a reveal or guess picture that looks rude (gesture flag, or only the middle finger up, or landmarks classified as a gesture) is replaced by a plain drawn hand with the same number of fingers and no photo, and the gesture is not named or shown on the live camera label. With it off, the gesture's name is shown as a badge (still no scoring).
+  - Layout: `.screen` used `justify-content:center` + scrolling, which clips the top of tall content and cannot be scrolled to (that hid the match code and Copy button). Now auto margins centre short content and tall content scrolls. The match-code box is sticky at the top of the lobby with large Copy / Share buttons; the "someone wants to join" card scrolls into view and has a gold border; smaller logo on short screens; wider cards on laptops.
+  - Join errors are now specific (no such match / link blocked within 15 s / cannot reach the matchmaking server / browser lacks WebRTC) instead of one generic line.
+- Verified (automated, Node, 83/83): updated rules tests (gestures never score, missing guess scores nothing), flows as host and guest with the default filter (gesture not named), message validation still accepts an old client's gesture field.
+- Verified on a device: nothing yet. Layout and the filter have not been looked at on a screen.
+- Open:
+  - LAPTOP CONNECTION: cause unknown. Need the exact message the laptop showed (and the phone's state: did the host see a "wants to join" card?). Likely suspects: VPN/firewall or ad-blocker blocking 0.peerjs.com / WebRTC, or the host's approval card having been off-screen (fixed above).
+  - Decide: should a pointer who hides their hand still give the guesser a free hit? (Strict "only correct guesses score" would make it a miss.)
+  - The filter can't hide what a real photo shows if a modified client omits its landmarks and gesture; photos exist only between friends in private matches, who can switch them off.
+
 ## 2026-10-27 (later) — Safety pass: camera off by default, strangers forfeit on drop, relay-only for strangers (NOT YET TRIED ON PHONES)
 - Found: the camera stream was opened in the lobby and stayed on (light on) for the whole match; `pause()` only stopped the analysis. Fixed.
 - Changed:

@@ -9,7 +9,7 @@ const b = installBrowser('?sim=1', '#room=ABCD-EFGH-JKLM-NPQR');
 const $ = id => b.byId.get(id);
 await import('../js/main.js');
 
-const SETTINGS = { seconds: 3, hits: 1, crits: true, background: 2 };
+const SETTINGS = { seconds: 3, hits: 1, background: 2 };
 const simButton = (sel, value) => $('bottomContent').querySelectorAll(sel).find(x => Object.values(x.dataset)[0] === value);
 const picture = (over = {}) => ({ view: 'avatar', skin: 'gold', hands: [{ thumb: false, index: true, middle: true, ring: true, pinky: true }], lm: null, ar: 1.333, photo: '', ...over });
 
@@ -103,16 +103,17 @@ test('game 1: the guesser shows 4 fingers and is right; the friend\'s photo is d
   assert.equal($('againBtn').disabled, true);
 });
 
-test('game 2: a friend sending a cartoon is drawn locally; a critical hit takes the guesser out', async () => {
+test('game 2: a friend sending a cartoon is drawn locally; a rude gesture is hidden by the default filter; the right guess ends the fight', async () => {
   hostConn.send({ t: 'start', settings: SETTINGS });
   hostConn.send({ t: 'round', n: 1 });
   await until(() => simButton('[data-count]', '2'), 'controls again');
   simButton('[data-count]', '2').onclick();
   await until(() => sentByGuest('guess').length === 2, 'guess sent', 9000);
-  hostConn.send({ t: 'reveal', n: 1, count: 5, gesture: 'sideways', noHand: false, ...picture() });
+  hostConn.send({ t: 'reveal', n: 1, count: 2, gesture: 'sideways', noHand: false, ...picture() });
   await until(() => $('topContent').children[0]?.className === 'reveal', 'result shown', 5000);
+  assert.ok(!/SIDEWAYS/i.test($('topContent').textContent), 'the filter is on by default: the gesture is not named');
   assert.equal($('topContent').children[0].children[0].tagName, 'CANVAS', 'a cartoon is drawn by this phone, not received');
   await until(() => b.visible()[0] === 'over', 'game over', 20000);
-  assert.equal($('overTitle').textContent, 'YOU LOSE');
+  assert.equal($('overTitle').textContent, 'YOU WIN!');
   setTimeout(() => process.exit(0), 50).unref();
 });

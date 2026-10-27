@@ -2,39 +2,40 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newGame, resolveRound, applyResult, pointerFor, normalizeSettings, describe, other, DEFAULTS } from '../js/logic.js';
 
-const R = o => resolveRound({ pointer: 'host', count: 4, guess: 4, gesture: null, noHand: false, crits: true, ...o });
+const R = o => resolveRound({ pointer: 'host', count: 4, guess: 4, noHand: false, ...o });
 
 test('pointer alternates, host first', () => {
   assert.deepEqual([1, 2, 3, 4].map(pointerFor), ['host', 'guest', 'host', 'guest']);
 });
 
 test('correct guess hits the pointer for 1', () => {
-  assert.deepEqual(R({}), { target: 'host', damage: 1, crit: false, reason: 'correct' });
+  assert.deepEqual(R({}), { target: 'host', damage: 1, reason: 'correct' });
   assert.equal(R({ pointer: 'guest' }).target, 'guest');
 });
 
 test('wrong guess, no gesture: a miss', () => {
-  assert.deepEqual(R({ guess: 3 }), { target: null, damage: 0, crit: false, reason: 'miss' });
+  assert.deepEqual(R({ guess: 3 }), { target: null, damage: 0, reason: 'miss' });
   assert.equal(R({ guess: null }).reason, 'miss', 'no guess counts as wrong');
 });
 
-test('wrong guess + gesture: pointer lands a critical on the guesser', () => {
-  assert.deepEqual(R({ guess: 3, gesture: 'middle' }), { target: 'guest', damage: 2, crit: true, reason: 'crit' });
-  assert.equal(R({ guess: 3, gesture: 'moutza' }).damage, 2);
-  assert.equal(R({ guess: 3, gesture: 'sideways' }).damage, 3);
-  assert.equal(R({ pointer: 'guest', guess: 3, gesture: 'middle' }).target, 'host');
+test('gestures never score: a rude gesture with a wrong guess is just a miss', () => {
+  for (const gesture of ['middle', 'moutza', 'sideways']) {
+    assert.deepEqual(R({ guess: 3, gesture }), { target: null, damage: 0, reason: 'miss' });
+    assert.equal(R({ pointer: 'guest', guess: 3, gesture }).target, null);
+  }
 });
 
-test('right guess beats the gesture', () => {
-  assert.equal(R({ guess: 4, gesture: 'sideways' }).reason, 'correct');
+test('a right guess scores exactly 1, whatever the gesture', () => {
+  assert.deepEqual(R({ guess: 4, gesture: 'sideways' }), { target: 'host', damage: 1, reason: 'correct' });
 });
 
-test('gestures do nothing when crits are off', () => {
-  assert.equal(R({ guess: 3, gesture: 'sideways', crits: false }).reason, 'miss');
+test('only a correct guess scores: a missing guess gives the pointer nothing', () => {
+  assert.equal(R({ guess: null }).target, null);
+  assert.equal(R({ guess: undefined }).damage, 0);
 });
 
 test('hiding the hand forfeits the round', () => {
-  assert.deepEqual(R({ noHand: true, guess: 9 }), { target: 'host', damage: 1, crit: false, reason: 'nohand' });
+  assert.deepEqual(R({ noHand: true, guess: 9 }), { target: 'host', damage: 1, reason: 'nohand' });
 });
 
 test('a game plays to the end', () => {
@@ -42,21 +43,23 @@ test('a game plays to the end', () => {
   assert.deepEqual(g.health, { host: 3, guest: 3 });
   g = applyResult(g, R({}));                       // guest hits host
   assert.equal(g.health.host, 2); assert.equal(g.over, false);
-  g = applyResult(g, R({ guess: 3, gesture: 'middle' }));   // host crit on guest: 3 -> 1
-  assert.equal(g.health.guest, 1);
-  g = applyResult(g, R({ pointer: 'guest' }));     // host hits guest: 1 -> 0
+  g = applyResult(g, R({ guess: 3, gesture: 'middle' }));   // wrong guess: nobody is hurt
+  assert.deepEqual(g.health, { host: 2, guest: 3 });
+  g = applyResult(g, R({ pointer: 'guest' }));     // host hits guest: 3 -> 2
+  g = applyResult(g, R({ pointer: 'guest' }));     // 2 -> 1
+  g = applyResult(g, R({ pointer: 'guest' }));     // 1 -> 0
   assert.equal(g.health.guest, 0); assert.equal(g.over, true); assert.equal(g.winner, 'host');
 });
 
 test('health never goes below zero', () => {
-  const g = applyResult(newGame({ hits: 1 }), R({ guess: 0, gesture: 'sideways' }));
+  const g = applyResult(newGame({ hits: 1 }), R({ pointer: 'guest', guess: 4 }));
   assert.equal(g.health.guest, 0); assert.equal(g.winner, 'host');
 });
 
 test('settings are cleaned', () => {
   assert.deepEqual(normalizeSettings({}), DEFAULTS);
-  const s = normalizeSettings({ seconds: '99', hits: 0, crits: 0, background: 9 });
-  assert.deepEqual(s, { seconds: 20, hits: 1, crits: false, background: 4 });
+  const s = normalizeSettings({ seconds: '99', hits: 0, background: 9 });
+  assert.deepEqual(s, { seconds: 20, hits: 1, background: 4 });
   assert.equal(normalizeSettings({ seconds: 'abc' }).seconds, 5);
 });
 
@@ -124,7 +127,7 @@ test('reveals from the network are checked', () => {
   assert.ok(validReveal(ok) && validReveal(ok, false));
   assert.ok(validReveal({ ...ok, gesture: 'middle' }));
   assert.ok(!validReveal({ ...ok, count: 11 }) && !validReveal({ ...ok, count: 3.5 }) && !validReveal({ ...ok, count: '4' }));
-  assert.ok(!validReveal({ ...ok, gesture: 'rude' }) && !validReveal({ ...ok, gesture: undefined }));
+  assert.ok(!validReveal({ ...ok, gesture: 'rude' }) && validReveal({ ...ok, gesture: undefined }), 'a missing gesture is fine; an unknown one is not');
   assert.ok(!validReveal({ ...ok, noHand: 'no' }));
   assert.ok(!validReveal({ ...ok, view: 'photo', photo: 'data:image/jpeg;base64,AAAA' }, false), 'photo reveal refused in a random match');
   assert.ok(!validReveal(null) && !validReveal('x'));

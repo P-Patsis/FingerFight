@@ -75,7 +75,7 @@ test('a friend joins and is accepted; both get ready; the host configures the fi
   const click = step => $('settingsCard').fire('click', { target: { closest: () => ({ dataset: { step } }) } });
   click('hits:-1'); click('hits:-1'); click('seconds:-1'); click('seconds:-1');
   $('bgPicker').children[3].onclick();
-  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, crits: true, background: 3 });
+  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, background: 3 });
   assert.equal($('stage').className, 'bg-3');
 });
 
@@ -105,7 +105,7 @@ test('game 1: the host points, the guesser is right, the host loses', async () =
   assert.equal($('againBtn').disabled, false);
 });
 
-test('game 2 (rematch): wrong guess + middle finger = critical hit; the host wins', async () => {
+test('game 2 (rematch): wrong guess + middle finger is only a miss (and the filter hides it); the host then wins', async () => {
   $('againBtn').onclick();
   assert.equal(sentOf(conn, 'start').length, 2);
   await until(() => sentOf(conn, 'round').length === 2, 'round 1 of the rematch');
@@ -113,8 +113,15 @@ test('game 2 (rematch): wrong guess + middle finger = critical hit; the host win
   simButton('[data-count]', '4').onclick();
   simButton('[data-g]', 'middle').onclick();
   await until(() => sentOf(conn, 'reveal').length === 2, 'reveal sent', 9000);
-  assert.equal(sentOf(conn, 'reveal')[1].gesture, 'middle');
+  assert.equal(sentOf(conn, 'reveal')[1].gesture, 'middle', 'the gesture is still detected and sent');
   conn.emit('data', { t: 'guess', n: 1, guess: 3, ...picture() });
+  await until(() => $('topContent').children[0]?.className === 'reveal', 'reveal shown', 5000);
+  assert.ok(!/MIDDLE/i.test($('topContent').textContent), 'the filter is on by default: the gesture is not named');
+  assert.equal($('topHp').children[0].classList.contains('lost'), false, 'no damage for a wrong guess');
+  await until(() => sentOf(conn, 'round').length === 3, 'round 2: the guest points', 12000);
+  await until(() => simButton('[data-count]', '2'), 'guess controls');
+  simButton('[data-count]', '2').onclick();
+  conn.emit('data', { t: 'reveal', n: 2, count: 2, gesture: null, noHand: false, ...picture() });
   await until(() => b.visible()[0] === 'over', 'game over', 20000);
   assert.equal($('overTitle').textContent, 'YOU WIN!');
   assert.ok($('topHp').children[0].classList.contains('lost'));
