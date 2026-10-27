@@ -60,3 +60,10 @@
 - **Relay servers live in js/ice.js and are EMPTY on purpose.** The PeerJS default TURN hosts are dead (no DNS), and no free relay works without an account. Random matches hide the IP through a relay, so without one they are refused with an explanation rather than hanging or silently exposing the IP. Do not paste a TURN credential into chat logs; it is public once it is in the page, so use a revocable one.
 - **Thresholds are data (`TUNING`), not constants.** Change defaults only after looking at real numbers from the debug panel.
 - **Never name a module variable `history`, `location`, `name` etc.** (it shadows the browser global; this broke the address-bar cleanup once).
+
+## Service worker must self-update (2026-10-27)
+Symptom: after a deploy the phone ran the new main.js against a cached old index.html and the buttons died until site data was cleared. Rules now:
+- sw.js calls `skipWaiting()` on install and `clients.claim()` on activate, and deletes every cache except the current VERSION and `ff-heavy` (the MediaPipe model, cache-first, never changes).
+- The shell (index.html, css, js) is NETWORK-FIRST with `cache: 'no-cache'`, and the install precache uses `cache: 'reload'`, so neither the HTTP cache (GitHub Pages max-age=600) nor an old precache can serve a stale file online. The cache is only the offline fallback.
+- The page registers with `updateViaCache: 'none'`, re-checks for a new worker whenever it becomes visible, and reloads once on `controllerchange` (at once on the menu; during a match it shows an "Update available: tap to refresh" button instead).
+- VERSION is a hash of every precached file: run `node tools/stamp.mjs` after ANY change to a shell file before committing. tests/sw.test.js fails if the stamp is stale, so a deploy cannot ship an old version name.

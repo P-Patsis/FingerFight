@@ -14,6 +14,11 @@
 
 Newest first.
 
+## 2026-10-27 (night, last) — Self-updating service worker
+- User: camera works after the reload. Changed: see DECISIONS.md "Service worker must self-update". New: tools/stamp.mjs (VERSION = hash of the shell files, now ff-ac696c68), tests/sw.test.js, update handling in main.js (auto reload on the menu, banner during a match). 106/106.
+- Verified: automated only. NOT verified: a real update cycle in a browser (needs one more deploy after this one, then reload twice).
+- Open: first load after this deploy still runs the previous worker once; from the next deploy on, updates apply by themselves.
+
 ## 2026-10-27 (night, later) — Dead buttons: stale cached page vs new script
 - Symptom (user): "cannot set properties of null (setting 'onclick')", Enable camera and Camera test dead. All ids exist in the current index.html (live too), so the phone was running the new main.js with an OLD cached index.html (GitHub Pages sends max-age=600 and the service worker's fetch used that HTTP cache). Cause inferred, not reproduced.
 - Changed: service worker fetches site files with `cache: 'no-cache'` (VERSION ff-v4); `$()` in main.js no longer returns null (a missing element is reported on screen as "This page is out of date (missing: ...)" instead of killing every later handler); new tests/ids.test.js checks every id used exists in the HTML. 104/104.

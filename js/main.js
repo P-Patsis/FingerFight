@@ -1200,7 +1200,23 @@ updateRejoin();
 
 // Installable app + offline start (needs HTTPS, so not on the plain-http dev server)
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js').catch(() => { /* not fatal */ });
+  // Updates: the new worker takes over by itself (skipWaiting + clients.claim). Reload once when that happens: straight away
+  // on the menu, but never in the middle of a match, where a small banner asks instead.
+  const hadWorker = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadWorker || reloading) return;
+    if (!$('menu').hidden) { reloading = true; location.reload(); return; }
+    const b = document.createElement('button');
+    b.className = 'btn small'; b.type = 'button'; b.textContent = 'Update available: tap to refresh';
+    b.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:60';
+    b.onclick = () => { reloading = true; location.reload(); };
+    document.body.append(b);
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    const check = () => reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  }).catch(() => { /* not fatal */ });
 }
 
 // The camera must never stay on in the background: leave the page (home button, app switch, screen off) and it goes dark.
