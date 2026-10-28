@@ -95,5 +95,32 @@ export function uniqueName(name, others) {
 }
 
 /** Country flag emoji for a two-letter code, or '' for anything that is not A-Z A-Z. */
-export const validCountry = c => typeof c === 'string' && /^[A-Z]{2}$/.test(c);
-export const flagEmoji = c => (validCountry(c) ? String.fromCodePoint(...[...c].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65)) : '');
+// ---- country codes -> flags. Case-insensitive on input, always canonical (two capitals, a real ISO 3166 region) on output.
+const ISO_REGIONS = new Set(('AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ '
+  + 'CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL '
+  + 'GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR '
+  + 'LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK '
+  + 'PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR '
+  + 'TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW').split(' '));
+const CODE_ALIASES = { EL: 'GR', UK: 'GB' };      // the EU code for Greece and the common (non-ISO) code for the UK
+// a browser language with no region ("el") says the country only where one country is by far the main one
+const LANG_COUNTRY = { el: 'GR', de: 'DE', fr: 'FR', it: 'IT', ja: 'JP', ko: 'KR', pl: 'PL', ru: 'RU', tr: 'TR', nl: 'NL', sv: 'SE', da: 'DK', fi: 'FI', cs: 'CZ', hu: 'HU', ro: 'RO' };
+
+/**
+ * Any spelling of a country -> its canonical two capitals, or '' when it is not a real country: "gr", "GR", "el-GR", "el_gr",
+ * "EL" (Greece), "uk". A bare language ("el") is only used when [allowLanguage] is set (browser language, never a typed value).
+ */
+export function countryCode(c, allowLanguage = false) {
+  if (typeof c !== 'string') return '';
+  const tag = c.trim().replace(/_/g, '-');
+  if (!tag || tag.length > 35) return '';
+  const parts = tag.split('-');
+  if (allowLanguage && parts.length === 1) return LANG_COUNTRY[tag.toLowerCase()] || '';        // a bare browser language is a language, not a region (sv is Swedish, not El Salvador; ar is Arabic, not Argentina)
+  let region = '';
+  if (parts.length === 1) { if (/^[A-Za-z]{2}$/.test(tag)) region = tag.toUpperCase(); }
+  else region = (parts.slice(1).find(x => /^[A-Za-z]{2}$/.test(x)) || '').toUpperCase();       // el-GR, zh-Hans-CN, en-gb
+  if (region) { region = CODE_ALIASES[region] || region; if (ISO_REGIONS.has(region)) return region; }
+  return '';
+}
+export const validCountry = c => countryCode(c) !== '';
+export const flagEmoji = c => { const k = countryCode(c); return k ? String.fromCodePoint(...[...k].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65)) : ''; };

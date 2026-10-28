@@ -109,19 +109,26 @@ let wantIndex = null;            // the arena whose music we should be playing
 let current = null;              // { index, src, gain }
 let loading = 0;                 // token: a late download for an old arena must not start
 
+const failedAt = new Map();      // index -> when a download/decode last failed: tried again after RETRY_MS (one network hiccup must not silence an arena all session)
+const RETRY_MS = 15000;
+
 async function fetchBuffer(index) {
   if (cache.has(index)) return cache.get(index);
-  let buf = null;
+  if (Date.now() - (failedAt.get(index) || 0) < RETRY_MS) return null;
+  let buf = null, missing = false;
   try {
     const url = TRACKS[index];
-    if (url) {
+    if (!url) missing = true;
+    else {
       const r = await fetch(url);
-      if (r.ok) buf = await ctx.decodeAudioData(await r.arrayBuffer());
+      if (r.status === 404) missing = true;                       // the file really is not there: remember that
+      else if (r.ok) buf = await ctx.decodeAudioData(await r.arrayBuffer());
+      else failedAt.set(index, Date.now());
     }
-  } catch { buf = null; }
+  } catch { buf = null; failedAt.set(index, Date.now()); }        // offline, the service worker was swapping, a bad decode: try again later
   // keep only the buffers we may need again soon (a decoded track is a lot of memory)
   for (const k of [...cache.keys()]) if (k !== index && k !== wantIndex && k !== current?.index && cache.get(k)) cache.delete(k);
-  cache.set(index, buf);
+  if (buf || missing) cache.set(index, buf);
   return buf;
 }
 

@@ -57,7 +57,7 @@ export class Conn {
     if (e === 'data') this.received.push(a[0]);
     for (const f of this.h[e] || []) f(...a);
   }
-  send(o) { this.sent.push(clone(o)); if (this.remote) setTimeout(() => this.remote.emit('data', clone(o)), 0); }
+  send(o) { this.sent.push(clone(o)); const r = this.remote; if (r) setTimeout(() => r.emit('data', clone(o)), 0); }      // r: the link may be closed before the message is delivered
   close() { this.open = false; if (this.remote?.open) { const r = this.remote; this.remote = null; setTimeout(() => { r.open = false; r.emit('close'); }, 0); } }
 }
 

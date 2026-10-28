@@ -43,6 +43,7 @@ export class HandCam {
     this.landmarker = null; this.stream = null;
     this.samples = []; this.running = false; this.lastTime = -1;
     this.onFrame = null;
+    this.onError = null;       // called (once per distinct message) if the tracking loop throws: the failure must be visible, not a silent freeze
     this.onLost = null;        // called if the camera stops by itself (permission revoked, another app took it, unplugged)
     this.gen = 0;              // bumped by every start/stop, so a camera that arrives after it was cancelled is switched off again
     this.debug = false;        // when true, every sample also carries the raw numbers behind the decision
@@ -130,8 +131,7 @@ export class HandCam {
     if (this.running || !this.landmarker) return;
     this.running = true;
     this.samples = [];
-    const loop = () => {
-      if (!this.running) return;
+    const step = () => {
       const v = this.video;
       if (v.readyState >= 2 && v.currentTime !== this.lastTime) {
         this.lastTime = v.currentTime;
@@ -156,6 +156,14 @@ export class HandCam {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         drawSkeleton(this.ctx, hands, this.canvas.width, this.canvas.height, 3);
         this.onFrame?.(s);
+      }
+    };
+    let lastErr = '';
+    const loop = () => {
+      if (!this.running) return;
+      try { step(); } catch (e) {            // one bad frame (or a model hiccup) must not stop the tracking for good
+        const msg = String(e?.message || e);
+        if (msg !== lastErr) { lastErr = msg; try { this.onError?.(msg); } catch { /* ignore */ } }
       }
       requestAnimationFrame(loop);
     };

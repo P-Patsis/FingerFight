@@ -95,3 +95,9 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - Fewer fingers over time is a HOST setting like max fingers, default OFF, only a lower cap (never raises the host's limit). Both phones clamp with the same `effectiveMax(settings, round)`.
 - Every js module must be in sw.js SHELL (tests/sw.test.js checks).
 - FORFEIT BY MATCH TYPE: an idle forfeit skips the result screen. Private: both phones return to the lobby, room and guest kept, ready flags kept. Random: connection closed, back to the menu with the reason. Wake lock follows the game screen in every match type. (Decided 2026-10-28.)
+
+## Regression fixes (2026-10-28)
+- COUNTRY CODES are case-insensitive on input and canonical on output (`countryCode` in names.js): real ISO regions only, EL->GR and UK->GB, region read from language tags. Unknown = NO flag, never a placeholder. From the browser, a bare language maps to a country only when one is obvious (a small table); never from an IP address.
+- HAND STYLE is the player's saved choice; a random match only DISPLAYS the cartoon (`effectiveStyle`), it never overwrites the choice.
+- MUSIC: only a real 404 is remembered as "no file"; a failed download or decode is retried after 15 s.
+- TRACKING LOOP must never die silently: each frame is guarded, errors go to `cam.onError` and onto the screen.

@@ -13,7 +13,7 @@ import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
   sanitizeName, validGuessMsg, validReveal, VIEWS, SAFE_VIEWS, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, newIdle, trackIdle, IDLE_ROUNDS,
 } from './logic.js';
-import { cleanName, uniqueName, flagEmoji, validCountry, isObscene } from './names.js';
+import { cleanName, uniqueName, flagEmoji, countryCode, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
 import { isRudeMessage as looksRude, loadTuning } from './gestures.js';
 import { createDebugPanel } from './debug.js';
@@ -172,14 +172,13 @@ profile = { flag: store.get('ff-flag') === '1', country: store.get('ff-country')
 /** A guess for the flag field only: the region of the browser's language setting (el-GR -> GR). No network, no IP involved. */
 function detectCountry() {
   try {
-    for (const l of [...(navigator.languages || []), navigator.language || '']) {
-      const m = /^[a-z]{2,3}-([A-Za-z]{2})\b/.exec(l);
-      if (m) return m[1].toUpperCase();
-    }
+    const tags = [...(navigator.languages || []), navigator.language || ''];
+    for (const l of tags) { const c = /[-_]/.test(l) ? countryCode(l) : ''; if (c) return c; }              // a tag with a region: el-GR -> GR
+    for (const l of tags) { const c = countryCode(l, true); if (c) return c; }        // otherwise the main country of the language: el -> GR
   } catch { /* ignore */ }
-  return '';
+  return '';                                                                            // unknown: no flag is shown
 }
-const myFlag = () => (profile.flag && validCountry(profile.country) ? profile.country : undefined);
+const myFlag = () => (profile.flag ? countryCode(profile.country) || undefined : undefined);
 const freshSettings = () => ({ ...DEFAULTS, background: Number.isInteger(profile.arena) && profile.arena >= 0 && profile.arena < BACKGROUNDS.length ? profile.arena : DEFAULTS.background });
 {
   // a shared link carries the code after the "#": browsers never send that part to any server
@@ -576,7 +575,7 @@ function acceptGuest(name) {
   pendingGuest = null;
   name = uniqueName(name, [names.host]);                 // two players called "Pano": the second becomes "Pano (2)"
   names.guest = name;
-  flags.guest = validCountry(pendingFlag) ? pendingFlag : '';
+  flags.guest = countryCode(pendingFlag);
   link?.setToken(guestToken);
   saveSession();
   send({ t: 'welcome', v: PROTOCOL, kind: matchKind, name: names.host, yourName: name, flag: myFlag(), settings, ready: ready.host });
@@ -630,7 +629,7 @@ function onMessage(m) {
       if (me !== 'guest' || m.kind !== matchKind) break;
       names.host = cleanName(m.name);
       if (typeof m.yourName === 'string') names.guest = cleanName(m.yourName, 20);       // the host may have numbered us ("Pano (2)")
-      flags.host = validCountry(m.flag) ? m.flag : '';
+      flags.host = countryCode(m.flag);
       settings = normalizeSettings(m.settings);
       ready.host = m.ready === true;
       send({ t: 'ready', ready: ready.guest });
@@ -740,20 +739,20 @@ function buildStyleCard() {
 
 function renderStyle() {
   const random = matchKind === 'random';
-  if (random && !SAFE_VIEWS.includes(style.mode)) style.mode = 'avatar';
+  const mode = effectiveStyle().mode;               // against a stranger a photo style is shown as the cartoon, but MY choice (style.mode) is kept for the next private match
   for (const b of $('modePicker').children) {
-    b.classList.toggle('sel', b.dataset.mode === style.mode);
+    b.classList.toggle('sel', b.dataset.mode === mode);
     b.disabled = random && !SAFE_VIEWS.includes(b.dataset.mode);
   }
   const randomPick = store.get('ff-skin') === 'random' || !store.get('ff-skin');
   for (const b of $('skinPicker').children) b.classList.toggle('sel', b.dataset.skin === 'random' ? randomPick : (!randomPick && b.dataset.skin === style.skin));
-  $('skinRow').hidden = style.mode !== 'avatar';
+  $('skinRow').hidden = mode !== 'avatar';
   $('photoRow').hidden = random;
   $('photoBtn').textContent = showPhotos ? 'On' : 'Off';
   $('photoBtn').classList.toggle('on', showPhotos);
   $('rudeBtn').textContent = hideRude ? 'On' : 'Off';
   $('rudeBtn').classList.toggle('on', hideRude);
-  const real = !SAFE_VIEWS.includes(style.mode);
+  const real = !SAFE_VIEWS.includes(mode);
   $('styleNote').textContent = random
     ? 'Random opponent: only drawn data is shared. Your camera image never leaves this phone.'
     : real ? 'Warning: this sends a real camera image of you (maybe your face or room) to your opponent.'
@@ -1032,6 +1031,10 @@ const debugPanel = () => (dbg = dbg || createDebugPanel(document.body));
 /** If the camera stops by itself (permission taken away, another app, unplugged) the badge must go out and the player is told. */
 function hookCamera() {
   if (!cam || SIM) return;
+  cam.onError = e => {                              // the tracking loop threw: say so on the screen instead of freezing silently
+    const t = 'Hand tracking error: ' + e;
+    if (!$('calib').hidden) $('calibMsg').textContent = t; else $('camCaption').textContent = t;
+  };
   cam.onLost = () => {
     camIndicator(false);
     const b = $('camBox'); b.hidden = true;
@@ -1057,7 +1060,7 @@ async function openCalib() {
   msg('Loading the hand model (about 17 MB, once)…');
   cam = cam || new HandCam($('video'), $('overlayCanvas'));
   hookCamera();
-  try { await cam.load(); } catch (e) { msg('Could not load the hand model (' + (e.message || e) + ').'); return; }
+  try { await cam.load(); } catch (e) { msg('Could not load the hand model (' + (e.message || e) + '). Check your internet connection (or a VPN / ad-blocker blocking cdn.jsdelivr.net or storage.googleapis.com), then tap Done and try again.'); return; }
   if ($('calib').hidden) return;                                   // the player already left
   const err = await cam.startCamera();
   if (err === 'cancelled' || $('calib').hidden) { if (err !== 'cancelled') closeCalib(); return; }
@@ -1070,9 +1073,11 @@ async function openCalib() {
   camIndicator(true);
   cam.debug = true;
   const p = debugPanel(); p.show(true);
-  cam.onFrame = s => { p.update(s); $('liveCount').textContent = s.count; $('liveGesture').textContent = s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : ''; };
+  let frames = 0;
+  cam.onFrame = s => { frames++; p.update(s); $('liveCount').textContent = s.count; $('liveGesture').textContent = s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : ''; };
   msg('Camera on (it switches off when you tap Done). Try each finger and watch the ratios.');
   cam.run();
+  setTimeout(() => { if (!frames && !$('calib').hidden && cam?.cameraOn) msg('The camera is on but the hand model produced no frames. Tap Done and try again; if it repeats, reload the page.'); }, 6000);
 }
 function closeCalib() {
   if (cam && !SIM) { cam.release(); cam.onFrame = null; cam.debug = false; }
