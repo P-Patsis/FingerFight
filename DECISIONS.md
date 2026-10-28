@@ -94,4 +94,4 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - Anti-grief: 3 consecutive no-hand rounds = FORFEIT (not a kick): the match ends through the normal game-over screen so a private room survives and both can change settings or rematch. Chosen because a kick would have to be negotiated over the connection and could be abused; a deterministic forfeit needs no extra message (both phones see the same reveal/guess messages). Constant `IDLE_ROUNDS`. Warn one round early.
 - Fewer fingers over time is a HOST setting like max fingers, default OFF, only a lower cap (never raises the host's limit). Both phones clamp with the same `effectiveMax(settings, round)`.
 - Every js module must be in sw.js SHELL (tests/sw.test.js checks).
-
+- FORFEIT BY MATCH TYPE: an idle forfeit skips the result screen. Private: both phones return to the lobby, room and guest kept, ready flags kept. Random: connection closed, back to the menu with the reason. Wake lock follows the game screen in every match type. (Decided 2026-10-28.)

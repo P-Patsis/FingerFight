@@ -2,6 +2,7 @@
 
 ## NEXT / pending decisions (read this first after a crash)
 - Live at https://p-patsis.github.io/FingerFight/ (repo P-Patsis/FingerFight, public; local git remote still says FingerRing, GitHub redirects). Installable as a PWA (Chrome menu, Install app).
+- Build 3 (flip camera, skeleton scale, open palm legal, wake lock, anti-grief, fewer fingers) is DONE and committed (fcfb37c); the forfeit/wake-lock decisions are resolved (entry below). STILL NEEDS A REAL-PHONE TEST: flip camera, skeleton size, wake lock holding the screen, idle warning banner, forfeit landing in the lobby / menu.
 - User's first real test (2026-10-27): "kinda works". Complaints handled: unstable connection (reconnect + resume token), no rejoin (rejoin button), random skins, camera safety. NOT yet re-tested on phones after these changes.
 - Ideas the user raised, status:
   1. Push notifications for "invite friend": NOT built. Needs a tiny server (web push needs a server that holds anonymous subscriptions and signs pushes with a private key; every app does this, Google/Firebase just hides it). Plan: Cloudflare Workers free tier, anonymous random IDs, no emails. Needs the user to create the account and agree; ask permission model: request notification permission only after a user tap ("Invite friend"), never on load.
@@ -13,6 +14,15 @@
 
 
 Newest first.
+
+## 2026-10-28 (night, 2) — Forfeit by match type; wake lock confirmed for random matches (NOT YET TRIED ON PHONES)
+- Changed:
+  - ANTI-GRIEF FORFEIT: private match -> after the K.O. banner both phones go straight to the LOBBY with the room and the guest kept (no result screen); both stay ready, so the host can press Start at once. If the guest had already left, the host's room is simply reopened empty. Random match -> the connection is closed, nothing is held, back to the MENU with the forfeit text in the menu message. Normal K.O.s are unchanged (result screen). `backToLobby` got an opt-in `keepReady` (used only here): it used to clear both ready flags while the camera button stays hidden, so nobody could ready up again.
+  - WAKE LOCK: checked, it was never private-only (`show('game')` drives it, `matchKind` is not consulted). Now covered by a random-match test.
+  - SW VERSION ff-d72698c6.
+- Tests: 145/145 (was 143). Changed tests/flow.idle.test.js (private: lobby, room kept, start enabled). New tests/flow.random.idle.test.js (random: lock taken at the game screen, forfeit -> menu, link closed, slot not held, lock released).
+- Verified on device: nothing yet. Needs a phone: the forfeit really landing in the lobby/menu on both sides; wake lock holding the screen in a random match.
+- Open: the same stuck-ready problem may exist in the older "Back to lobby (change settings)" button (it also clears ready); left alone as out of scope, check on a phone.
 
 ## 2026-10-28 (night) — Flip camera, bigger far-away skeleton, open palm is legal, wake lock, anti-grief, fewer fingers (NOT YET TRIED ON PHONES)
 - Changed:

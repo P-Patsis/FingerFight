@@ -35,8 +35,10 @@ test('a guest who never shows a hand forfeits after 3 rounds; the host wins and 
   await until(() => sentOf(conn, 'reveal').length === 2, 'host reveal 3', 15000);
   conn.emit('data', { t: 'guess', n: 3, guess: null, ...picture() });
 
-  await until(() => b.visible()[0] === 'over', 'forfeit ends the match', 20000);
-  assert.equal($('overTitle').textContent, 'YOU WIN!');
-  assert.match($('overText').textContent, /Ghost showed no hand for 3 rounds in a row, so Hank wins by forfeit/);
-  assert.equal($('settingsBtn').hidden, false, 'a private room stays open (back to lobby is offered)');
+  await until(() => b.visible()[0] === 'lobby', 'forfeit returns both to the lobby', 20000);
+  assert.match($('lobbyMsg').textContent, /Ghost showed no hand for 3 rounds in a row, so Hank wins by forfeit/);
+  assert.equal($('nameGuest').textContent, 'Ghost', 'the room is kept with the same guest');
+  assert.equal(conn.open, true, 'the connection stays up');
+  // the room is still alive and both are still ready (cameras were already enabled): the host can start another fight at once
+  assert.equal($('startBtn').disabled, false);
 });

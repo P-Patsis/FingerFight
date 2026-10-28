@@ -495,14 +495,14 @@ function hostSeatFreed(reason) {
   backToLobby(why + ' Your room is still open: the same code works for a new or returning player.');
 }
 
-function backToLobby(msg, keepGuest = false) {
+function backToLobby(msg, keepGuest = false, keepReady = false) {
   token++;
   releaseCamera();
   round = null; inGame = false; game = null; autoStarted = false; opponentGone = false;
   fightLog = []; streak = { side: null, n: 0 };
   idle = newIdle();
   if (!keepGuest) { names.guest = ''; pendingGuest = null; guestToken = null; }
-  ready = { host: false, guest: false };
+  if (!keepReady) ready = { host: false, guest: false };      // keepReady: both cameras are already enabled, so nobody could ready up again
   fx.clearFx(); $('banner').replaceChildren(); netBadge('');
   setBackground(settings.background);
   show('lobby');
@@ -1293,6 +1293,19 @@ function knockout() {
     $('overTitle').textContent = won ? 'YOU WIN!' : 'YOU LOSE';
     $('overText').textContent = game.forfeit ? names[game.forfeit] + ' showed no hand for ' + IDLE_ROUNDS + ' rounds in a row, so ' + names[winner] + ' wins by forfeit.' : names[winner] + ' wins ' + (game.health[winner]) + ' hit' + (game.health[winner] === 1 ? '' : 's') + ' to ' + game.health[loser] + '.';
     clearSession();                                    // the match is over: nothing to rejoin
+    if (game.forfeit) {                                // anti-grief forfeit: no result screen, the match is simply over
+      const why = names[game.forfeit] + ' showed no hand for ' + IDLE_ROUNDS + ' rounds in a row, so ' + names[winner] + ' wins by forfeit.';
+      if (matchKind === 'random') {                    // strangers: nothing is held, back to the menu to find someone else
+        resetAll();
+        show('menu');
+        menuMsg(why + ' Find another opponent when you are ready.', won ? false : true);
+        return;
+      }
+      if (matchKind === 'private' && link && !(me === 'guest' && opponentGone)) {   // friends: both go back to the lobby, the room is kept
+        backToLobby(why + ' The host can start another fight.', !opponentGone, !opponentGone);
+        return;
+      }
+    }
     if (matchKind === 'random') {                      // strangers: the connection ends with the match, no rematch
       try { link?.close(); } catch { /* ignore */ }
       link = null;
