@@ -178,7 +178,11 @@ function makeLink(quiet = false) {
     onMessage: onMessage,
     onClose: reason => onLinkClosed(reason),
     canResume: () => !searching && !!names.host && !!names.guest,
-    onReconnecting: () => netBadge('Connection lost. Reconnecting…'),
+    keepRoom: () => me === 'host' && (matchKind === 'private' || (matchKind === 'random' && !names.guest)),   // a private room outlives its guest; a waiting random host survives an aborted probe
+    canReplaceSeat: () => me === 'host' && matchKind === 'private' && !inGame,       // nothing to protect between fights
+    onSeatReplaced: () => { names.guest = ''; ready.guest = false; pendingGuest = null; guestToken = null; netBadge(''); },
+    onSeatFreed: reason => hostSeatFreed(reason),
+    onReconnecting: () => netBadge(me === 'host' ? (names.guest || 'Your opponent') + ' disconnected (reloading?). Waiting for them to come back…' : 'Connection lost. Reconnecting…'),
     onReconnected: () => onReconnected(),
     onStatus: t => { if (!quiet) menuMsg(t); },
   }, { relay: matchKind === 'random' && hideIp });
@@ -214,6 +218,7 @@ $('createBtn').onclick = async () => {
   if (!code) { menuMsg('Could not create a match. Try again.', true); resetAll(); return; }
   roomCodeRaw = code;
   $('roomCode').textContent = formatCode(code);
+  saveSession();
   enterLobby();
 };
 
@@ -261,28 +266,30 @@ function setSearching(on) {
 
 $('cancelBtn').onclick = () => { searchId++; setSearching(false); cleanupLink(); matchKind = null; menuMsg('Search cancelled.'); };
 
-async function tryJoinRandom(i, name, active) {
+/** Look at every slot at once and join the player who has waited longest (see Link.joinAny). */
+async function tryJoinRandom(name, active) {
   me = 'guest'; names = { host: '', guest: name };
   const l = makeLink(true); link = l;
   let mine;
   const matched = new Promise(res => { mine = res; matchWaiter = res; });
   const done = () => { if (matchWaiter === mine) matchWaiter = null; };
-  try { await l.join(randomId(i), 4000); } catch { done(); cleanupLink(l); return false; }
+  try { await l.joinAny(Array.from({ length: RANDOM_SLOTS }, (_, i) => randomId(i)), 9000); } catch { done(); cleanupLink(l); return false; }
   const ok = await Promise.race([matched, sleep(3500).then(() => false)]);   // a host answers 'welcome' straight away
   done();
   if (!ok || !active()) { cleanupLink(l); return false; }
   return true;
 }
 
-async function tryHostRandom(i, name, active) {
+async function tryHostRandom(i, name, active, since) {
   me = 'host'; names = { host: name, guest: '' };
   let mine;
   const matched = new Promise(res => { mine = res; hostWaiter = res; });    // set up BEFORE opening, so an early guest isn't missed
   const done = () => { if (hostWaiter === mine) hostWaiter = null; };
   const l = makeLink(true); link = l;
+  l.queueSince = since;                         // joiners see how long this player has been waiting overall
   try { await l.host(randomId(i)); } catch (e) { done(); cleanupLink(l); return e.message === 'taken' ? 'taken' : 'error'; }
   menuMsg('Waiting for an opponent…');
-  const r = await Promise.race([matched, waitFor(() => !active(), 40000).then(() => 'timeout')]);
+  const r = await Promise.race([matched, waitFor(() => !active(), 7000 + Math.random() * 6000).then(() => 'timeout')]);
   done();
   if (r === true && active()) return 'matched';
   cleanupLink(l);
@@ -301,17 +308,17 @@ $('randomBtn').onclick = async () => {
   setSearching(true);
   const active = () => searching && id === searchId;
   const myRandom = 'Fighter ' + (1000 + Math.floor(Math.random() * 9000));    // strangers get a generated name
-  const deadline = Date.now() + 120_000;
+  const started = Date.now(), deadline = started + 120_000;
   menuMsg('Looking for an opponent…');
   let matched = false;
   while (!matched && active() && Date.now() < deadline) {
-    for (let i = 0; i < RANDOM_SLOTS && active() && !matched; i++) matched = await tryJoinRandom(i, myRandom, active);
+    if (active()) matched = await tryJoinRandom(myRandom, active);
     for (let i = 0; i < RANDOM_SLOTS && active() && !matched; i++) {
-      const r = await tryHostRandom(i, myRandom, active);
+      const r = await tryHostRandom(i, myRandom, active, started);
       if (r === 'matched') matched = true;
       else if (r !== 'taken') break;               // timed out or failed: go back to looking
     }
-    if (!matched && active()) await sleep(300 + Math.random() * 700);      // jitter so two searchers don't move in lockstep
+    if (!matched && active()) await sleep(150 + Math.random() * 450);      // jitter so two searchers don't move in lockstep
   }
   if (id !== searchId) return;                     // cancelled
   setSearching(false);
@@ -374,15 +381,15 @@ function forfeitWin() {
 const SESSION_KEY = 'ff-session';
 const SESSION_MAX_AGE = 3 * 60 * 1000;     // long enough to reload the page or switch apps, short enough to never be stale
 function saveSession() {
-  if (matchKind !== 'private' || !link?.token || !me) return;
-  store.set(SESSION_KEY, JSON.stringify({ role: me, code: roomCodeRaw, token: link.token, names, t: Date.now() }));
+  if (matchKind !== 'private' || !me || (me === 'guest' && !link?.token)) return;
+  store.set(SESSION_KEY, JSON.stringify({ role: me, code: roomCodeRaw, token: link?.token || null, names, t: Date.now() }));
 }
 function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ } updateRejoin(); }
 function loadSession() {
   try {
     const x = JSON.parse(store.get(SESSION_KEY) || 'null');
-    if (!x || (x.role !== 'host' && x.role !== 'guest') || x.code?.length !== CODE_LEN || !validToken(x.token) || Date.now() - x.t > SESSION_MAX_AGE) return null;
-    return { role: x.role, code: cleanCode(x.code), token: x.token, names: { host: sanitizeName(x.names?.host), guest: sanitizeName(x.names?.guest) } };
+    if (!x || (x.role !== 'host' && x.role !== 'guest') || x.code?.length !== CODE_LEN || (x.token ? !validToken(x.token) : x.role !== 'host') || Date.now() - x.t > SESSION_MAX_AGE) return null;
+    return { role: x.role, code: cleanCode(x.code), token: x.token || null, names: { host: sanitizeName(x.names?.host), guest: sanitizeName(x.names?.guest) } };
   } catch { return null; }
 }
 function updateRejoin() {
@@ -396,12 +403,43 @@ function netBadge(text) {
   $('netBadge').hidden = !text;
 }
 
+/** Private room, host side: the guest left or vanished. The room stays open with a free seat instead of being thrown away. */
+function hostSeatFreed(reason) {
+  if (me !== 'host' || matchKind !== 'private' || !link) return;
+  const who = names.guest || 'Your opponent';
+  names.guest = ''; ready = { host: false, guest: false }; pendingGuest = null; guestToken = null; netBadge('');
+  const why = reason === 'left' ? who + ' left.' : who + ' disconnected.';
+  if (game?.over) {                                  // keep the result screen; the host chooses when to reopen the room
+    opponentGone = true;
+    $('againBtn').disabled = false; $('againBtn').textContent = 'Open the room again';
+    $('overMsg').textContent = why + ' Your room is still open.';
+    return;
+  }
+  backToLobby(why + ' Your room is still open: the same code works for a new or returning player.');
+}
+
+function backToLobby(msg, keepGuest = false) {
+  token++;
+  releaseCamera();
+  round = null; inGame = false; game = null; autoStarted = false; opponentGone = false;
+  fightLog = []; streak = { side: null, n: 0 };
+  if (!keepGuest) { names.guest = ''; pendingGuest = null; guestToken = null; }
+  ready = { host: false, guest: false };
+  fx.clearFx(); $('banner').replaceChildren(); netBadge('');
+  setBackground(settings.background);
+  show('lobby');
+  renderLobby();
+  $('lobbyMsg').textContent = msg || '';
+  saveSession();
+}
+
 function onReconnected() {
   netBadge('');
   showBanner('RECONNECTED', '', 1200);
   send({ t: 'ready', ready: ready[me] });
   if (me !== 'host') return;
   send({ t: 'settings', settings });
+  if (!inGame && !game) send({ t: 'abort' });                 // we just reloaded: a fight the guest still shows is gone
   if (inGame && game && !game.over) {
     // an unresolved round is replayed from scratch: nobody loses a hit because of a dropped connection
     if (!round?.resolved) game.round = Math.max(0, (round?.n || game.round) - 1);
@@ -440,7 +478,7 @@ $('rejoinBtn').onclick = async () => {
   link = makeLink();
   try {
     if (x.role === 'guest') await link.join(privateId(x.code), 20000, x.token);
-    else { link.setToken(x.token); await link.rehost(privateId(x.code)); }
+    else { link.setToken(x.token); await link.rehost(privateId(x.code)); if (x.names.guest && x.token) link.expectResume(); else names.guest = ''; }
   } catch (e) {
     menuMsg(x.role === 'guest' ? 'Could not rejoin. The match may be over.' : 'Could not reopen the match (' + e.message + '). Try again in a minute.', true);
     resetAll(); clearSession();
@@ -448,7 +486,7 @@ $('rejoinBtn').onclick = async () => {
   }
   $('roomCode').textContent = formatCode(x.code);
   enterLobby();
-  if (x.role === 'guest') { send({ t: 'ready', ready: ready.guest }); }
+  if (x.role === 'guest') { send({ t: 'rejoined' }); send({ t: 'ready', ready: ready.guest }); }
   else menuMsg('');
   saveSession();
 };
@@ -475,7 +513,14 @@ $('rejectBtn').onclick = () => {
 function onMessage(m) {
   switch (m.t) {
     case 'bye':
-      onLinkClosed('left');
+      if (me === 'host' && matchKind === 'private' && link) { link.freeSeat(); hostSeatFreed('left'); }     // the guest left on purpose: free the seat at once
+      else onLinkClosed('left');
+      break;
+    case 'rejoined':                                // host: the guest reloaded their page, so their side of any fight is gone
+      if (me === 'host' && inGame && !game?.over) { send({ t: 'abort' }); backToLobby('The fight was cancelled because ' + (names.guest || 'your opponent') + ' reloaded their page. Press ready to start again.', true); }
+      break;
+    case 'abort':                                   // guest: the host reloaded (or cancelled): back to the lobby, seats kept
+      if (me === 'guest' && (inGame || !$('over').hidden)) backToLobby('The fight was cancelled (the host reloaded the page). Press ready to start again.', true);
       break;
     case 'full':
       if (matchWaiter) { matchWaiter(false); break; }
@@ -1148,8 +1193,8 @@ function knockout() {
       $('overMsg').textContent = 'Random matches end here. Find another opponent from the menu.';
     } else {
       $('againBtn').hidden = false;
-      $('againBtn').disabled = me !== 'host' || opponentGone;
-      $('againBtn').textContent = me === 'host' ? 'Play again' : 'Waiting for host…';
+      $('againBtn').disabled = me !== 'host';
+      $('againBtn').textContent = me === 'host' ? (opponentGone ? 'Open the room again' : 'Play again') : 'Waiting for host…';
       $('overMsg').textContent = opponentGone ? 'Your opponent has left.' : '';
     }
     renderCollage();
@@ -1159,6 +1204,7 @@ function knockout() {
 }
 
 $('againBtn').onclick = () => {
+  if (me === 'host' && opponentGone && matchKind === 'private' && link) { backToLobby(''); return; }     // the guest left: reopen the room
   if (me !== 'host' || !link?.open) return;
   send({ t: 'start', settings });
   startGame();
@@ -1197,6 +1243,10 @@ function resetAll() {
 setBackground(0);
 show('menu');
 updateRejoin();
+// A reload (or the browser killing the tab) must not end a private match: pick the session up again by itself.
+if (loadSession() && !SIM) setTimeout(() => { if (!link && !searching) $('rejoinBtn').onclick(); }, 0);
+// keep the saved session fresh for as long as a private match lasts, so it only expires after the page has really been gone
+setInterval(() => { if (link && me && matchKind === 'private' && !game?.over) saveSession(); }, 20000)?.unref?.();
 
 // Installable app + offline start (needs HTTPS, so not on the plain-http dev server)
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol === 'https:') {

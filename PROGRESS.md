@@ -14,6 +14,12 @@
 
 Newest first.
 
+## 2026-10-28 — Connection layer: reload, stale seats, random queue (NOT YET TESTED ON PHONES)
+- Changed: js/net.js (`joinAny`, `freeSeat`, `expectResume`, 'queue' message, seat takeover, resume works on a re-opened room), js/main.js (hostSeatFreed/backToLobby, auto-rejoin on load, session saved from room creation and refreshed every 20 s, 'rejoined'/'abort', random search via joinAny), tests: new seats.test.js and queue.test.js, updated flow.host / flow.random.join / reconnect tests. 114/114. See DECISIONS.md "Rooms, seats and the random queue".
+- Behaviour now: guest leaves or drops -> host stays in the lobby ("X left. Your room is still open"), same code works again; host sees "X disconnected (reloading?). Waiting for them to come back"; reloading either side re-joins by itself; a reload mid-fight cancels the fight, seats are kept.
+- Verified: automated (fake PeerJS) only. NOT verified with real phones: real timings of reload/rehost, the 8-slot probe on real PeerJS, relay path.
+- Open: phone test list given to the user; a fight cannot survive a reload.
+
 ## 2026-10-27 (night, final) — The real cause of the dead buttons: an unclosed HTML comment
 - User saw "out of date (missing: overLeave, againBtn)" even on a fresh load. Cause: `<!-- ===== Game over =====` in index.html had no `-->`, so browsers swallowed the whole result screen up to the next comment end. This was introduced with the collage commit; it was the REAL cause of the dead Enable camera / Camera test buttons too (the missing-element crash), not (only) a stale cache. My Node fake DOM does not parse comments, so the tests missed it.
 - Fixed: comment closed; tests/ids.test.js now checks every comment is closed and ignores ids inside comments (verified it fails on the old file). SW VERSION ff-8470d479. 106/106.

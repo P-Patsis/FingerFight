@@ -62,6 +62,7 @@ export class Link {
     this.lastSeen = 0;
     this.timers = [];
     this.candidates = new Set();
+    this.queueSince = 0;         // random host only: when this player started waiting (told to joiners so the longest wait is matched first)
   }
 
   get open() { return !!this.conn && this.conn.open && !this.grace; }
@@ -122,6 +123,63 @@ export class Link {
     });
   }
 
+  /**
+   * Random matches: look at ALL the slots at once with one signalling connection (instead of one slot after another).
+   * Every waiting host says how long it has been waiting ('queue'); after a short window the joiner picks the longest wait.
+   * Resolves with the chosen id once its data channel is open; rejects 'no-room' (nobody waiting) or 'timeout'.
+   */
+  joinAny(ids, timeoutMs = 9000, windowMs = 450) {
+    this.role = 'guest';
+    return new Promise((resolve, reject) => {
+      const cands = new Map();
+      let chosen = false, unavailable = 0, windowTimer = null;
+      const closeAll = except => { for (const r of cands.values()) if (r !== except) { try { r.c.close(); } catch { /* ignore */ } } };
+      const finish = err => { if (chosen) return; chosen = true; clearTimeout(timer); clearTimeout(windowTimer); closeAll(); reject(new Error(err)); };
+      const timer = setTimeout(() => finish([...cands.values()].some(r => r.opened && !r.dead) ? 'timeout' : 'no-room'), timeoutMs);
+      const alive = () => [...cands.values()].filter(r => r.opened && !r.dead && r.c.open);
+      const pick = () => {
+        if (chosen) return;
+        const best = alive().sort((a, b) => (b.waited - a.waited) || (a.n - b.n))[0];     // longest wait first, then the lowest slot
+        if (!best) return;
+        chosen = true; clearTimeout(timer); clearTimeout(windowTimer);
+        closeAll(best);
+        this.roomId = best.id;
+        this.#adopt(best.c);
+        this.h.onOpen?.();
+        resolve(best.id);
+      };
+      const check = () => { const open = [...cands.values()].filter(r => r.opened && !r.dead); if (open.length && open.every(r => r.got)) pick(); };
+      this.peer = newPeer(null, this.relay);
+      this.peer.on('error', e => {
+        if (e.type === 'peer-unavailable') { if (!chosen && ++unavailable >= ids.length) finish('no-room'); return; }
+        if (!chosen) finish(e.type || 'error');
+        else if (!this.grace) this.#drop(e.type || 'error');
+      });
+      this.peer.on('disconnected', () => this.#softReconnectPeer());
+      this.peer.on('open', () => {
+        this.h.onStatus?.('Looking for an opponent…');
+        ids.forEach((id, n) => {
+          const c = this.peer.connect(id, { reliable: true });
+          const r = { id, n, c, waited: 0, got: false, opened: false, dead: false };
+          cands.set(id, r);
+          c.on('open', () => {
+            if (chosen) { try { c.close(); } catch { /* ignore */ } return; }
+            r.opened = true;
+            if (!windowTimer) windowTimer = setTimeout(pick, windowMs);
+            check();
+          });
+          c.on('data', d => {
+            if (chosen || !d) return;
+            if (d.t === 'queue') { r.waited = Math.max(0, Number(d.waited) || 0); r.got = true; check(); }
+            else if (d.t === 'full') { r.dead = true; check(); }
+          });
+          c.on('close', () => { r.dead = true; });
+          c.on('error', () => { r.dead = true; });
+        });
+      });
+    });
+  }
+
   #dial(onUp, resuming) {
     const c = this.peer.connect(this.roomId, { reliable: true });
     this.#adopt(c, () => {
@@ -163,7 +221,11 @@ export class Link {
 
   /** Host: a new connection. If a seat is taken it must prove it holds the token; otherwise it is "full". */
   #incoming(c) {
-    if (!this.conn && !this.grace) { this.#adopt(c); return; }                  // a fresh guest
+    if (this.queueSince) {                                                      // random host: tell the joiner how long we have waited
+      const say = () => { try { c.send({ t: 'queue', waited: Date.now() - this.queueSince }); } catch { /* ignore */ } };
+      if (c.open) say(); else c.on('open', say);
+    }
+    if (!this.conn && !this.grace && !this.token) { this.#adopt(c); return; }   // a fresh guest (a re-opened room with a token checks for 'resume' below)
     if (!this.token && !this.grace) {                                           // seat taken, nobody could be resuming
       c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); });
       return;
@@ -189,10 +251,20 @@ export class Link {
         this.candidates.delete(c);
         this.#adopt(c);
         this.h.onMessage?.(d);
+      } else if (d && d.t === 'hello' && this.h.canReplaceSeat?.() && (this.grace || this.#seatLooksDead())) {
+        // nothing is being played, and the seated player is gone (dropped, reloading, or silent): the seat is free again
+        this.candidates.delete(c);
+        this.freeSeat();
+        this.h.onSeatReplaced?.();
+        this.#adopt(c);
+        this.h.onMessage?.(d);
       } else kill({ t: 'full' });
     });
     c.on('close', () => this.candidates.delete(c));
   }
+
+  /** A live player pings every PING_MS; two missed pings mean the phone is gone even though the browser has not noticed yet. */
+  #seatLooksDead() { return !!this.conn && Date.now() - this.lastSeen > PING_MS * 2 + 500; }
 
   #resumedOk(asHost = false) {
     if (!this.grace && !this.rejoining && !asHost) { this.resumedCb?.(); this.resumedCb = null; return; }
@@ -250,10 +322,32 @@ export class Link {
 
   #lost(reason) {
     if (this.closed) return;
+    if (this.role === 'host' && this.h.keepRoom?.()) {            // a private room outlives its guest: free the seat, keep the room open
+      this.freeSeat();
+      this.h.onSeatFreed?.(reason);
+      return;
+    }
     this.closed = true;
     this.timers.forEach(clearTimeout);
     clearInterval(this.hb);
     this.h.onClose?.(reason);
+  }
+
+  /** Host after a reload: the guest is expected back with the token. Behaves like a dropped link (grace period, "reconnecting"). */
+  expectResume() {
+    if (this.closed || this.grace || this.conn) return;
+    this.grace = true;
+    this.h.onReconnecting?.();
+    this.timers.push(setTimeout(() => { this.grace = false; this.#lost('timeout'); }, GRACE_MS));
+  }
+
+  /** Host only: the guest left or vanished. Forget them completely (connection, token, grace period) so anyone can take the seat. */
+  freeSeat() {
+    this.timers.forEach(clearTimeout); this.timers = [];
+    this.grace = false; this.rejoining = false;
+    for (const c of this.candidates) { try { c.close(); } catch { /* ignore */ } }
+    this.candidates.clear();
+    this.dropGuest();
   }
 
   /** Host only: disconnect the current guest (declined, or never said hello) and keep the room open for another. */

@@ -129,11 +129,12 @@ test('game 2 (rematch): wrong guess + middle finger is only a miss (and the filt
   assert.ok($('topHp').children[0].classList.contains('lost'));
 });
 
-test('the opponent leaving after the fight keeps the result screen, with a message and no rematch; Leave returns to the menu', () => {
+test('the opponent leaving after the fight keeps the result screen; the room stays open and can be reopened; Leave returns to the menu', () => {
   conn.emit('data', { t: 'bye' });
   assert.deepEqual(b.visible(), ['over']);
-  assert.match($('overMsg').textContent, /opponent has left/);
-  assert.equal($('againBtn').disabled, true);
+  assert.match($('overMsg').textContent, /left\. Your room is still open/);
+  assert.equal($('againBtn').disabled, false);
+  assert.equal($('againBtn').textContent, 'Open the room again');
   $('overLeave').onclick();
   assert.deepEqual(b.visible(), ['menu']);
   setTimeout(() => process.exit(0), 50).unref();

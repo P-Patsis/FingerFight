@@ -1,4 +1,4 @@
-// Random matchmaking, path 2: a host is already waiting in slot 3, so the searcher scans slots 0-2 (empty), joins 3 and is welcomed.
+// Random matchmaking, path 2: a host is already waiting in slot 3, so the searcher looks at all slots at once (0-2 empty, 1 full), joins 3 and is welcomed.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installBrowser, FakePeer, sleep, until } from './harness.js';
@@ -16,7 +16,7 @@ let hostConn, hello;
 const hellos = [];
 // slot 1: a room that is already full; slot 3: a host that welcomes the searcher
 const fullHost = new FakePeer('ffight-r-1');
-fullHost.on('connection', c => c.on('data', m => { if (m.t === 'hello') { hellos.push('slot1'); c.send({ t: 'full' }); } }));
+fullHost.on('connection', c => { c.send({ t: 'full' }); });          // like the real room: 'full' the moment someone connects
 const host = new FakePeer('ffight-r-3');
 host.on('connection', c => {
   hostConn = c;
@@ -26,7 +26,7 @@ host.on('connection', c => {
 test('the searcher skips empty slots and a full one, joins the waiting host in slot 3 with a generated name', async () => {
   await sleep(20);
   await $('randomBtn').onclick();                       // resolves once matched
-  assert.deepEqual(hellos, ['slot1', 'slot3'], 'slot 0 and 2 were empty, slot 1 said full, slot 3 welcomed');
+  assert.deepEqual(hellos, ['slot3'], 'slots 0 and 2 were empty, slot 1 said full straight away, slot 3 welcomed');
   assert.deepEqual(b.visible(), ['lobby']);
   assert.equal(hello.kind, 'random');
   assert.match(hello.name, /^Fighter \d{4}$/);

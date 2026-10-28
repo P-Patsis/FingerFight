@@ -26,13 +26,10 @@ test('setup: host creates a match and accepts a guest who offers a resume token'
   assert.equal(saved.role, 'host'); assert.equal(saved.token, TOKEN);
 });
 
-test('a drop shows "reconnecting" and keeps the lobby; a stranger and a wrong token are refused', async () => {
+test('a drop shows "reconnecting" and keeps the lobby; a wrong token is refused', async () => {
   conn.emit('close');
   assert.equal($('netBadge').hidden, false);
   assert.deepEqual(b.visible(), ['lobby'], 'the match is not thrown away');
-  const stranger = connect();
-  stranger.emit('data', { t: 'hello', v: 2, kind: 'private', name: 'Mallory' });
-  assert.equal(sentOf(stranger, 'full').length, 1);
   const forger = connect();
   forger.emit('data', { t: 'resume', token: 'ZZZZZZZZZZZZZZZZZZZZZZZZ' });
   assert.equal(sentOf(forger, 'full').length, 1);
@@ -54,6 +51,9 @@ test('a drop in the middle of a fight: the round is replayed, hit points are re-
   await until(() => sentOf(conn, 'round').length === 1, 'round 1 announced');
   conn.emit('close');
   assert.equal($('netBadge').hidden, false);
+  const stranger = connect();                       // a fight is on: the seat is reserved for the token holder only
+  stranger.emit('data', { t: 'hello', v: 2, kind: 'private', name: 'Mallory' });
+  assert.equal(sentOf(stranger, 'full').length, 1, 'nobody takes the seat in the middle of a fight');
   const c = connect();
   c.emit('data', { t: 'resume', token: TOKEN });
   const sync = sentOf(c, 'sync')[0];
