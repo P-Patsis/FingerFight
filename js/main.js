@@ -9,9 +9,10 @@ import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, ne
 import { HandCam, SimCam } from './hands.js';
 import { SKINS, drawAvatar, drawFromMessage, statesFromCount, skinById } from './avatars.js';
 import {
-  DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
+  NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
   sanitizeName, validGuessMsg, validReveal, VIEWS, SAFE_VIEWS, RANDOM_SLOTS,
 } from './logic.js';
+import { cleanName, uniqueName, flagEmoji, validCountry, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
 import { classifyHands, loadTuning } from './gestures.js';
 import { createDebugPanel } from './debug.js';
@@ -38,7 +39,10 @@ const PROTOCOL = 2;
 let link = null;
 let me = null;                          // 'host' | 'guest'
 let names = { host: '', guest: '' };
-let settings = { ...DEFAULTS };
+let flags = { host: '', guest: '' };       // optional 2-letter country codes the players chose to show (never derived from an IP address)
+let pendingFlag = '';
+let profile = null;                     // set below: name lives in the input, the rest here (see "Profile")
+let settings = { ...DEFAULTS };                   // replaced by freshSettings() once the profile is read
 let ready = { host: false, guest: false };   // camera + hand model ready on that phone
 let cam = null, camReady = false;
 let game = null;                        // see logic.js newGame()
@@ -60,7 +64,7 @@ let searching = false, searchId = 0;    // random matchmaking in progress
 let matchWaiter = null, hostWaiter = null;
 let autoStarted = false;
 let opponentGone = false;               // the other phone closed after the fight was decided
-let hideIp = store_get('ff-hideip') !== '0';   // random matches go through the relay only, so a stranger never sees my IP address
+const hideIp = true;                            // always on: random matches go through the relay only, so a stranger never sees my IP address
 let guestToken = null;                  // host: the resume token the pending guest offered in hello
 
 const MODE_LABELS = {
@@ -83,10 +87,40 @@ const store = {
 // ---------------------------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------------------------
+// ---- the phone's BACK button: while in a room / fight / sub-screen we hold one extra history entry, so Back lands here instead of leaving the site
+let currentScreen = 'menu', navPushed = false, ignorePop = 0;
+function navPush() { try { globalThis.history.pushState({ ff: 1 }, ''); navPushed = true; } catch { /* no history API */ } }
+function navSync(id) {
+  const deep = id !== 'menu';
+  if (deep && !navPushed) navPush();
+  else if (!deep && navPushed) { navPushed = false; ignorePop++; try { globalThis.history.back(); } catch { ignorePop--; } }
+}
+/** Leaving a room ends the match for both players, so it is always confirmed. */
+function askLeave(id) {
+  const msg = id === 'game' ? 'Leave the fight? Your opponent will be told you left.'
+    : matchKind === 'random' ? 'Leave this match?'
+    : 'Leave this room? Your opponent will be told, and the match code stops working until you open a room again.';
+  return typeof globalThis.confirm === 'function' ? globalThis.confirm(msg) : true;
+}
+globalThis.addEventListener?.('popstate', () => {
+  if (ignorePop > 0) { ignorePop--; return; }
+  if (!navPushed) return;
+  navPushed = false;                                      // the browser has already taken our entry away
+  if (currentScreen === 'lobby' || currentScreen === 'game' || currentScreen === 'over') {
+    if (askLeave(currentScreen)) leave(); else navPush();   // "stay": put the entry back, the room and the connection are untouched
+  } else if (currentScreen === 'calib') closeCalib();
+  else show('menu');
+});
+
 function show(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+  currentScreen = id;
+  // the style and sound cards are shared by the Profile screen and the lobby: the same controls, so nothing is duplicated or out of step
+  if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('soundSlotProfile').append($('soundCard')); }
+  else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('soundSlot').append($('soundCard')); }
   if (id === 'menu') { updateRejoin(); music.stop(); }
   else if (currentBg >= 0) music.setArena(currentBg);      // lobby / game / result: the arena's loop (lazy, silent if the file is missing)
+  navSync(id);
 }
 
 let currentBg = -1;
@@ -130,6 +164,19 @@ function el(tag, cls, text) {
 // Menu
 // ---------------------------------------------------------------------------------------------
 $('nameInput').value = store.get('ff-name') || '';
+profile = { flag: store.get('ff-flag') === '1', country: store.get('ff-country') || detectCountry(), arena: Number(store.get('ff-arena')) };
+/** A guess for the flag field only: the region of the browser's language setting (el-GR -> GR). No network, no IP involved. */
+function detectCountry() {
+  try {
+    for (const l of [...(navigator.languages || []), navigator.language || '']) {
+      const m = /^[a-z]{2,3}-([A-Za-z]{2})\b/.exec(l);
+      if (m) return m[1].toUpperCase();
+    }
+  } catch { /* ignore */ }
+  return '';
+}
+const myFlag = () => (profile.flag && validCountry(profile.country) ? profile.country : undefined);
+const freshSettings = () => ({ ...DEFAULTS, background: Number.isInteger(profile.arena) && profile.arena >= 0 && profile.arena < BACKGROUNDS.length ? profile.arena : DEFAULTS.background });
 {
   // a shared link carries the code after the "#": browsers never send that part to any server
   const m = /(?:^|[#&])room=([A-Za-z0-9-]+)/.exec(location.hash || '');
@@ -139,7 +186,7 @@ $('nameInput').value = store.get('ff-name') || '';
   }
 }
 $('codeInput').addEventListener('input', e => { e.target.value = formatCode(cleanCode(e.target.value)); });
-const renderSound = () => { $('muteBtn').textContent = 'Sound: ' + (sfx.muted ? 'off' : 'on'); };
+const renderSound = () => { $('muteBtn').textContent = sfx.muted ? 'Off' : 'On'; $('muteBtn').classList.toggle('on', !sfx.muted); };
 $('muteBtn').onclick = () => { sfx.unlock(); sfx.setMuted(!sfx.muted); renderSound(); };
 $('volSlider').value = String(Math.round(sfx.volume * 100));
 $('volSlider').oninput = e => { sfx.unlock(); sfx.setVolume(Number(e.target.value) / 100); if (sfx.muted && Number(e.target.value) > 0) { sfx.setMuted(false); renderSound(); } };
@@ -149,9 +196,36 @@ renderSound();
 document.addEventListener?.('click', e => { if (e.target?.closest?.('button')) { sfx.unlock(); sfx.ui(); } }, true);
 fx.initFx($('game'));
 
-const renderIp = () => { $('ipBtn').textContent = 'Hide my IP from strangers: ' + (hideIp ? 'on' : 'off'); };
-$('ipBtn').onclick = () => { hideIp = !hideIp; store.set('ff-hideip', hideIp ? '1' : '0'); renderIp(); };
-renderIp();
+
+settings = freshSettings();
+
+// ---- Profile & settings (everything is saved on this phone and used in every match)
+function renderWho() { $('whoAmI').textContent = sanitizeName($('nameInput').value); }
+function renderProfile() {
+  const n = sanitizeName($('nameInput').value);
+  $('nameNote').textContent = isObscene(n) ? 'This name is not allowed. In matches you will appear as "Naughty Player #…".' : '';
+  $('flagBtn').textContent = profile.flag ? 'On' : 'Off';
+  $('flagBtn').classList.toggle('on', profile.flag);
+  $('countryRow').hidden = !profile.flag;
+  $('countryInput').value = profile.country || '';
+  for (const b of $('arenaDefault').children) b.classList.toggle('sel', Number(b.dataset.i) === profile.arena);
+  renderWho();
+}
+$('nameInput').oninput = () => { store.set('ff-name', sanitizeName($('nameInput').value)); renderProfile(); };
+$('flagBtn').onclick = () => { profile.flag = !profile.flag; store.set('ff-flag', profile.flag ? '1' : '0'); renderProfile(); };
+$('countryInput').oninput = e => {
+  const c = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+  e.target.value = c; profile.country = c; store.set('ff-country', c);
+};
+BACKGROUNDS.forEach((name, i) => {
+  const b = el('button', 'thumb-' + i, name);
+  b.type = 'button'; b.dataset.i = String(i);
+  b.onclick = () => { profile.arena = i; store.set('ff-arena', String(i)); if (!link) settings = freshSettings(); renderProfile(); };
+  $('arenaDefault').append(b);
+});
+$('profileBtn').onclick = () => { buildStyleCard(); renderProfile(); show('profile'); };
+$('profileBack').onclick = () => show('menu');
+renderWho();
 
 function menuMsg(text, err = false) {
   $('menuMsg').textContent = text;
@@ -159,9 +233,8 @@ function menuMsg(text, err = false) {
 }
 
 function myName() {
-  const n = sanitizeName($('nameInput').value);
-  store.set('ff-name', n);
-  return n;
+  store.set('ff-name', sanitizeName($('nameInput').value));
+  return cleanName($('nameInput').value, NAME_MAX);      // what others see: cleaned, or "Naughty Player #123" if obscene
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -192,7 +265,7 @@ function makeLink(quiet = false) {
 function cleanupLink(only) {
   if (only && link !== only) { only.closed = true; try { only.close(); } catch { /* ignore */ } return; }
   if (link) { link.closed = true; try { link.close(); } catch { /* ignore */ } }
-  link = null; me = null; names = { host: '', guest: '' };
+  link = null; me = null; names = { host: '', guest: '' }; flags = { host: '', guest: '' };
   clearTimeout(helloTimer);
 }
 
@@ -299,7 +372,7 @@ async function tryHostRandom(i, name, active, since) {
 $('randomBtn').onclick = async () => {
   sfx.unlock();
   if (hideIp && !hasRelay()) {      // relay-only needs a TURN relay (see ice.js); without one a random match could never connect
-    menuMsg('Random matches hide your IP behind a relay server, and none is set up yet. Turn off "Hide my IP from strangers" to play random opponents directly (they could then see your IP address), or invite a friend with a private match.', true);
+    menuMsg('Random matches always hide your IP behind a relay server, and none is set up. Invite a friend with a private match instead.', true);
     return;
   }
   resetAll();
@@ -307,7 +380,7 @@ $('randomBtn').onclick = async () => {
   const id = ++searchId;
   setSearching(true);
   const active = () => searching && id === searchId;
-  const myRandom = 'Fighter ' + (1000 + Math.floor(Math.random() * 9000));    // strangers get a generated name
+  const myRandom = myName();                       // random opponents see the profile name too (filtered; clashes are numbered by the host)
   const started = Date.now(), deadline = started + 120_000;
   menuMsg('Looking for an opponent…');
   let matched = false;
@@ -334,7 +407,7 @@ const allowPhotos = () => matchKind === 'private';          // random opponents 
 const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
-  if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, token: link?.token || undefined });
+  if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
   if (me === 'host') {                                     // a connection that never says hello must not hog the room
     clearTimeout(helloTimer);
     helloTimer = setTimeout(() => { if (me === 'host' && !names.guest && !pendingGuest) link?.dropGuest(); }, 8000);
@@ -345,7 +418,7 @@ function onLinkClosed(reason) {
   if (!me || searching) return;
   if (game?.over) {                                  // the fight is decided: the other phone closing now is normal, keep the result screen
     opponentGone = true;
-    $('againBtn').disabled = true;
+    $('againBtn').disabled = true; $('settingsBtn').disabled = true;
     if (matchKind === 'private') $('overMsg').textContent = 'Your opponent has left.';
     return;
   }
@@ -389,7 +462,7 @@ function loadSession() {
   try {
     const x = JSON.parse(store.get(SESSION_KEY) || 'null');
     if (!x || (x.role !== 'host' && x.role !== 'guest') || x.code?.length !== CODE_LEN || (x.token ? !validToken(x.token) : x.role !== 'host') || Date.now() - x.t > SESSION_MAX_AGE) return null;
-    return { role: x.role, code: cleanCode(x.code), token: x.token || null, names: { host: sanitizeName(x.names?.host), guest: sanitizeName(x.names?.guest) } };
+    return { role: x.role, code: cleanCode(x.code), token: x.token || null, names: { host: sanitizeName(x.names?.host, 20), guest: sanitizeName(x.names?.guest, 20) } };
   } catch { return null; }
 }
 function updateRejoin() {
@@ -491,12 +564,17 @@ $('rejoinBtn').onclick = async () => {
   saveSession();
 };
 
+/** A player's name with their flag, if they chose to show one. */
+function labelOf(side) { return (flags[side] ? flagEmoji(flags[side]) + ' ' : '') + (names[side] || ''); }
+
 function acceptGuest(name) {
   pendingGuest = null;
+  name = uniqueName(name, [names.host]);                 // two players called "Pano": the second becomes "Pano (2)"
   names.guest = name;
+  flags.guest = validCountry(pendingFlag) ? pendingFlag : '';
   link?.setToken(guestToken);
   saveSession();
-  send({ t: 'welcome', v: PROTOCOL, kind: matchKind, name: names.host, settings, ready: ready.host });
+  send({ t: 'welcome', v: PROTOCOL, kind: matchKind, name: names.host, yourName: name, flag: myFlag(), settings, ready: ready.host });
   hostWaiter?.(true);
   renderLobby();
 }
@@ -515,6 +593,10 @@ function onMessage(m) {
     case 'bye':
       if (me === 'host' && matchKind === 'private' && link) { link.freeSeat(); hostSeatFreed('left'); }     // the guest left on purpose: free the seat at once
       else onLinkClosed('left');
+      break;
+    case 'lobby':                                   // the opponent went back to the lobby to change settings (never in the middle of a fight)
+      if (!me || matchKind !== 'private' || !names.host || !names.guest || (inGame && game && !game.over)) break;
+      backToLobby(names[other(me)] + ' went back to the lobby. Change anything you like, then press ready.', true);
       break;
     case 'rejoined':                                // host: the guest reloaded their page, so their side of any fight is gone
       if (me === 'host' && inGame && !game?.over) { send({ t: 'abort' }); backToLobby('The fight was cancelled because ' + (names.guest || 'your opponent') + ' reloaded their page. Press ready to start again.', true); }
@@ -535,12 +617,15 @@ function onMessage(m) {
       if (m.v !== PROTOCOL || m.kind !== matchKind) { send({ t: 'rejected' }); link?.dropGuest(); break; }
       clearTimeout(helloTimer);
       guestToken = validToken(m.token) ? m.token : null;
-      if (matchKind === 'private' && requireApproval) { pendingGuest = sanitizeName(m.name); renderLobby(); }
-      else acceptGuest(sanitizeName(m.name));
+      pendingFlag = m.flag;
+      if (matchKind === 'private' && requireApproval) { pendingGuest = cleanName(m.name); renderLobby(); }
+      else acceptGuest(cleanName(m.name));
       break;
     case 'welcome':                                 // guest: accepted; here are the host's details
       if (me !== 'guest' || m.kind !== matchKind) break;
-      names.host = sanitizeName(m.name);
+      names.host = cleanName(m.name);
+      if (typeof m.yourName === 'string') names.guest = cleanName(m.yourName, 20);       // the host may have numbered us ("Pano (2)")
+      flags.host = validCountry(m.flag) ? m.flag : '';
       settings = normalizeSettings(m.settings);
       ready.host = m.ready === true;
       send({ t: 'ready', ready: ready.guest });
@@ -591,6 +676,7 @@ function onMessage(m) {
 // ---------------------------------------------------------------------------------------------
 function enterLobby() {
   menuMsg('');
+  if (me) flags[me] = myFlag() || '';
   setBackground(settings.background);
   buildBgPicker();
   buildStyleCard();
@@ -674,8 +760,8 @@ function renderLobby() {
   const random = matchKind === 'random';
   $('privateBox').hidden = !(matchKind === 'private' && me === 'host');
   $('randomNote').hidden = !random;
-  $('nameHost').textContent = names.host || '-';
-  $('nameGuest').textContent = names.guest || 'Waiting…';
+  $('nameHost').textContent = labelOf('host') || '-';
+  $('nameGuest').textContent = labelOf('guest') || 'Waiting…';
   $('dotHost').classList.toggle('on', !!names.host);
   $('dotGuest').classList.toggle('on', !!names.guest);
   $('stHost').textContent = names.host ? (ready.host ? 'ready' : 'camera off') : '';
@@ -730,8 +816,8 @@ $('shareBtn').onclick = async () => {
     $('lobbyMsg').textContent = 'Link copied. Send it to your friend.';
   } catch { $('lobbyMsg').textContent = 'Share this link: ' + url; }
 };
-$('leaveBtn').onclick = leave;
-$('overLeave').onclick = leave;
+$('leaveBtn').onclick = () => { if (askLeave(currentScreen)) leave(); };
+$('overLeave').onclick = () => { if (askLeave(currentScreen)) leave(); };
 $('camBtn').onclick = enableCamera;
 
 function leave() {
@@ -760,8 +846,10 @@ async function enableCamera() {
     return;
   }
   clearTimeout(slow);
+  if (!cam) return;                                  // the player left while the model was loading
   let err;
   try { err = await cam.startCamera(); } catch (e) { err = 'Could not start the camera (' + (e.message || e) + ').'; }
+  if (!cam) return;
   if (err === 'cancelled') { $('camBtn').disabled = false; return; }
   if (err) { status(err); $('camBtn').disabled = false; return; }
   cam.stopCamera();                              // permission and model are checked; the camera stays OFF until a guess window opens
@@ -795,8 +883,8 @@ function startGame() {
     f.innerHTML = fighterSVG(side);
     f.className = 'fighter idle';
   }
-  $('topName').textContent = names[other(me)];
-  $('botName').textContent = names[me];
+  $('topName').textContent = labelOf(other(me));
+  $('botName').textContent = labelOf(me);
   renderHp('host'); renderHp('guest');
   for (const side of ['host', 'guest']) contentEl(side).replaceChildren();
   $('roundLabel').textContent = 'ROUND 1';
@@ -1189,10 +1277,11 @@ function knockout() {
     if (matchKind === 'random') {                      // strangers: the connection ends with the match, no rematch
       try { link?.close(); } catch { /* ignore */ }
       link = null;
-      $('againBtn').hidden = true;
+      $('againBtn').hidden = true; $('settingsBtn').hidden = true;
       $('overMsg').textContent = 'Random matches end here. Find another opponent from the menu.';
     } else {
-      $('againBtn').hidden = false;
+      $('againBtn').hidden = false; $('settingsBtn').hidden = false;
+      $('settingsBtn').disabled = me === 'guest' && opponentGone;
       $('againBtn').disabled = me !== 'host';
       $('againBtn').textContent = me === 'host' ? (opponentGone ? 'Open the room again' : 'Play again') : 'Waiting for host…';
       $('overMsg').textContent = opponentGone ? 'Your opponent has left.' : '';
@@ -1202,6 +1291,15 @@ function knockout() {
     if (won) { sfx.win(); fx.confetti(); } else { sfx.lose(); fx.rain(); }
   });
 }
+
+/** After a fight: back to the lobby WITH the opponent still connected, to change arena / hands / sound before the next one. */
+$('settingsBtn').onclick = () => {
+  if (matchKind !== 'private' || !link || (inGame && game && !game.over)) return;
+  if (me === 'host' && opponentGone) { backToLobby(''); return; }
+  if (!link.open) return;
+  send({ t: 'lobby' });
+  backToLobby('Back in the lobby: change anything you like, then press ready.', true);
+};
 
 $('againBtn').onclick = () => {
   if (me === 'host' && opponentGone && matchKind === 'private' && link) { backToLobby(''); return; }     // the guest left: reopen the room
@@ -1224,9 +1322,9 @@ function resetAll() {
   if (link) { link.closed = true; try { link.close(); } catch { /* ignore */ } }
   link = null;
   me = null;
-  names = { host: '', guest: '' };
+  names = { host: '', guest: '' }; flags = { host: '', guest: '' };
   ready = { host: false, guest: false };
-  settings = { ...DEFAULTS };
+  settings = freshSettings();
   if (cam && !SIM) { try { cam.stream?.getTracks().forEach(t => t.stop()); } catch { /* ignore */ } }
   cam = null; camReady = false;
   matchKind = null; roomCodeRaw = ''; pendingGuest = null; autoStarted = false;

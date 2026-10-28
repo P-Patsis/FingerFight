@@ -32,19 +32,20 @@ test('cancelling frees the slot and restores the menu; a new search straight aft
 });
 
 let stranger, conn, got = [];
-test('a stranger connects and is accepted at once (no approval, no typed name); the lobby is the safe one', async () => {
+test('a stranger connects and is accepted at once (no approval); the lobby is the safe one', async () => {
   stranger = new FakePeer();
   conn = stranger.connect('ffight-r-0');
   conn.on('data', m => got.push(m));
-  conn.on('open', () => conn.send({ t: 'hello', v: 2, kind: 'random', name: 'Fighter 4242' }));
+  conn.on('open', () => conn.send({ t: 'hello', v: 2, kind: 'random', name: 'Fighter' }));
   await until(() => b.visible()[0] === 'lobby' && got.some(m => m.t === 'welcome'), 'matched: lobby and welcome sent');
   const welcome = got.find(m => m.t === 'welcome');
   assert.equal(welcome.kind, 'random');
-  assert.match(welcome.name, /^Fighter \d{4}$/, 'strangers get generated names, not typed ones');
+  assert.equal(welcome.name, 'Fighter', 'random opponents see the profile name (no typed name here, so the default)');
   assert.equal($('joinPrompt').hidden, true);
   assert.equal($('randomNote').hidden, false); assert.equal($('privateBox').hidden, true);
   assert.equal($('settingsCard').hidden, true); assert.equal($('startBtn').hidden, true);
-  assert.equal($('nameGuest').textContent, 'Fighter 4242');
+  assert.equal(welcome.yourName, 'Fighter (2)', 'two players called Fighter: the guest is numbered');
+  assert.equal($('nameGuest').textContent, 'Fighter (2)');
   assert.equal($('randomBtn').hidden, false, 'search UI is reset');
 });
 

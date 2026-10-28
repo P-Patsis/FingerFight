@@ -276,3 +276,14 @@ input:focus { outline: none; border-color: var(--cyan); }
 .dbg-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 12px; color: #cbd5e1; padding: 4px 0; }
 .dbg-row input { grid-column: 1 / -1; width: 100%; padding: 0; accent-color: var(--cyan); }
 .dbg-bar { display: flex; gap: 8px; margin-top: 6px; }
+
+/* ---------- top bar (Leave / Back stay in view at the top) ---------- */
+.topbar { position: sticky; top: -16px; z-index: 7; align-self: stretch; display: flex; justify-content: flex-start;
+  padding: 16px 0 8px; margin-top: 0 !important; background: linear-gradient(#080a16f5 72%, transparent); }
+.btn.danger { background: #dc2626; color: #fff; box-shadow: 0 3px 0 #7f1d1d; }
+.lobby-top { top: 40px; }
+.who { margin: 0; color: var(--muted); font-size: 14px; }
+.who b { color: var(--ink); font-size: 16px; }
+#nameNote:empty { display: none; }
+/* names can be any script, including right-to-left: keep each name in its own box so it can't reorder the text around it */
+.pl span, .pname, .who b { unicode-bidi: isolate; }

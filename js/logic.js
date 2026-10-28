@@ -80,9 +80,22 @@ export const SAFE_VIEWS = ['avatar', 'skeleton'];          // the only ones allo
 export const RANDOM_SLOTS = 8;                              // shared matchmaking slots (see main.js)
 
 /** A display name: letters, digits, space and _ . - only, at most 12 characters. */
-export function sanitizeName(s) {
-  const t = String(s ?? '').replace(/[^\p{L}\p{N} _.\-]/gu, '').trim().slice(0, 12);
-  return t || 'Fighter';
+/** Names are shown as plain text only, so almost any language is fine. What is removed, and why:
+ *  - control, invisible-format (including right-to-left override tricks), private-use and unassigned characters
+ *  - "<" and ">" (markup), and pile-ups of combining marks (a name must not grow tall over the screen)
+ *  Letters of every script (Latin, Greek, Chinese, Arabic, ...), numbers, spaces, symbols such as $ * # & ' and emoji
+ *  (including flags and joined emoji) stay. The limit counts what a person sees as one character, not bytes. */
+export const NAME_MAX = 12;
+const segmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+const graphemes = t => (segmenter ? Array.from(segmenter.segment(t), x => x.segment) : Array.from(t));
+export function sanitizeName(s, max = NAME_MAX) {
+  const t = String(s ?? '').normalize('NFC').replace(/[\p{Z}\s]+/gu, ' ')
+    .replace(/[\p{Cc}\p{Cf}\p{Co}\p{Cn}\p{Cs}<>]/gu, c => (c === '\u200d' ? c : ''))       // keep only the joiner used inside emoji
+    .replace(/\u200d(?![\p{Extended_Pictographic}])/gu, '').replace(/(?<![\p{Extended_Pictographic}\ufe0f])\u200d/gu, '')
+    .replace(/(\p{M}{2})\p{M}+/gu, '$1')
+    .replace(/[\p{Z}\s]+/gu, ' ').trim();
+  const cut = graphemes(t).slice(0, max).join('').trim();
+  return cut || 'Fighter';
 }
 
 export const validGuess = g => g === null || (Number.isInteger(g) && g >= 0 && g <= MAX_FINGERS);

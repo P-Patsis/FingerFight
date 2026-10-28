@@ -33,10 +33,10 @@ test('ICE servers = the STUN list plus whatever relays are configured; bad entri
   assert.equal(seen[0][1].config.iceTransportPolicy, 'relay');
 });
 
-test('a random search with "hide my IP" on but no relay configured is refused with an explanation', () => {
+test('a random search (hide-IP is always on) but no relay configured is refused with an explanation', () => {
   setTurnServers([]);
   $('randomBtn').onclick();
-  assert.match($('menuMsg').textContent, /none is set up yet/i);
+  assert.match($('menuMsg').textContent, /always hide your IP.*none is set up/i);
   assert.equal($('cancelBtn').hidden, true, 'no search was started');
   assert.equal($('randomBtn').hidden, false);
 });

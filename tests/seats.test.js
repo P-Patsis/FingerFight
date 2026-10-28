@@ -56,6 +56,13 @@ test('someone joining while the seated guest is alive is still told the room is 
   assert.equal($('nameGuest').textContent, 'Jon');
 });
 
+test('the guest going back to the lobby after a fight tells the host; a fight in progress is never interrupted this way', async () => {
+  g1.emit('data', { t: 'lobby' });
+  assert.deepEqual(b.visible(), ['lobby']);
+  assert.match($('lobbyMsg').textContent, /Jon went back to the lobby/);
+  assert.equal($('nameGuest').textContent, 'Jon', 'seats are kept');
+});
+
 test('the host reloading: the saved session reopens the SAME room code', async () => {
   const saved = JSON.parse(globalThis.localStorage.getItem('ff-session'));
   assert.equal(saved.role, 'host'); assert.equal(saved.code.length, 16);

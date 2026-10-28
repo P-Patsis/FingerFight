@@ -14,6 +14,12 @@
 
 Newest first.
 
+## 2026-10-28 (later) — Back button, Profile & settings, names, flag (NOT YET TRIED ON PHONES)
+- Changed: see DECISIONS.md "Names, profile, back button, flag". New: js/names.js, Profile screen, red Leave bar, history-based Back with confirm, "Back to lobby" after a fight, optional flag, hide-IP always on (toggle removed), random matches keep the profile name (clash numbering), profanity filter incl. d1ck / pu$$y / nlgga. Also fixed a crash when leaving while the camera was still enabling.
+- Tests: new names.test.js, nav.test.js; updated logic / random-flow / relay / flow.host / seats tests. 126/126. Connection layer (82ad16f) untouched apart from names in hello/welcome.
+- Verified: automated only. NOT seen on a screen: Profile layout, the sticky Leave bar over the lobby code box, the real Android Back button.
+- Open: phone test list given to the user.
+
 ## 2026-10-28 — Connection layer: reload, stale seats, random queue (NOT YET TESTED ON PHONES)
 - Changed: js/net.js (`joinAny`, `freeSeat`, `expectResume`, 'queue' message, seat takeover, resume works on a re-opened room), js/main.js (hostSeatFreed/backToLobby, auto-rejoin on load, session saved from room creation and refreshed every 20 s, 'rejoined'/'abort', random search via joinAny), tests: new seats.test.js and queue.test.js, updated flow.host / flow.random.join / reconnect tests. 114/114. See DECISIONS.md "Rooms, seats and the random queue".
 - Behaviour now: guest leaves or drops -> host stays in the lobby ("X left. Your room is still open"), same code works again; host sees "X disconnected (reloading?). Waiting for them to come back"; reloading either side re-joins by itself; a reload mid-fight cancels the fight, seats are kept.

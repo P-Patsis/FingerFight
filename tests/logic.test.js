@@ -79,13 +79,17 @@ const hand = (over = {}) => ({ thumb: false, index: true, middle: false, ring: f
 const lm = () => [Array.from({ length: 21 }, (_, i) => [i * 10, 1000 - i * 10])];
 const pic = (over = {}) => ({ view: 'avatar', skin: 'gold', hands: [hand()], lm: null, ar: 1.333, photo: '', ...over });
 
-test('names are cleaned', () => {
+test('names are cleaned: any language, symbols and emoji stay; markup, invisible tricks and pile-ups go', () => {
   assert.equal(sanitizeName('  Alex  '), 'Alex');
-  assert.equal(sanitizeName('<img src=x onerror=alert(1)>'), 'img srcx one');   // markup characters removed, 12 chars max
+  assert.equal(sanitizeName('<img src=x>'), 'img src=x', 'angle brackets (markup) are removed');
   assert.equal(sanitizeName(''), 'Fighter');
   assert.equal(sanitizeName(null), 'Fighter');
-  assert.equal(sanitizeName('Μαρία'), 'Μαρία', 'non-Latin letters are fine');
+  for (const n of ['Μαρία', '李小龙', 'محمد', 'José', 'Zoë', 'Ольга', '$*Cool*$', 'Pano_99', "O'Neil", '😀🔥', '👨‍👩‍👧', '🇬🇷 Pano']) assert.equal(sanitizeName(n), n, n);
   assert.equal(sanitizeName('a'.repeat(40)).length, 12);
+  assert.equal(sanitizeName('😀'.repeat(20)), '😀'.repeat(12), 'the limit counts visible characters: an emoji is one');
+  assert.equal(sanitizeName('a\u202eb\u200bc\u0007d'), 'abcd', 'right-to-left override, zero-width and control characters are dropped');
+  assert.equal(sanitizeName('Z' + '\u0300'.repeat(30)), 'Z\u0300\u0300', 'stacked combining marks are limited');
+  assert.equal(sanitizeName('a    b\tc'), 'a b c');
 });
 
 test('guesses are checked', () => {

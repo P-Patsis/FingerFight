@@ -29,7 +29,7 @@ test('the searcher skips empty slots and a full one, joins the waiting host in s
   assert.deepEqual(hellos, ['slot3'], 'slots 0 and 2 were empty, slot 1 said full straight away, slot 3 welcomed');
   assert.deepEqual(b.visible(), ['lobby']);
   assert.equal(hello.kind, 'random');
-  assert.match(hello.name, /^Fighter \d{4}$/);
+  assert.equal(hello.name, 'Fighter', 'the profile name, not a generated one');
   assert.equal($('nameHost').textContent, 'Fighter 7777');
   assert.equal($('randomNote').hidden, false);
   assert.equal($('randomBtn').hidden, false, 'search UI is reset');

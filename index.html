@@ -21,7 +21,7 @@
   <section id="menu" class="screen">
     <h1 class="logo">FINGER<br>FIGHT</h1>
     <p class="tag">Guess how many fingers. Land the hit.</p>
-    <label class="field">Your name<input id="nameInput" maxlength="12" autocomplete="off" placeholder="Fighter"></label>
+    <p class="who">Playing as <b id="whoAmI">Fighter</b></p>
     <button id="createBtn" class="btn big">Create private match</button>
     <div class="or">got a friend's code?</div>
     <div class="row">
@@ -33,15 +33,30 @@
     <button id="randomBtn" class="btn">Find a random opponent</button>
     <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>
-    <button id="muteBtn" class="link">Sound: on</button>
-    <label class="vol">Volume <input id="volSlider" type="range" min="0" max="100" step="5" value="70" aria-label="Volume"></label>
-    <button id="ipBtn" class="link">Hide my IP from strangers: on</button>
+    <button id="profileBtn" class="btn ghost">Profile &amp; settings</button>
     <button id="calibBtn" class="link">Camera test &amp; finger calibration</button>
     <p class="fine">Uses your camera to count your fingers. Against random opponents only a cartoon or skeleton of your hand is ever shared, never a camera image.</p>
   </section>
 
+  <!-- ===== Profile & settings ===== -->
+  <section id="profile" class="screen" hidden>
+    <div class="topbar"><button id="profileBack" class="btn small">← Back</button></div>
+    <h2 class="logo small">PROFILE</h2>
+    <div class="card">
+      <label class="field">Your name<input id="nameInput" maxlength="40" autocomplete="off" placeholder="Fighter"></label>
+      <p id="nameNote" class="fine"></p>
+      <div class="set"><span>Show my country flag</span><button id="flagBtn" class="toggle">Off</button></div>
+      <label class="field" id="countryRow">Country code (2 letters, e.g. GR)<input id="countryInput" maxlength="2" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="GR"></label>
+      <div class="set col"><span>Favourite arena (used when you host)</span><div id="arenaDefault" class="bg-picker"></div></div>
+    </div>
+    <div id="soundSlotProfile"></div>
+    <div id="styleSlotProfile"></div>
+    <p class="fine">Your IP address is always hidden from strangers (random matches go through a relay). Your name, hand style, sound and arena are saved on this phone and used in every match.</p>
+  </section>
+
   <!-- ===== Lobby ===== -->
   <section id="lobby" class="screen" hidden>
+    <div class="topbar"><button id="leaveBtn" class="btn small danger">← Leave room</button></div>
     <div class="lobby-top" id="privateBox">
       <div class="room-label">MATCH CODE (send it to your friend)</div>
       <div id="roomCode" class="room-code">----</div>
@@ -69,18 +84,21 @@
       <div class="set" id="approveRow"><span>Ask before someone joins</span><button id="approveBtn" class="toggle on">On</button></div>
       <div class="set col"><span>Arena</span><div id="bgPicker" class="bg-picker"></div></div>
     </div>
-    <div class="card" id="styleCard">
+    <div id="soundSlot"><div class="card" id="soundCard">
+      <div class="set"><span>Sound</span><button id="muteBtn" class="toggle on">On</button></div>
+      <label class="vol">Volume <input id="volSlider" type="range" min="0" max="100" step="5" value="70" aria-label="Volume"></label>
+    </div></div>
+    <div id="styleSlot"><div class="card" id="styleCard">
       <div class="set col"><span>What your opponent sees of your hand</span><div id="modePicker" class="mode-picker"></div></div>
       <div class="set col" id="skinRow"><span>Cartoon hand skin</span><div id="skinPicker" class="skin-picker"></div></div>
       <div class="set"><span>Hide rude gestures (show only the number)</span><button id="rudeBtn" class="toggle on">On</button></div>
       <div class="set" id="photoRow"><span>Show my opponent's photos</span><button id="photoBtn" class="toggle on">On</button></div>
       <p id="styleNote" class="fine"></p>
-    </div>
+    </div></div>
     <p id="camStatus" class="msg" role="status"></p>
     <button id="camBtn" class="btn">Enable camera</button>
     <button id="startBtn" class="btn big" disabled>Start fight</button>
     <p id="lobbyMsg" class="msg" role="status"></p>
-    <button id="leaveBtn" class="link">Leave</button>
   </section>
 
   <!-- ===== Game ===== -->
@@ -114,12 +132,13 @@
 
   <!-- ===== Game over ===== -->
   <section id="over" class="screen" hidden>
+    <div class="topbar"><button id="overLeave" class="btn small danger">← Leave room</button></div>
     <h2 id="overTitle" class="logo small">K.O.</h2>
     <p id="overText" class="tag"></p>
     <div id="collage" class="collage" hidden></div>
     <button id="againBtn" class="btn big">Play again</button>
+    <button id="settingsBtn" class="btn">Back to lobby (change settings)</button>
     <p id="overMsg" class="msg"></p>
-    <button id="overLeave" class="link">Leave</button>
   </section>
 
   <!-- the camera lives here and is moved into the bottom panel when it is your turn to point -->
