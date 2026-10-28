@@ -62,7 +62,7 @@ test('health never goes below zero', () => {
 test('settings are cleaned', () => {
   assert.deepEqual(normalizeSettings({}), DEFAULTS);
   const s = normalizeSettings({ seconds: '99', hits: 0, background: 9 });
-  assert.deepEqual(s, { seconds: 20, hits: 1, maxFingers: 10, background: 4 });
+  assert.deepEqual(s, { seconds: 20, hits: 1, maxFingers: 10, background: 4, shrink: false });
   assert.equal(normalizeSettings({ seconds: 'abc' }).seconds, 5);
 });
 

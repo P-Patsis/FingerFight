@@ -17,11 +17,9 @@ player's phone does the same. Phone-to-phone over the internet with a 4-letter r
 | Gesture (pointer only) | How it is detected | Critical damage |
 |---|---|---|
 | Middle finger | only the middle finger is up | 2 |
-| Moutza | all five fingers up and fanned wide | 2 |
 | Sideways bird | middle finger up at roughly 90 degrees to the other raised fingers | 3 |
 
-Critical gestures can be switched off in the lobby. The camera can't tell a palm from the back of a hand, so
-"moutza" means "open hand, fingers spread" either way. All gesture detection is geometric and approximate.
+Critical gestures can be switched off in the lobby. An open palm (five fingers) is a normal five, never a gesture or filtered. All gesture detection is geometric and approximate.
 
 ## Starting a match
 - **Create private match:** you get a long unique code (16 characters, about 80 bits, not guessable). **Copy code** or

@@ -2,10 +2,10 @@
 //  - this site's files: network first (so an update arrives at once), the cached copy when offline
 //  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
 // Match traffic is WebRTC, which a service worker never sees.
-const VERSION = 'ff-9f832ec3';
+const VERSION = 'ff-b1159fab';
 const HEAVY_CACHE = 'ff-heavy';           // the 17 MB hand model lives in its own cache, so a site update never makes it download again
 const SHELL = ['./', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
-  'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js', 'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js'];
+  'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js', 'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js', 'js/names.js', 'js/wake.js'];
 const HEAVY = ['https://cdn.jsdelivr.net/npm/@mediapipe/', 'https://storage.googleapis.com/mediapipe-models/'];
 
 self.addEventListener('install', e => {

@@ -1,3 +1,4 @@
+import { RUDE_GESTURES } from './logic.js';
 // Pure hand geometry on MediaPipe's 21 landmarks (each {x, y} in 0..1 of the image). No DOM.
 // Landmark ids: 0 wrist; thumb 1-4; index 5-8; middle 9-12; ring 13-16; pinky 17-20 (MCP, PIP, DIP, TIP).
 //
@@ -19,14 +20,13 @@ export const DEFAULT_TUNING = Object.freeze({
   thumb: 1.0,       // the thumb is UP when its tip is this many times farther from the pinky base than its own joint
   minScore: 0,      // ignore a detected hand whose model confidence is below this (0 = accept everything)
   frames: 7,        // how many of the latest camera frames vote on the answer at the snap
-  moutza: 22,       // degrees of spread between index and pinky for the open-palm gesture
   sideMin: 60,      // the sideways gesture: angle range (degrees) between the middle finger and the other raised fingers
   sideMax: 120,
 });
 /** [min, max, step] for each value, used to clamp loaded values and to build the sliders. */
 export const TUNING_RANGES = Object.freeze({
   extend: [1.0, 1.5, 0.01], thumb: [0.8, 1.3, 0.01], minScore: [0, 0.95, 0.05], frames: [3, 15, 1],
-  moutza: [10, 40, 1], sideMin: [30, 89, 1], sideMax: [91, 150, 1],
+  sideMin: [30, 89, 1], sideMax: [91, 150, 1],
 });
 export const TUNING = { ...DEFAULT_TUNING };
 const TUNE_KEY = 'ff-tune';
@@ -72,11 +72,9 @@ export const countHands = (hands, aspect = 1) => Math.min(10, hands.reduce((n, l
 const dirOf = (lm, name, aspect) => { const [mcp, , tip] = FINGER_IDS[name]; return unit(P(lm, mcp, aspect), P(lm, tip, aspect)); };
 
 /**
- * One hand's gesture: 'sideways' | 'moutza' | 'middle' | null.
+ * One hand's gesture: 'sideways' | 'middle' | null. An open palm (five fingers, spread or not) is NOT a gesture: it is just a five.
  *  - middle:   only the middle finger is up (thumb ignored)
- *  - moutza:   all five up AND fanned wide (index-to-pinky angle over TUNING.moutza), the open-palm insult
  *  - sideways: middle finger up and at roughly 90 degrees to the other raised fingers (at least two of them)
- * The camera can't tell palm from back of hand, so moutza is "open and spread" either way.
  */
 
 export function classify(lm, aspect = 1) {
@@ -90,14 +88,11 @@ export function classify(lm, aspect = 1) {
     const a = angleBetween(m, { x: mean.x / len, y: mean.y / len });
     if (a >= TUNING.sideMin && a <= TUNING.sideMax) return 'sideways';
   }
-  if (f.thumb && f.index && f.middle && f.ring && f.pinky) {
-    if (angleBetween(dirOf(lm, 'index', aspect), dirOf(lm, 'pinky', aspect)) >= TUNING.moutza) return 'moutza';
-  }
   if (f.middle && !f.index && !f.ring && !f.pinky) return 'middle';
   return null;
 }
 
-const RANK = { sideways: 3, moutza: 2, middle: 1 };
+const RANK = { sideways: 2, middle: 1 };
 
 /** The strongest gesture among the visible hands, or null. */
 export function classifyHands(hands, aspect = 1) {
@@ -107,4 +102,18 @@ export function classifyHands(hands, aspect = 1) {
     if (g && (!best || RANK[g] > RANK[best])) best = g;
   }
   return best;
+}
+
+/**
+ * Does a received picture message show a rude gesture? Uses the sender's gesture flag, the hand landmarks and the finger
+ * flags. An open palm / five fingers is never rude (the old 'moutza' flag from older clients is ignored).
+ */
+export function isRudeMessage(msg) {
+  if (RUDE_GESTURES.includes(msg.gesture)) return true;
+  if (Array.isArray(msg.hands) && msg.hands.some(h => h.middle && !h.index && !h.ring && !h.pinky)) return true;   // only the middle finger up
+  if (Array.isArray(msg.lm) && msg.lm.length) {
+    const hands = msg.lm.map(h => h.map(([x, y]) => ({ x: x / 1000, y: y / 1000 })));
+    if (classifyHands(hands, msg.ar || 1)) return true;
+  }
+  return false;
 }

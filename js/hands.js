@@ -39,6 +39,7 @@ export class HandCam {
   constructor(video, canvas) {
     this.video = video; this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.facing = 'user';
+    this.deviceId = null; this.exact = false; this.flipping = false;
     this.landmarker = null; this.stream = null;
     this.samples = []; this.running = false; this.lastTime = -1;
     this.onFrame = null;
@@ -65,7 +66,7 @@ export class HandCam {
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: this.facing }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        video: { ...this.#videoConstraint(), width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
     } catch (e) {
       return e.name === 'NotAllowedError' || e.name === 'SecurityError'
         ? 'Camera permission denied. Allow the camera in the browser site settings, then reload.'
@@ -81,13 +82,49 @@ export class HandCam {
     }
     this.video.srcObject = this.stream;
     await this.video.play();
+    const real = stream.getVideoTracks?.()[0]?.getSettings?.().facingMode;     // what the browser really gave us
+    if (real === 'user' || real === 'environment') this.facing = real;
     const mirror = this.facing === 'user';
     this.video.classList.toggle('mirror', mirror);
     this.canvas.classList.toggle('mirror', mirror);
     return null;
   }
 
-  async flip() { this.facing = this.facing === 'user' ? 'environment' : 'user'; return this.startCamera(); }
+  #videoConstraint() { return this.deviceId ? { deviceId: { exact: this.deviceId } } : { facingMode: this.exact ? { exact: this.facing } : { ideal: this.facing } }; }
+
+  /**
+   * Switches between the front and back camera while the camera is on. Tries the other facingMode (exact), then any
+   * other camera by id; if neither works the previous camera is restored. The hand tracking keeps running: only the
+   * video's stream changes (the analysis loop reads the same <video>).
+   * @returns {Promise<string|null>} an error message to show, or null on success
+   */
+  async flip() {
+    if (this.flipping) return null;
+    if (!this.stream) return 'The camera is off.';
+    this.flipping = true;
+    const before = { facing: this.facing, deviceId: this.deviceId };
+    const curId = this.stream.getVideoTracks?.()[0]?.getSettings?.().deviceId;
+    const want = this.facing === 'user' ? 'environment' : 'user';
+    try {
+      this.deviceId = null; this.facing = want;
+      let err = await this.#tryFacing();
+      if (err && err !== 'cancelled' && navigator.mediaDevices.enumerateDevices) {   // the browser ignored facingMode: pick another camera by id
+        const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput' && d.deviceId && d.deviceId !== curId);
+        if (cams.length) { this.deviceId = cams[0].deviceId; this.facing = want; err = await this.startCamera(); }
+      }
+      if (err && err !== 'cancelled') {                                       // nothing worked: go back to the camera that was working
+        this.facing = before.facing; this.deviceId = before.deviceId;
+        await this.startCamera();
+        return /permission/i.test(err) ? err : 'No other camera could be opened (this phone may have only one).';
+      }
+      return err;
+    } finally { this.flipping = false; }
+  }
+
+  async #tryFacing() {
+    this.exact = true;                       // exact, so a browser that cannot do it fails instead of reusing the same camera
+    try { return await this.startCamera(); } finally { this.exact = false; }
+  }
 
   run() {
     if (this.running || !this.landmarker) return;

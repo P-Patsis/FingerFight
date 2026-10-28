@@ -3,12 +3,14 @@
 // A round: one player is the POINTER (holds up fingers), the other is the GUESSER (guesses the total number
 // of fingers). Roles swap every round. Both sides run resolveRound() on the same inputs, so both get the same answer.
 
-export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 10, background: 0 });
+export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 10, background: 0, shrink: false });
 export const LIMITS = Object.freeze({ seconds: [3, 20], hits: [1, 10], maxFingers: [1, 10] });
 export const MAX_FINGERS = 10;
 
 /** Gestures the camera can recognise. They never score; they are only shown (or filtered out) at the reveal. */
-export const GESTURES = ['middle', 'moutza', 'sideways'];
+export const GESTURES = ['middle', 'moutza', 'sideways'];   // 'moutza' (open palm) is still ACCEPTED from older clients but is no longer detected, shown or filtered
+/** The only gestures the rude-gesture filter hides. An open palm is a normal five and is never filtered. */
+export const RUDE_GESTURES = Object.freeze(['middle', 'sideways']);
 
 export const other = side => (side === 'host' ? 'guest' : 'host');
 
@@ -25,7 +27,37 @@ export function normalizeSettings(s = {}) {
     hits: clamp(n('hits'), LIMITS.hits),
     maxFingers: clamp(n('maxFingers'), LIMITS.maxFingers),   // quicker matches: both players only use 0..maxFingers
     background: Math.max(0, Math.min(4, Math.round(Number(s.background) || 0))),
+    shrink: s.shrink === true,                                // optional: the finger limit drops as the match goes on (default OFF)
   };
+}
+
+// ---- reduce fingers over time (optional host setting) --------------------------------------------------------------
+export const SHRINK_EVERY = 2;   // the limit drops by one every this many rounds ...
+export const SHRINK_FLOOR = 3;   // ... but never below this (0..3), so a long match stays playable
+
+/** The finger limit for round [round] (1-based): the host's maxFingers, or less once the shrink option is on. */
+export function effectiveMax(settings, round) {
+  const max = normalizeSettings(settings).maxFingers;
+  if (settings?.shrink !== true) return max;
+  const drop = Math.floor((Math.max(1, Number(round) || 1) - 1) / SHRINK_EVERY);
+  return Math.min(max, Math.max(SHRINK_FLOOR, max - drop));
+}
+
+// ---- anti-grief: a player who shows no hand for IDLE_ROUNDS rounds in a row forfeits ------------------------------
+export const IDLE_ROUNDS = 3;    // consecutive rounds with no detected hand before the match is forfeited (a warning comes one round earlier)
+
+export const newIdle = () => ({ host: 0, guest: 0 });
+
+/**
+ * Updates the idle counters after a round. [noHand] = {host: bool, guest: bool}: true when that player showed no hand
+ * (as pointer: no answer; as guesser: no guess). Seeing a hand resets the counter.
+ * @returns {{idle: {host:number, guest:number}, warn: string[], forfeit: 'host'|'guest'|null}}
+ */
+export function trackIdle(idle, noHand) {
+  const next = { host: noHand.host ? idle.host + 1 : 0, guest: noHand.guest ? idle.guest + 1 : 0 };
+  const warn = ['host', 'guest'].filter(s => next[s] === IDLE_ROUNDS - 1);
+  const gone = ['host', 'guest'].filter(s => next[s] >= IDLE_ROUNDS);
+  return { idle: next, warn, forfeit: gone.length === 1 ? gone[0] : null };   // both idle at once: nobody forfeits (nobody is being left waiting)
 }
 
 export function newGame(settings) {

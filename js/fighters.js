@@ -3,7 +3,7 @@
 
 export const BACKGROUNDS = ['Dojo', 'Neon Street', 'Rooftop Sunset', 'Volcano Arena', 'Space Station'];
 
-export const GESTURE_NAMES = { middle: 'MIDDLE FINGER', moutza: 'MOUTZA', sideways: 'SIDEWAYS BIRD' };
+export const GESTURE_NAMES = { middle: 'MIDDLE FINGER', sideways: 'SIDEWAYS BIRD' };
 
 const STYLES = {
   host:  { gi: '#dc2626', trim: '#fca5a5', band: '#facc15', skin: '#f1c27d', hair: '#1f2937' },

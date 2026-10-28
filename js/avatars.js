@@ -189,9 +189,15 @@ export const TIP_ID = { thumb: 4, index: 8, middle: 12, ring: 16, pinky: 20 };
  */
 export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = true) {
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h);
-  const fw = Math.min(w, h * ar), fh = fw / ar;             // the frame, letterboxed and centred
-  const ox = (w - fw) / 2, oy = (h - fh) / 2;
-  const px = p => ({ x: ox + (p[0] / 1000) * fw, y: oy + (p[1] / 1000) * fh });
+  // Fit the hand(s) to the picture, not the camera frame: a far-away hand is a small box inside a big frame, so
+  // scale the bounding box of all points up to fill the area (aspect kept, frame aspect [ar] respected).
+  const xs = lms.flat().map(p => p[0] * ar), ys = lms.flat().map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const bw = Math.max(maxX - minX, 40), bh = Math.max(maxY - minY, 40);       // floor: a single point must not blow up
+  const pad = 0.1;
+  const k = Math.min((w * (1 - 2 * pad)) / bw, (h * (1 - 2 * pad)) / bh);
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  const px = p => ({ x: w / 2 + (p[0] * ar - cx) * k, y: h / 2 + (p[1] - cy) * k });
   const tips = [];
   lms.forEach((hand, hi) => {
     ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = '#22d3ee';

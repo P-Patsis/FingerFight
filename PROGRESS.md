@@ -14,6 +14,19 @@
 
 Newest first.
 
+## 2026-10-28 (night) — Flip camera, bigger far-away skeleton, open palm is legal, wake lock, anti-grief, fewer fingers (NOT YET TRIED ON PHONES)
+- Changed:
+  - FLIP CAMERA (js/hands.js, main.js): tries the other facingMode as `exact`, then another camera by deviceId (for browsers that ignore facingMode), and restores the working camera if neither exists. Mirroring follows the camera the browser really gave. The hand tracking loop is untouched (it reads the same <video>). The handler was only bound inside Enable-camera and wrote errors to a lobby line nobody sees during a match; it is now bound once and errors show on the camera caption.
+  - SKELETON SCALE (avatars.js): reveal/collage skeletons are fitted to the bounding box of the hand(s) with 10% padding, so a far hand fills the picture. The live overlay on the camera view is unchanged (it must sit on the real video).
+  - OPEN PALM: no longer detected or filtered. `classify()` returns only middle / sideways; the filter is `isRudeMessage` (gestures.js) over `RUDE_GESTURES`; an old client's `moutza` flag is accepted and ignored. Removed its slider, sim button, label, README row.
+  - WAKE LOCK (js/wake.js): taken while the game screen shows, released on any other screen and when the page hides, re-taken on return. Unsupported or denied = nothing happens.
+  - ANTI-GRIEF (logic.js `IDLE_ROUNDS = 3`, `trackIdle`): 3 rounds in a row with no hand (as pointer: no answer; as guesser: no guess) forfeits the match. Warning banner to that player after round 2. Both phones compute it from the same messages. Both idle at once = nobody forfeits.
+  - FEWER FINGERS (host toggle in the lobby, default OFF, `settings.shrink`): the limit drops by 1 every 2 rounds, floor 3 (`SHRINK_EVERY`, `SHRINK_FLOOR`). Applied to scoring clamps, the pad/sim buttons, the live count and the caption.
+  - Also fixed: sw.js SHELL was missing js/names.js (offline start would have failed); now has names.js and wake.js, with a test that every js/*.js is listed. VERSION ff-b1159fab.
+- Tests: 143/143 (was 126). New: tests/polish.test.js (skeleton scale, anti-grief logic, shrink, wake lock, flip incl. fallback and single camera), tests/flow.idle.test.js (3 idle rounds -> forfeit end to end), open-palm filter tests, SHELL test.
+- Logic-tested only (Node): everything above. NEEDS A REAL PHONE: flip on the real front/back cameras (does `exact` facingMode work, does the hand model keep tracking after the switch, is the back camera's view un-mirrored), skeleton size on the screen, wake lock actually holding the screen (Chrome needs https, we have it), the idle warning banner.
+- Open: confirm the choices below. Forfeit not kick: a private room stays open (back to lobby), a random match just ends. Random-match wake lock same as private.
+
 ## 2026-10-28 (later) — Back button, Profile & settings, names, flag (NOT YET TRIED ON PHONES)
 - Changed: see DECISIONS.md "Names, profile, back button, flag". New: js/names.js, Profile screen, red Leave bar, history-based Back with confirm, "Back to lobby" after a fight, optional flag, hide-IP always on (toggle removed), random matches keep the profile name (clash numbering), profanity filter incl. d1ck / pu$$y / nlgga. Also fixed a crash when leaving while the camera was still enabling.
 - Tests: new names.test.js, nav.test.js; updated logic / random-flow / relay / flow.host / seats tests. 126/126. Connection layer (82ad16f) untouched apart from names in hello/welcome.

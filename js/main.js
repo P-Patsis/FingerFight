@@ -7,14 +7,15 @@ import { sfx, music } from './audio.js';
 import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
+import { createWakeLock } from './wake.js';
 import { SKINS, drawAvatar, drawFromMessage, statesFromCount, skinById } from './avatars.js';
 import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
-  sanitizeName, validGuessMsg, validReveal, VIEWS, SAFE_VIEWS, RANDOM_SLOTS,
+  sanitizeName, validGuessMsg, validReveal, VIEWS, SAFE_VIEWS, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, newIdle, trackIdle, IDLE_ROUNDS,
 } from './logic.js';
 import { cleanName, uniqueName, flagEmoji, validCountry, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
-import { classifyHands, loadTuning } from './gestures.js';
+import { isRudeMessage as looksRude, loadTuning } from './gestures.js';
 import { createDebugPanel } from './debug.js';
 import { hasRelay } from './ice.js';
 
@@ -50,6 +51,8 @@ let round = null;                       // the round in progress
 let streak = { side: null, n: 0 };      // consecutive landed hits by one side (combo pulse)
 let fightLog = [];                       // every resolved round of this game, for the final collage
 let inGame = false;
+const wake = createWakeLock();                 // screen stays on while the game screen is showing
+let idle = newIdle();                          // consecutive rounds each player showed no hand (anti-grief)
 let token = 0;                          // bumped to cancel pending timeouts from an old round or game
 let bannerTimer = null;
 
@@ -115,6 +118,7 @@ globalThis.addEventListener?.('popstate', () => {
 function show(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   currentScreen = id;
+  wake.want(id === 'game');
   // the style and sound cards are shared by the Profile screen and the lobby: the same controls, so nothing is duplicated or out of step
   if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('soundSlotProfile').append($('soundCard')); }
   else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('soundSlot').append($('soundCard')); }
@@ -496,6 +500,7 @@ function backToLobby(msg, keepGuest = false) {
   releaseCamera();
   round = null; inGame = false; game = null; autoStarted = false; opponentGone = false;
   fightLog = []; streak = { side: null, n: 0 };
+  idle = newIdle();
   if (!keepGuest) { names.guest = ''; pendingGuest = null; guestToken = null; }
   ready = { host: false, guest: false };
   fx.clearFx(); $('banner').replaceChildren(); netBadge('');
@@ -769,6 +774,8 @@ function renderLobby() {
   $('valSeconds').textContent = settings.seconds;
   $('valHits').textContent = settings.hits;
   $('valMax').textContent = settings.maxFingers;
+  $('shrinkBtn').textContent = settings.shrink ? 'On' : 'Off';
+  $('shrinkBtn').classList.toggle('on', !!settings.shrink);
   $('approveBtn').textContent = requireApproval ? 'On' : 'Off';
   $('approveBtn').classList.toggle('on', requireApproval);
   $('approveRow').hidden = !(matchKind === 'private' && me === 'host');
@@ -802,6 +809,7 @@ $('settingsCard').addEventListener('click', e => {
   send({ t: 'settings', settings });
   renderLobby();
 });
+$('shrinkBtn').onclick = () => { if (me === 'host') { settings = normalizeSettings({ ...settings, shrink: !settings.shrink }); send({ t: 'settings', settings }); renderLobby(); } };
 $('approveBtn').onclick = () => { if (me === 'host') { requireApproval = !requireApproval; renderLobby(); } };
 
 $('copyBtn').onclick = async () => {
@@ -856,7 +864,6 @@ async function enableCamera() {
   camReady = true;
   ready[me] = true;
   status('Camera ready. It switches on only while you guess, and off at the snap.');
-  $('flipBtn').onclick = async () => { const e = await cam.flip(); if (e) status(e); };
   send({ t: 'ready', ready: true });
   renderLobby();
 }
@@ -969,7 +976,7 @@ function runTimer(seconds) {
 //      the guesser's fingers are the guess.
 function setupCameraUI() {
   const pointing = round.pointer === me;
-  const lim = settings.maxFingers < 10 ? ' (max ' + settings.maxFingers + ')' : '';
+  const lim = curMax() < 10 ? ' (max ' + curMax() + ')' : '';
   const caption = (pointing ? 'POINT: hold up your fingers' : 'GUESS: show the number with your fingers') + lim;
   const box = contentEl(me);
   if (SIM) {
@@ -981,8 +988,8 @@ function setupCameraUI() {
       for (const b of wrap.querySelectorAll('[data-g]')) b.classList.toggle('sel', (b.dataset.g || null) === cam.sim.gesture);
       wrap.querySelector('[data-nohand]').classList.toggle('sel', cam.sim.noHand);
     };
-    for (let c = 0; c <= settings.maxFingers; c++) { const b = btn(String(c), () => { cam.set({ count: c }); refresh(); }); b.dataset.count = c; wrap.append(b); }
-    if (pointing) for (const g of ['', 'middle', 'moutza', 'sideways']) { const b = btn(g || 'no gesture', () => { cam.set({ gesture: g || null }); refresh(); }); b.dataset.g = g; wrap.append(b); }
+    for (let c = 0; c <= curMax(); c++) { const b = btn(String(c), () => { cam.set({ count: c }); refresh(); }); b.dataset.count = c; wrap.append(b); }
+    if (pointing) for (const g of ['', 'middle', 'sideways']) { const b = btn(g || 'no gesture', () => { cam.set({ gesture: g || null }); refresh(); }); b.dataset.g = g; wrap.append(b); }
     const nh = btn('hide hand', () => { cam.set({ noHand: !cam.sim.noHand }); refresh(); }); nh.dataset.nohand = '1'; wrap.append(nh);
     box.replaceChildren(wrap);
     refresh();
@@ -996,12 +1003,24 @@ function setupCameraUI() {
   if (debugWanted) { cam.debug = true; debugPanel().show(true); }
   cam.onFrame = s => {
     dbg?.update(s);
-    $('liveCount').textContent = Math.min(s.count, settings.maxFingers);
+    $('liveCount').textContent = Math.min(s.count, curMax());
     // gestures never score; the label is shown only to the pointer and only if the rude-gesture filter is off
     $('liveGesture').textContent = pointing && s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : '';
   };
   cam.run();
 }
+
+/** Front/back camera. Errors are written on the camera box itself (the lobby status line is not on screen during a match). */
+$('flipBtn').onclick = async () => {
+  if (!cam || SIM) return;
+  const b = $('flipBtn'); b.disabled = true;
+  const cap = $('camCaption'), old = cap.textContent;
+  try {
+    const e = await cam.flip();
+    if (e) { cap.textContent = e; setTimeout(() => { if (cap.textContent === e) cap.textContent = old; }, 3500); }
+  } catch (e) { cap.textContent = 'Could not switch camera (' + (e.message || e) + ')'; }
+  finally { b.disabled = false; camIndicator(cam.cameraOn); }
+};
 
 // ---------------------------------------------------------------------------------------------
 // Debug panel + camera test (calibration) + camera safety hooks
@@ -1097,13 +1116,16 @@ function endGuessPhase() {
   tryResolve();
 }
 
+/** The finger limit for the round on screen (the host's setting, lower later in the match when "fewer fingers" is on). */
+const curMax = () => effectiveMax(settings, round?.n || 1);
+
 function tryResolve() {
   if (!round || round.resolved || !round.reveal || !round.guessMsg) return;
   round.resolved = true;
   round.phase = 'result';
   const { pointer } = round;
   // quicker matches: anything above the limit counts as the limit (and is drawn as a plain hand of that many fingers)
-  const max = settings.maxFingers;
+  const max = curMax();
   const plain = (m, n) => ({ ...m, view: 'avatar', photo: '', lm: null, gesture: null, hands: statesFromCount(n) });
   const reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
   const guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
@@ -1111,6 +1133,14 @@ function tryResolve() {
   fightLog.push({ n: round.n, pointer, reveal, guessMsg, reason: result.reason });
   const before = { ...game.health };
   game = applyResult(game, result);
+  // anti-grief: both phones see the same two messages, so both reach the same verdict
+  const away = { host: false, guest: false };
+  away[pointer] = !!reveal.noHand;
+  away[other(pointer)] = guessMsg.guess === null;
+  const verdict = trackIdle(idle, away);
+  idle = verdict.idle;
+  if (verdict.forfeit && !game.over) game = { ...game, over: true, winner: other(verdict.forfeit), forfeit: verdict.forfeit };
+  if (verdict.warn.includes(me)) later(2200, () => showBanner('NO HAND SEEN', 'Show your hand next round or you forfeit the match.', 2200, 'crit'));
   showReveal(pointer, reveal, guessMsg, result);
   playResult(result, reveal, before);
 }
@@ -1133,17 +1163,6 @@ function buildPicture(msg) {
   return c;
 }
 
-/** Does this picture show a rude gesture? Uses the sender's gesture flag, the hand landmarks, and the finger flags. */
-function looksRude(msg) {
-  if (msg.gesture) return true;
-  if (Array.isArray(msg.hands) && msg.hands.some(h => h.middle && !h.index && !h.ring && !h.pinky)) return true;   // only the middle finger up
-  if (Array.isArray(msg.lm) && msg.lm.length) {
-    const hands = msg.lm.map(h => h.map(([x, y]) => ({ x: x / 1000, y: y / 1000 })));
-    if (classifyHands(hands, msg.ar || 1)) return true;
-  }
-  return false;
-}
-
 /** With the filter on, a rude picture is replaced by a plain drawn hand with the same number of fingers. */
 function filtered(msg) {
   if (!hideRude || !looksRude(msg)) return msg;
@@ -1160,7 +1179,7 @@ function showReveal(pointer, reveal, guessMsg, result) {
   const big = el('div', 'big', reveal.noHand ? '?' : String(reveal.count));
   big.append(el('small', '', reveal.noHand ? 'no hand seen' : 'fingers'));
   card.append(big);
-  if (reveal.gesture && !hideRude) card.append(el('span', 'badge', GESTURE_NAMES[reveal.gesture]));   // shown, never scored
+  if (RUDE_GESTURES.includes(reveal.gesture) && !hideRude) card.append(el('span', 'badge', GESTURE_NAMES[reveal.gesture]));   // shown, never scored
   contentEl(pointer).replaceChildren(card);
   // the guesser's side: their fingers, the guess, and whether it was right
   const g = el('div', 'reveal');
@@ -1272,7 +1291,7 @@ function knockout() {
     inGame = false;
     const won = winner === me;
     $('overTitle').textContent = won ? 'YOU WIN!' : 'YOU LOSE';
-    $('overText').textContent = names[winner] + ' wins ' + (game.health[winner]) + ' hit' + (game.health[winner] === 1 ? '' : 's') + ' to ' + game.health[loser] + '.';
+    $('overText').textContent = game.forfeit ? names[game.forfeit] + ' showed no hand for ' + IDLE_ROUNDS + ' rounds in a row, so ' + names[winner] + ' wins by forfeit.' : names[winner] + ' wins ' + (game.health[winner]) + ' hit' + (game.health[winner] === 1 ? '' : 's') + ' to ' + game.health[loser] + '.';
     clearSession();                                    // the match is over: nothing to rejoin
     if (matchKind === 'random') {                      // strangers: the connection ends with the match, no rematch
       try { link?.close(); } catch { /* ignore */ }

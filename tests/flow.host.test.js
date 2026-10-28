@@ -75,7 +75,7 @@ test('a friend joins and is accepted; both get ready; the host configures the fi
   const click = step => $('settingsCard').fire('click', { target: { closest: () => ({ dataset: { step } }) } });
   click('hits:-1'); click('hits:-1'); click('seconds:-1'); click('seconds:-1');
   $('bgPicker').children[3].onclick();
-  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, maxFingers: 10, background: 3 });
+  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, maxFingers: 10, background: 3, shrink: false });
   assert.equal($('stage').className, 'bg-3');
 });
 

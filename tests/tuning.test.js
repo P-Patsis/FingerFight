@@ -8,8 +8,8 @@ const g = await import('../js/gestures.js');
 const { formatSample } = await import('../js/debug.js');
 
 test('tuning values are clamped, unknown keys ignored, saved and loaded, and reset', () => {
-  g.setTuning({ extend: 9, frames: 1, bogus: 5, moutza: 'x' });
-  assert.equal(g.TUNING.extend, 1.5); assert.equal(g.TUNING.frames, 3); assert.equal(g.TUNING.bogus, undefined); assert.equal(g.TUNING.moutza, g.DEFAULT_TUNING.moutza);
+  g.setTuning({ extend: 9, frames: 1, bogus: 5, sideMin: 'x' });
+  assert.equal(g.TUNING.extend, 1.5); assert.equal(g.TUNING.frames, 3); assert.equal(g.TUNING.bogus, undefined); assert.equal(g.TUNING.sideMin, g.DEFAULT_TUNING.sideMin);
   g.setTuning({ extend: 1.2 }); g.saveTuning();
   g.resetTuning(); assert.equal(g.TUNING.extend, g.DEFAULT_TUNING.extend);
   mem.set('ff-tune', JSON.stringify({ extend: 1.3, thumb: 99 }));

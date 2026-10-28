@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeHand, ALL, FAN, FLAT } from './helpers.js';
-import { countHand, countHands, classify, classifyHands, fingerStates } from '../js/gestures.js';
+import { countHand, countHands, classify, classifyHands, fingerStates, isRudeMessage } from '../js/gestures.js';
 
 const ASPECTS = [1, 0.75, 1.333];   // square, portrait 3:4, landscape 4:3
 
@@ -35,11 +35,19 @@ test('middle finger', () => {
   }
 });
 
-test('moutza = open hand, fingers fanned wide', () => {
-  for (const a of ASPECTS) assert.equal(classify(makeHand(ALL, FAN), a), 'moutza', 'aspect ' + a);
+test('an open palm (five fingers, fanned wide) is NOT a gesture: it is a normal five', () => {
+  for (const a of ASPECTS) assert.equal(classify(makeHand(ALL, FAN), a), null, 'aspect ' + a);
 });
 
-test('five fingers held together is NOT moutza', () => {
+test('the rude-gesture filter never flags an open palm, in any form', () => {
+  const lm = makeHand(ALL, FAN).map(p => [Math.round(p.x * 1000), Math.round(p.y * 1000)]);
+  assert.equal(isRudeMessage({ gesture: 'moutza', hands: [ALL] }), false, 'old clients still send moutza: ignored');
+  assert.equal(isRudeMessage({ gesture: null, hands: [ALL], lm: [lm], ar: 1.333 }), false, 'landmarks of a fanned open hand');
+  assert.equal(isRudeMessage({ gesture: 'middle', hands: [] }), true, 'the middle finger is still filtered');
+  assert.equal(isRudeMessage({ gesture: 'sideways', hands: [] }), true);
+});
+
+test('five fingers held together is not a gesture either', () => {
   for (const a of ASPECTS) assert.equal(classify(makeHand(ALL, FLAT), a), null, 'aspect ' + a);
 });
 
@@ -64,6 +72,6 @@ test('ordinary poses are not gestures', () => {
 test('strongest gesture wins across two hands', () => {
   const mid = makeHand({ middle: true }), open = makeHand(ALL, FAN), fist = makeHand({});
   assert.equal(classifyHands([fist, mid]), 'middle');
-  assert.equal(classifyHands([mid, open]), 'moutza');
+  assert.equal(classifyHands([mid, open]), 'middle', 'the open hand adds nothing');
   assert.equal(classifyHands([fist]), null);
 });

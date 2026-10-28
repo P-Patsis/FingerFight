@@ -9,7 +9,7 @@ import { TUNING, TUNING_RANGES, DEFAULT_TUNING, setTuning, resetTuning, saveTuni
 
 const LABELS = {
   extend: 'Finger up when tip/joint ratio >', thumb: 'Thumb up when ratio >', minScore: 'Ignore hands with confidence <',
-  frames: 'Frames that vote at the snap', moutza: 'Open-palm spread (deg) >', sideMin: 'Sideways angle min (deg)', sideMax: 'Sideways angle max (deg)',
+  frames: 'Frames that vote at the snap', sideMin: 'Sideways angle min (deg)', sideMax: 'Sideways angle max (deg)',
 };
 const FINGERS = ['thumb', 'index', 'middle', 'ring', 'pinky'];
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : '–');
