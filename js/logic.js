@@ -3,7 +3,7 @@
 // A round: one player is the POINTER (holds up fingers), the other is the GUESSER (guesses the total number
 // of fingers). Roles swap every round. Both sides run resolveRound() on the same inputs, so both get the same answer.
 
-export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 10, background: 0, shrink: false });
+export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 5, background: 0, shrink: false });
 export const LIMITS = Object.freeze({ seconds: [3, 20], hits: [1, 10], maxFingers: [1, 10] });
 export const MAX_FINGERS = 10;
 
@@ -32,8 +32,18 @@ export function normalizeSettings(s = {}) {
 }
 
 // ---- reduce fingers over time (optional host setting) --------------------------------------------------------------
-export const SHRINK_EVERY = 2;   // the limit drops by one every this many rounds ...
+// THE RULE: with "fewer fingers" ON, rounds 1-5 use the host's limit, rounds 6-10 one less, rounds 11-15 two less, and so on
+// (the ceiling drops by 1 after every 5 rounds), but never below 3 and never above the host's own limit.
+export const SHRINK_EVERY = 5;   // the limit drops by one every this many rounds ...
 export const SHRINK_FLOOR = 3;   // ... but never below this (0..3), so a long match stays playable
+
+/** Text for the banner when the ceiling is lower in round [round] than in the round before; '' when it did not change. */
+export function shrinkNotice(settings, round) {
+  const n = Number(round) || 1;
+  if (n < 2) return '';
+  const now = effectiveMax(settings, n);
+  return now < effectiveMax(settings, n - 1) ? 'Max fingers is now ' + now : '';
+}
 
 /** The finger limit for round [round] (1-based): the host's maxFingers, or less once the shrink option is on. */
 export function effectiveMax(settings, round) {
@@ -125,7 +135,17 @@ export const safeViewOf = v => (viewOf(v).endsWith('puppet') ? 'puppet' : 'skele
 /** A saved or stored choice -> a current view (older saved values are mapped; unknown gives the puppet). */
 export const viewOf = v => normalizeView(v) || 'puppet';
 /** The camera-image warning belongs to the photo views ONLY (they send a real JPEG); skeleton and puppet send finger data, never a picture. */
-export const CAMERA_WARNING = 'Warning: this sends a real camera image of you (maybe your face or room) to your opponent.';
+export const CAMERA_WARNING = 'Warning: this sends a real photo of you to your opponent.';
+/** The camera starts by itself when a player creates or joins a room (one try; after a failure the button is shown instead and
+ *  nothing retries behind the player's back). */
+export const autoCameraWanted = ({ ready, busy, failed } = {}) => !ready && !busy && !failed;
+
+/** The per-round instruction for the shower (pointer) and for the guesser. */
+export const TURN_SHOW = 'Your turn to show fingers';
+export const TURN_GUESS = 'Your turn to guess';
+export const turnMessage = pointing => (pointing ? TURN_SHOW : TURN_GUESS);
+/** How long the HIT! feedback stays up (it was 1300 ms; half a second longer so it is hard to miss). */
+export const HIT_MS = 1800;
 export const cameraWarning = v => (normalizeView(v) !== null && !isSafeView(v) ? CAMERA_WARNING : '');
 export const RANDOM_SLOTS = 8;                              // shared matchmaking slots (see main.js)
 

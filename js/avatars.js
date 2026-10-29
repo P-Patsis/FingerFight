@@ -92,6 +92,33 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
   return tips;
 }
 
+/** Profile preview: how my current choice looks to the viewer, drawn with the selected skin from a sample open hand.
+ *  Photo views get a stand-in "camera picture" (a plain silhouette, never my real camera) with the hand drawn over it.
+ *  Returns what was drawn: { camera: bool, hand: 'puppet' | 'skeleton' }. */
+export function drawViewPreview(ctx, w, h, mode, skin) {
+  const puppet = String(mode).endsWith('puppet');
+  const camera = String(mode).startsWith('photo');
+  const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
+  if (!camera) {
+    if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false);
+    return { camera, hand: puppet ? 'puppet' : 'skeleton' };
+  }
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#475569'); g.addColorStop(1, '#1e293b');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#64748b';                                         // a head and shoulders, to read as "a camera picture of you"
+  ctx.beginPath(); ctx.arc(w * 0.2, h * 0.32, h * 0.16, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(w * 0.2, h * 0.95, w * 0.17, h * 0.34, 0, 0, 7); ctx.fill();
+  const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1);        // the hand sits in the right 60% of the picture
+  const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
+  if (puppet) drawPuppet(ctx, lms.map(hand => hand.map(at)), skin);
+  else {
+    ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = '#22d3ee';
+    for (const hand of lms) for (const [a, b] of BONES) { const A = at(hand[a]), B = at(hand[b]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
+  }
+  return { camera, hand: puppet ? 'puppet' : 'skeleton' };
+}
+
 /** The sender's landmarks, or a pose made from the finger states when there are none (simulator, filtered or old messages). */
 export function landmarksOf(msg) {
   if (Array.isArray(msg.lm) && msg.lm.length) return { lms: msg.lm, ar: msg.ar || 1 };

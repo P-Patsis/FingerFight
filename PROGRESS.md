@@ -15,6 +15,23 @@
 
 Newest first.
 
+## 2026-10-29 (3) — Playtest polish: 10 items + connection badge (NOT YET TRIED ON PHONE OR LAPTOP)
+- Changed (all additive; tracking, puppet, skins, view matrix, sound, photos, flag, connection untouched):
+  1. DEFAULT MAX FINGERS = 5 (`DEFAULTS.maxFingers`); still 1-10 in the lobby stepper.
+  2. FEWER FINGERS, THE RULE (comment above `SHRINK_EVERY` in logic.js): ON = rounds 1-5 use the host's limit, rounds 6-10 one less, 11-15 two less, ... i.e. the ceiling drops by 1 after every 5 rounds, never below 3 and never above the host's limit (a limit already under 3 stays). Was every 2 rounds. Players are told: the ROUND banner says "Max fingers is now N" and the middle bar keeps it for that round (`shrinkNotice`).
+  3. MATCH CODE BOX: compact (label, code in 19 px, small Copy code / Share link buttons) and NOT sticky any more, so it can no longer cover the settings. Simplified: not collapsible; it scrolls away like the rest.
+  4. AUTO CAMERA: entering the lobby (create or join, host or guest) starts the camera/model by itself (`autoCameraWanted`, one try per room). The Enable camera button is hidden while it runs; on failure it comes back as "Try the camera again" with the reason in the line above. The lobby is never blocked. The camera still only runs inside a guess window.
+  5. JOIN REQUEST: `#joinPrompt` is now position: fixed near the top with a gold border and a dimmed backdrop, so it is always on screen.
+  6. PROFILE PREVIEW: canvas under the view buttons (also in the lobby) drawing the current choice with the selected skin from a sample open hand; photo views draw a stand-in silhouette "camera picture" (never the real camera) with the puppet/skeleton over it (`drawViewPreview`).
+  7. WARNING TEXT exactly: "Warning: this sends a real photo of you to your opponent."
+  8. TURN TEXT: "Your turn to show fingers" / "Your turn to guess" (middle bar and the banner).
+  9. BACK BUTTON: the black bar is gone (`.topbar` has no background and lets taps through); the button keeps its solid colour plus a shadow.
+  10. HIT!: banner "HIT!" now stays `HIT_MS` = 1800 ms (was 1300); the pause before the next round grows by the same 500 ms.
+  - Extra: the "Connection lost" badge was one long line wider than the screen; it now wraps inside the screen (max width, 12 px, rounded box) and the host's text is shorter ("X disconnected. Waiting…").
+- Tests: 191 (new tests/polish2.test.js, 10 tests; updated the old default-10 / every-2-rounds / warning-text expectations).
+- Not seen on a screen (no browser here): code box layout, floating join panel, back button without the bar, preview drawing, the wrapped badge. Needs phone AND laptop: lobby with the code box + settings visible together; host with "Ask before someone joins" On and a guest joining (panel visible, Accept/Decline work); camera starting by itself on create and join, then deny the permission once to see the button + reason; Profile preview changes with view and skin; a match with fewer fingers On (set max 5: round 6 says max 4); HIT! length; the lost-connection text by switching wifi off briefly.
+- Open: the HIT! banner still shows the old explanatory line under it (kept on purpose).
+
 ## 2026-10-29 (2) — Desktop hardening, feed hidden for drawn views, performance, warning, card layout (NOT YET TRIED ON PHONE OR LAPTOP)
 - LAPTOP (camera dead / no puppet / page unresponsive): the real cause is NOT proven from code (no desktop browser here). Verified by reading: the flip logic only asks for `exact` environment during a flip, a laptop's first start uses `ideal: user`, so no back-camera hang. Found and fixed real desktop failure paths: (1) the GPU delegate can be created fine and then fail on the FIRST frame on desktop GPUs: now switches once to the CPU delegate; (2) `video.play()` rejection and camera errors had no message: now "NotFoundError: ..." with name + message; (3) the puppet drawing is inside try/catch: on a throw it falls back to the skeleton and says "Puppet could not be drawn ... (name: message)" once; (4) a tracking error on EVERY frame backs off (250 ms after 3 in a row) and stops after 40 with "tracking stopped after repeated errors; reload", instead of spinning. If it still fails on the laptop: read the red text under the camera / in the Camera test and send it.
 - FEED HIDDEN: for Skeleton and Puppet (own side) the live video is not displayed (opacity 0 over a dark gradient); the analysis still reads it. Photo + skeleton / Photo + puppet still show it. Default = fully hidden (cleaner and cheaper than blur); no toggle.

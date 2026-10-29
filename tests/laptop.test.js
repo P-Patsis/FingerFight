@@ -24,7 +24,7 @@ test('the warning text shows on the page only while a photo view is chosen, and 
     await import('../js/main.js?w=' + mode);
     b.byId.get('profileBtn').onclick();
     const note = b.byId.get('styleNote').textContent;
-    assert.equal(/Warning: this sends a real camera image/.test(note), mode.startsWith('photo-'), mode + ': ' + note);
+    assert.equal(/^Warning: this sends a real photo of you to your opponent\.$/.test(note), mode.startsWith('photo-'), mode + ': ' + note);
     const buttons = [...b.byId.get('modePicker').children];
     for (const btn of buttons) assert.equal(btn.children.some(c => /real photo/.test(c.textContent)), btn.dataset.mode.startsWith('photo-'), btn.dataset.mode);
   }

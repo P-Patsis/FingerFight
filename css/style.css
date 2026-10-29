@@ -43,14 +43,15 @@ input:focus { outline: none; border-color: var(--cyan); }
 .link { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: 14px; padding: 8px; }
 
 /* ---------- lobby ---------- */
-.lobby-top { text-align: center; position: sticky; top: -16px; z-index: 5; width: min(100%, 360px); padding: 10px 10px 8px;
-  background: rgba(8, 10, 22, .96); border: 2px solid #334155; border-radius: 14px; box-shadow: 0 6px 14px #0009; }
-.lobby-top .btn { font-size: 20px; padding: 12px 22px; }
-#joinPrompt { border: 2px solid var(--gold); }
+.lobby-top { text-align: center; position: static; width: min(100%, 360px); padding: 6px 10px 8px;
+  background: rgba(8, 10, 22, .96); border: 2px solid #334155; border-radius: 12px; }
+.lobby-top .btn { font-size: 15px; padding: 7px 12px; }
+.code-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; }
+.code-row .room-code { flex: 1 0 100%; }
 @media (max-height: 720px) { .logo { font-size: clamp(40px, 12vw, 64px); } .screen { gap: 8px; } }
 @media (min-width: 700px) { .card, .players { width: min(100%, 440px); } .fine, .msg { max-width: 440px; } }
 .room-label { font-size: 12px; letter-spacing: 3px; color: var(--muted); }
-.room-code { font: 400 26px var(--display); letter-spacing: 2px; color: var(--gold); text-shadow: 0 2px 0 #000; margin: 4px 0 10px; user-select: all; word-break: break-all; max-width: 320px; }
+.room-code { font: 400 19px var(--display); letter-spacing: 1px; color: var(--gold); text-shadow: 0 2px 0 #000; margin: 2px 0 4px; user-select: all; word-break: break-all; max-width: 320px; }
 .players { display: flex; flex-direction: column; gap: 6px; width: min(100%, 320px); }
 .pl { display: flex; align-items: center; gap: 8px; background: #0f172acc; border-radius: 10px; padding: 8px 12px; font-weight: 600; }
 .pl em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--muted); }
@@ -238,10 +239,14 @@ input:focus { outline: none; border-color: var(--cyan); }
 .skin-picker button.sel { border-color: var(--gold); }
 .skin-picker canvas { width: 100%; height: auto; display: block; border-radius: 6px; }
 .reveal canvas { height: min(15vh, 130px); width: auto; border-radius: 10px; border: 2px solid #fff; }
-#joinPrompt { align-items: center; text-align: center; border: 2px solid var(--gold); }
+#joinPrompt { align-items: center; text-align: center; border: 3px solid var(--gold); position: fixed; z-index: 60;
+  top: calc(env(safe-area-inset-top, 0px) + 54px); left: 50%; transform: translateX(-50%); width: min(92vw, 380px);
+  box-shadow: 0 10px 30px #000c, 0 0 0 100vmax #0006; }
+#joinPrompt[hidden] { display: none; }
 
 .net-badge { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); left: 50%; transform: translateX(-50%); z-index: 50;
-  background: #b4281e; color: #fff; padding: 6px 14px; border-radius: 999px; font: 600 13px system-ui, sans-serif; }
+  background: #b4281e; color: #fff; padding: 5px 12px; border-radius: 14px; font: 600 12px/1.25 system-ui, sans-serif;
+  max-width: calc(100vw - 24px); width: max-content; text-align: center; white-space: normal; overflow-wrap: anywhere; }
 .net-badge[hidden] { display: none; }
 .skin-picker .dice { font-size: 26px; }
 .cam-live { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); right: 8px; z-index: 50;
@@ -279,9 +284,9 @@ input:focus { outline: none; border-color: var(--cyan); }
 
 /* ---------- top bar (Leave / Back stay in view at the top) ---------- */
 .topbar { position: sticky; top: -16px; z-index: 7; align-self: stretch; display: flex; justify-content: flex-start;
-  padding: 16px 0 8px; margin-top: 0 !important; background: linear-gradient(#080a16f5 72%, transparent); }
+  padding: 16px 0 4px; margin-top: 0 !important; background: none; pointer-events: none; }   /* no bar: only the button itself is drawn and tappable */
+.topbar .btn { pointer-events: auto; box-shadow: 0 2px 10px #000a, 0 3px 0 #0006; }
 .btn.danger { background: #dc2626; color: #fff; box-shadow: 0 3px 0 #7f1d1d; }
-.lobby-top { top: 40px; }
 .who { margin: 0; color: var(--muted); font-size: 14px; }
 .who b { color: var(--ink); font-size: 16px; }
 #nameNote:empty { display: none; }
@@ -307,3 +312,7 @@ input:focus { outline: none; border-color: var(--cyan); }
 .vol { display: flex; align-items: center; gap: 10px; font-size: 15px; }
 .vol input { flex: 1; min-width: 0; }
 .mode-picker button { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- Profile preview ---------- */
+.view-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0 2px; }
+.view-preview canvas { width: min(100%, 240px); height: auto; border-radius: 10px; border: 2px solid #334155; background: #0f172a; }

@@ -8,12 +8,12 @@ import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
 import { createWakeLock } from './wake.js';
-import { drawFromMessage, drawPuppetPicture, statesFromCount } from './avatars.js';
+import { drawFromMessage, drawPuppetPicture, drawViewPreview, statesFromCount } from './avatars.js';
 import { statesToLandmarks } from './puppet.js';
 import { loadSkins, skinIds, getSkin, skinIdOf } from './skins.js';
 import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
-  sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, cameraWarning, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, newIdle, trackIdle, IDLE_ROUNDS,
+  sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, cameraWarning, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, autoCameraWanted, shrinkNotice, turnMessage, HIT_MS, newIdle, trackIdle, IDLE_ROUNDS,
 } from './logic.js';
 import { cleanName, uniqueName, flagEmoji, countryCode, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
@@ -48,6 +48,7 @@ let profile = null;                     // set below: name lives in the input, t
 let settings = { ...DEFAULTS };                   // replaced by freshSettings() once the profile is read
 let ready = { host: false, guest: false };   // camera + hand model ready on that phone
 let cam = null, camReady = false;
+let camBusy = false, camAutoFailed = false;   // auto-start: one attempt per room; a failure leaves the Enable camera button with the reason
 let game = null;                        // see logic.js newGame()
 let round = null;                       // the round in progress
 let streak = { side: null, n: 0 };      // consecutive landed hits by one side (combo pulse)
@@ -245,7 +246,7 @@ function makeLink(quiet = false) {
     canReplaceSeat: () => me === 'host' && matchKind === 'private' && !inGame,       // nothing to protect between fights
     onSeatReplaced: () => { names.guest = ''; ready.guest = false; pendingGuest = null; guestToken = null; netBadge(''); },
     onSeatFreed: reason => hostSeatFreed(reason),
-    onReconnecting: () => netBadge(me === 'host' ? (names.guest || 'Your opponent') + ' disconnected (reloading?). Waiting for them to come back…' : 'Connection lost. Reconnecting…'),
+    onReconnecting: () => netBadge(me === 'host' ? (names.guest || 'Your opponent') + ' disconnected. Waiting…' : 'Connection lost. Reconnecting…'),
     onReconnected: () => onReconnected(),
     onStatus: t => { if (!quiet) menuMsg(t); },
   }, { relay: matchKind === 'random' && hideIp });
@@ -673,7 +674,7 @@ function enterLobby() {
   buildStyleCard();
   show('lobby');
   renderLobby();
-  if (SIM) enableCamera();
+  if (autoCameraWanted({ ready: camReady, busy: camBusy, failed: camAutoFailed })) enableCamera();   // no separate tap; never blocks the lobby
 }
 
 function buildBgPicker() {
@@ -733,6 +734,13 @@ function buildStyleCard() {
   renderStyle();
 }
 
+/** The Profile/lobby preview of the current choice, drawn with the selected skin (a stand-in picture, never the real camera). */
+function renderViewPreview(mode) {
+  const c = $('viewPreview');
+  try { drawViewPreview(c.getContext('2d'), c.width, c.height, mode, getSkin(skinIdOf(style.skin))); } catch { /* the preview is decoration */ }
+  $('viewPreviewLabel').textContent = 'Preview: ' + ({ skeleton: 'skeleton of your hand', puppet: 'your puppet', 'photo-skeleton': 'camera picture + skeleton', 'photo-puppet': 'camera picture + puppet' }[mode] || '');
+}
+
 function renderStyle() {
   const random = matchKind === 'random';
   const mode = effectiveStyle().mode;
@@ -754,6 +762,7 @@ function renderStyle() {
     ? 'Random opponent: only a drawn puppet or skeleton is shared. Your camera image never leaves this phone.'
     : warn || 'Only drawn data is sent. Your camera image never leaves this phone.';
   $('styleNote').classList.toggle('err', !!warn);
+  renderViewPreview(mode);
   applyOverlay();
 }
 
@@ -785,7 +794,7 @@ function renderLobby() {
   $('joinPrompt').hidden = !pendingGuest;
   if (pendingGuest) $('joinPrompt').scrollIntoView?.({ block: 'nearest' });
   if (pendingGuest) $('joinText').textContent = pendingGuest + ' wants to join your match.';
-  $('camBtn').hidden = camReady;
+  $('camBtn').hidden = camReady || camBusy;
   const canStart = me === 'host' && link?.open && !!names.guest && ready.host && ready.guest;
   $('startBtn').hidden = me !== 'host' || random;           // a random match starts by itself
   $('startBtn').disabled = !canStart;
@@ -837,7 +846,14 @@ function leave() {
 
 async function enableCamera() {
   sfx.unlock();
-  if (camReady) return;
+  if (camReady || camBusy) return;
+  camBusy = true;
+  if (me) renderLobby();                                // hides the button while the attempt runs
+  try { await enableCameraNow(); } finally { camBusy = false; if (me) renderLobby(); }   // ... and brings it back if it failed
+}
+
+async function enableCameraNow() {
+  const failed = () => { camAutoFailed = true; $('camBtn').disabled = false; $('camBtn').textContent = 'Try the camera again'; };
   $('camBtn').disabled = true;
   const status = t => { $('camStatus').textContent = t; };
   status(SIM ? 'Simulator: no camera needed.' : 'Loading the hand model (about 17 MB, once)…');
@@ -849,7 +865,7 @@ async function enableCamera() {
   } catch (e) {
     clearTimeout(slow);
     status('Could not load the hand model (' + (e.message || e) + '). Check your internet connection (or a VPN / ad-blocker blocking cdn.jsdelivr.net or storage.googleapis.com).');
-    $('camBtn').disabled = false;
+    failed();
     return;
   }
   clearTimeout(slow);
@@ -858,7 +874,7 @@ async function enableCamera() {
   try { err = await cam.startCamera(); } catch (e) { err = 'Could not start the camera (' + (e.message || e) + ').'; }
   if (!cam) return;
   if (err === 'cancelled') { $('camBtn').disabled = false; return; }
-  if (err) { status(err); $('camBtn').disabled = false; return; }
+  if (err) { status(err); failed(); return; }
   cam.stopCamera();                              // permission and model are checked; the camera stays OFF until a guess window opens
   camReady = true;
   ready[me] = true;
@@ -926,15 +942,15 @@ function beginRound(n) {
   $('roundLabel').textContent = 'ROUND ' + n;
   const pointing = pointer === me;
   $('mid').className = pointing ? 'point' : 'guess';
-  $('roleLabel').replaceChildren(el('b', '', pointing ? 'YOU POINT' : 'YOU GUESS'), el('small', '', pointing ? 'hold up fingers; they guess' : 'guess how many they hold'));
+  $('roleLabel').replaceChildren(el('b', '', turnMessage(pointing)), el('small', '', (pointing ? 'hold up fingers; they guess' : 'guess how many they hold') + (shrinkNotice(settings, n) ? ' · ' + shrinkNotice(settings, n).toLowerCase() : '')));
   $('timerNum').textContent = settings.seconds;
   $('timerWrap').classList.remove('urgent');
   $('timerBar').firstElementChild.style.transform = 'scaleX(1)';
   for (const side of ['host', 'guest']) { contentEl(side).replaceChildren(); fighterEl(side).className = 'fighter idle'; }
   releaseCamera();
   fx.wipe();
-  showBanner('ROUND ' + n, '', 1000);
-  later(1100, () => { showBanner(pointer === me ? 'YOU POINT' : 'YOU GUESS', pointer === me ? 'Hold up your fingers! They will guess the number.' : 'Show your guess with your fingers!', 1000); sfx.roundStart(); });
+  showBanner('ROUND ' + n, shrinkNotice(settings, n), 1000);   // a lower finger ceiling is announced here and stays in the middle bar
+  later(1100, () => { showBanner(turnMessage(pointer === me), pointer === me ? 'Hold up your fingers! They will guess the number.' : 'Show your guess with your fingers!', 1000); sfx.roundStart(); });
   later(1900, startGuessPhase);
 }
 
@@ -1244,10 +1260,10 @@ function playResult(result, reveal, before) {
     if (navigator.vibrate) navigator.vibrate(lethal ? [60, 40, 90] : 50);
     renderHp(target, before[target]);
     if (streak.n >= 2) { fx.combo(streak.n, centerOf(attacker).x, centerOf(attacker).y); }
-    showBanner('HIT!', text, 1300, 'good');
+    showBanner('HIT!', text, HIT_MS, 'good');
   });
   later(1700, () => { for (const s of ['host', 'guest']) fighterEl(s).classList.remove('punch', 'hit', 'taunt', 'crit-fx'); });
-  finishRound(2600);
+  finishRound(2600 + (HIT_MS - 1300));      // the pause before the next round grows with the longer HIT! banner
 }
 
 function finishRound(ms) {
@@ -1364,13 +1380,13 @@ function resetAll() {
   ready = { host: false, guest: false };
   settings = freshSettings();
   if (cam && !SIM) { try { cam.stream?.getTracks().forEach(t => t.stop()); } catch { /* ignore */ } }
-  cam = null; camReady = false;
+  cam = null; camReady = false; camBusy = false; camAutoFailed = false;
   matchKind = null; roomCodeRaw = ''; pendingGuest = null; autoStarted = false;
   clearTimeout(helloTimer);
   guestToken = null; opponentGone = false; netBadge(''); camIndicator(false);
   matchWaiter = null; hostWaiter = null;
   if (searching) { searchId++; setSearching(false); }
-  $('camBtn').disabled = false;
+  $('camBtn').disabled = false; $('camBtn').textContent = 'Enable camera';
   $('camStatus').textContent = '';
   $('banner').replaceChildren();
   setBackground(0);

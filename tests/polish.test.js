@@ -62,15 +62,16 @@ test('shrink is OFF by default and survives normalisation only when exactly true
   assert.equal(normalizeSettings({}).shrink, false);
   assert.equal(normalizeSettings({ shrink: 'yes' }).shrink, false);
   assert.equal(normalizeSettings({ shrink: true }).shrink, true);
-  assert.equal(effectiveMax(normalizeSettings({}), 50), 10, 'off = never changes');
+  assert.equal(effectiveMax(normalizeSettings({}), 50), 5, 'off = never changes');
 });
 
-test('shrink lowers the limit every 2 rounds down to the floor, never above the host limit', () => {
-  const on = normalizeSettings({ shrink: true });
-  assert.deepEqual([1, 2, 3, 4, 5, 13, 14, 40].map(r => effectiveMax(on, r)), [10, 10, 9, 9, 8, 4, 4, SHRINK_FLOOR]);
+test('shrink lowers the limit every 5 rounds down to the floor of 3, never above the host limit', () => {
+  const on = normalizeSettings({ shrink: true, maxFingers: 10 });
+  assert.deepEqual([1, 5, 6, 10, 11, 16, 30, 31, 40].map(r => effectiveMax(on, r)), [10, 10, 9, 9, 8, 7, 5, 4, SHRINK_FLOOR]);
   const five = normalizeSettings({ shrink: true, maxFingers: 5 });
-  assert.deepEqual([1, 3, 5, 99].map(r => effectiveMax(five, r)), [5, 4, 3, 3]);
+  assert.deepEqual([1, 5, 6, 10, 11, 99].map(r => effectiveMax(five, r)), [5, 5, 4, 4, 3, 3]);
   assert.equal(effectiveMax(normalizeSettings({ shrink: true, maxFingers: 2 }), 30), 2, 'a limit already below the floor stays');
+  assert.equal(effectiveMax(normalizeSettings({ maxFingers: 10 }), 40), 10, 'off: never drops');
 });
 
 // ---- wake lock --------------------------------------------------------------------------------------------------

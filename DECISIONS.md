@@ -117,3 +117,11 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - Drawn views (skeleton, puppet) hide the live camera picture entirely rather than blur it: nothing of the room is rendered, and it is cheaper. Photo views keep it. Chosen over a blur because a blur still draws video every frame.
 - The camera warning is derived from the view (`cameraWarning`), never from the picker's position, so it cannot sit under a drawn option.
 - A failing tracking loop stops after 40 consecutive errors and says so; a failing puppet degrades to the skeleton. Visible error beats a hang.
+
+## Playtest polish (2026-10-29)
+- DEFAULT MAX FINGERS is 5 (one hand): quicker, and the shrink floor of 3 then has room to work. The host can still raise it to 10.
+- FEWER FINGERS: the ceiling drops by 1 after every 5 rounds, floor 3, never above the host's limit; the change is announced when it happens. Chosen over every 2 rounds, which shrank too fast to feel fair.
+- The camera starts by itself in the lobby (one try per room, no hidden retries). A failure shows a button and the reason; the lobby never waits for it. The camera is still off outside the guess window.
+- The match-code box is not sticky: a floating box over the settings was the problem; the join request is the thing that floats, because the host must act on it.
+- The profile preview never uses the real camera: photo views are a stand-in picture, so opening Profile cannot turn the camera on.
+- Top bars (Back/Leave) are transparent and let taps through; only the button itself is drawn.
