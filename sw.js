@@ -2,11 +2,17 @@
 //  - this site's files: network first (so an update arrives at once), the cached copy when offline
 //  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
 // Match traffic is WebRTC, which a service worker never sees.
-const VERSION = 'ff-fbbb6c36';
+const VERSION = 'ff-09c7118c';
 const HEAVY_CACHE = 'ff-heavy';           // the 17 MB hand model lives in its own cache, so a site update never makes it download again
 const SHELL = ['./', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
-  'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js', 'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js', 'js/names.js', 'js/wake.js', 'js/puppet.js', 'js/skins.js',
-  'assets/skins/manifest.json', 'assets/skins/cartoon.json', 'assets/skins/robot.json', 'assets/skins/neon.json'];
+  'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js',
+  'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js', 'js/names.js',
+  'js/wake.js', 'js/puppet.js', 'js/skins.js', 'js/layers.js', 'js/particles.js', 'js/cosmetics.js',
+  'js/inventory.js', 'js/unlock.js', 'assets/skins/manifest.json', 'assets/skins/cartoon.json', 'assets/skins/robot.json', 'assets/skins/neon.json',
+  'assets/skins/paw.json', 'assets/skins/dragon.json', 'assets/skins/gauntlet.json', 'assets/skins/goldhand.json', 'assets/items/manifest.json', 'assets/items/pale.json',
+  'assets/items/tan.json', 'assets/items/brown.json', 'assets/items/deep.json', 'assets/items/orc.json', 'assets/items/frost.json', 'assets/items/tribal.json',
+  'assets/items/scar.json', 'assets/items/runes.json', 'assets/items/rednails.json', 'assets/items/blacknails.json', 'assets/items/neonnails.json', 'assets/items/goldring.json',
+  'assets/items/silverring.json', 'assets/items/ruby.json', 'assets/items/whiteglove.json', 'assets/items/leather.json', 'assets/items/fingerless.json', 'assets/items/knight.json'];
 const HEAVY = ['https://cdn.jsdelivr.net/npm/@mediapipe/', 'https://storage.googleapis.com/mediapipe-models/'];
 
 self.addEventListener('install', e => {

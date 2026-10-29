@@ -296,5 +296,14 @@
    ]
   }
  },
- "overlays": []
+ "overlays": [],
+ "category": "scifi",
+ "particles": [
+  {
+   "effect": "sparks",
+   "color": "#fde68a",
+   "where": "knuckles",
+   "rate": 4
+  }
+ ]
 }

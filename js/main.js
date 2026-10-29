@@ -8,9 +8,14 @@ import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
 import { createWakeLock } from './wake.js';
-import { drawFromMessage, drawPuppetPicture, drawViewPreview, statesFromCount } from './avatars.js';
+import { drawFromMessage, drawPuppetPicture, drawViewPreview, statesFromCount, previewHandPx } from './avatars.js';
 import { statesToLandmarks } from './puppet.js';
-import { loadSkins, skinIds, getSkin, skinIdOf } from './skins.js';
+import { skinIds, getSkin, skinIdOf } from './skins.js';
+import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, COS_LAYERS } from './cosmetics.js';
+import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS } from './layers.js';
+import { Inventory } from './inventory.js';
+import { unlockItem, unlockLabel } from './unlock.js';
+import { ParticleSystem } from './particles.js';
 import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
   sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, cameraWarning, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, autoCameraWanted, shrinkNotice, turnMessage, HIT_MS, newIdle, trackIdle, IDLE_ROUNDS,
@@ -75,12 +80,14 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
-let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon' };
+let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', cos: {} };   // cos = equipped layer items (tone, tattoo, nails, ring, glove); see COSMETICS.md
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
 const store = {
   get: store_get,
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
+const inv = new Inventory({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // owned items and equipment (this phone only)
+style.skin = inv.baseId; style.cos = inv.loadout().cos;
 
 // ---------------------------------------------------------------------------------------------
 // Small helpers
@@ -395,7 +402,7 @@ $('randomBtn').onclick = async () => {
 // Network
 // ---------------------------------------------------------------------------------------------
 const allowPhotos = () => matchKind === 'private';          // random opponents never send, and are never shown, photos
-const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, hands: m.hands, lm: m.lm, ar: m.ar });
+const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
   if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
@@ -694,7 +701,7 @@ function buildBgPicker() {
 const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
 const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
 /** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
-const applyOverlay = () => cam?.setOverlay?.(effectiveStyle().mode, style.skin);
+const applyOverlay = () => cam?.setOverlay?.(effectiveStyle().mode, style.skin, style.cos);
 
 function skinPreview(id) {
   const c = document.createElement('canvas');
@@ -706,13 +713,13 @@ function skinPreview(id) {
 function buildSkinPicker() {
   const box = $('skinPicker');
   box.replaceChildren();
-  for (const id of skinIds()) {
+  for (const id of skinIds().filter(x => inv.owns(x))) {          // locked hands are unlocked in the Store
     const b = el('button', '');
     b.type = 'button';
     b.dataset.skin = id;
     b.title = getSkin(id).name;
     b.append(skinPreview(id), el('span', 'nm', getSkin(id).name));
-    b.onclick = () => { style.skin = id; store.set('ff-puppet', id); renderStyle(); };
+    b.onclick = () => { inv.equip(id); syncStyle(); };
     box.append(b);
   }
 }
@@ -737,7 +744,7 @@ function buildStyleCard() {
 /** The Profile/lobby preview of the current choice, drawn with the selected skin (a stand-in picture, never the real camera). */
 function renderViewPreview(mode) {
   const c = $('viewPreview');
-  try { drawViewPreview(c.getContext('2d'), c.width, c.height, mode, getSkin(skinIdOf(style.skin))); } catch { /* the preview is decoration */ }
+  try { const rec = resolveLoadout(style.skin, style.cos); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, rec); } catch { /* the preview is decoration */ }
   $('viewPreviewLabel').textContent = 'Preview: ' + ({ skeleton: 'skeleton of your hand', puppet: 'your puppet', 'photo-skeleton': 'camera picture + skeleton', 'photo-puppet': 'camera picture + puppet' }[mode] || '');
 }
 
@@ -767,7 +774,14 @@ function renderStyle() {
 }
 
 // the skin files load in the background; the picker and the saved choice are checked against what actually loaded
-loadSkins().then(() => { style.skin = skinIdOf(style.skin); if ($('modePicker').children.length) { buildSkinPicker(); renderStyle(); } }).catch(() => {});
+loadCatalog().then(() => { inv.load(); syncStyle(); }).catch(() => {});
+
+/** The equipment changed (Store, picker, or the catalogue just loaded): refresh what depends on it. */
+function syncStyle() {
+  style.skin = inv.baseId; style.cos = inv.loadout().cos;
+  if ($('modePicker').children.length) { buildSkinPicker(); renderStyle(); }
+  if (!$('store').hidden) renderStore();
+}
 
 function renderLobby() {
   const random = matchKind === 'random';
@@ -888,6 +902,101 @@ $('startBtn').onclick = () => {
   send({ t: 'start', settings });
   startGame();
 };
+
+// ---------------------------------------------------------------------------------------------
+// Store (cosmetics). Browse by category and item type, see each item on the puppet, equip what is owned, unlock what is not.
+// Unlocking goes through js/unlock.js, which is a STUB for now (no ads, no payments): see the boundary comment there.
+// ---------------------------------------------------------------------------------------------
+const storeView = { category: 'all', layer: 'all' };
+let storeAnim = { raf: 0, ps: null, last: 0, snapAt: 0 };
+
+function sampleLandmarks() { return [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })]; }
+
+/** A small still of the puppet wearing [load] ({base, cos}): used on every item card. */
+function drawCard(canvas, load) {
+  try {
+    const rec = resolveLoadout(load.base, load.cos);
+    drawPuppetPicture(canvas.getContext('2d'), canvas.width, canvas.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, seed: load.base + JSON.stringify(load.cos) });
+  } catch { /* previews are decoration */ }
+}
+
+function chip(box, value, label, current, onPick) {
+  const b = el('button', value === current ? 'sel' : '', label);
+  b.type = 'button'; b.dataset.value = value;
+  b.onclick = () => { onPick(value); renderStore(); };
+  box.append(b);
+}
+
+function renderStore() {
+  const cats = $('storeCats'), lays = $('storeLayers'), grid = $('storeGrid');
+  cats.replaceChildren(); lays.replaceChildren(); grid.replaceChildren();
+  chip(cats, 'all', 'All', storeView.category, v => { storeView.category = v; });
+  for (const c of CATEGORIES) chip(cats, c, CATEGORY_LABELS[c], storeView.category, v => { storeView.category = v; });
+  chip(lays, 'all', 'Everything', storeView.layer, v => { storeView.layer = v; });
+  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], storeView.layer, v => { storeView.layer = v; });
+  const list = filterCatalog(catalog(), storeView);
+  if (!list.length) grid.append(el('p', 'fine', 'Nothing here yet.'));
+  for (const e of list) {
+    const owned = inv.owns(e.id), worn = inv.isEquipped(e.id);
+    const card = el('div', 'item-card' + (worn ? ' eq' : '') + (owned ? '' : ' locked'));
+    card.dataset.id = e.id;
+    const cv = document.createElement('canvas'); cv.width = 96; cv.height = 96;
+    drawCard(cv, inv.loadoutWith(e.id));                          // the item on the puppet, with what is already equipped
+    card.append(cv, el('b', '', e.name), el('div', 'tags', CATEGORY_LABELS[e.category] + ' · ' + LAYER_LABELS[e.layer] + (e.whole ? ' · whole hand' : '')),
+      el('span', 'badge ' + (owned ? 'own' : 'lock'), worn ? 'Equipped' : owned ? 'Owned' : 'Locked'));
+    const btn = el('button', 'btn small ghost', worn ? (e.layer === 'base' ? 'In use' : 'Take off') : owned ? 'Equip' : unlockLabel(e));
+    btn.type = 'button'; btn.dataset.act = worn ? 'off' : owned ? 'equip' : 'unlock';
+    btn.disabled = worn && e.layer === 'base';
+    btn.onclick = async () => {
+      if (btn.dataset.act === 'unlock') {
+        btn.disabled = true;
+        const r = await unlockItem(inv, e);                       // STUB today (js/unlock.js); a native build swaps the provider
+        $('storeMsg').textContent = r.granted ? e.name + ' unlocked. Tap Equip to wear it.' : 'Not unlocked' + (r.error ? ' (' + r.error + ')' : '') + '.';
+        if (r.granted) sfx.ui();
+      } else if (btn.dataset.act === 'equip') inv.equip(e.id);
+      else inv.unequip(e.layer);
+      syncStyle();
+      renderStore();
+    };
+    card.append(btn);
+    grid.append(card);
+  }
+  const names = [inv.baseId, ...COS_LAYERS.map(l => inv.cos[l]).filter(Boolean)].map(id => entryOf(id)?.name || id);
+  $('storeLoadout').textContent = 'Wearing: ' + names.join(', ');
+  startStoreAnim();
+}
+
+/** The big preview: the puppet in the current loadout with its particle effects running (same capped particle system the camera uses). */
+function startStoreAnim() {
+  globalThis.cancelAnimationFrame?.(storeAnim.raf);
+  const c = $('storePreview'), ctx = c.getContext?.('2d');
+  if (!ctx || typeof globalThis.requestAnimationFrame !== 'function') return;
+  const rec = resolveLoadout(style.skin, style.cos);
+  const hands = previewHandPx(c.width, c.height);
+  storeAnim.ps = new ParticleSystem();
+  storeAnim.ps.setEmitters(rec.emitters);
+  storeAnim.last = 0;
+  const frame = now => {
+    if ($('store').hidden) return;                                   // left the Store: the loop ends by itself
+    const dt = storeAnim.last ? (now - storeAnim.last) / 1000 : 0;
+    if (!storeAnim.last || now - storeAnim.last >= 33) {              // about 30 fps is plenty for a preview
+      storeAnim.last = now;
+      try {
+        drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, live: true });
+        storeAnim.ps.update(dt, hands); storeAnim.ps.draw(ctx);
+      } catch { /* decoration */ }
+    }
+    storeAnim.raf = globalThis.requestAnimationFrame(frame);
+  };
+  if (fx.reducedMotion?.()) { frame(0); return; }                    // reduced motion: one still picture, no loop
+  storeAnim.raf = globalThis.requestAnimationFrame(frame);
+}
+
+$('storeBtn').onclick = () => { show('store'); renderStore(); };
+$('profileStore').onclick = () => { show('store'); renderStore(); };
+$('storeBack').onclick = () => show('menu');
+$('storeSnap').onclick = () => { try { storeAnim.ps?.trigger('snap', previewHandPx($('storePreview').width, $('storePreview').height)); } catch { /* ignore */ } };
+$('storeClear').onclick = () => { for (const l of COS_LAYERS) inv.unequip(l); syncStyle(); renderStore(); };
 
 // ---------------------------------------------------------------------------------------------
 // Game

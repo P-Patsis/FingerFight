@@ -1,0 +1,322 @@
+{
+ "format": 1,
+ "id": "dragon",
+ "name": "Dragon",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "parts": {
+  "palm": {
+   "ref": {
+    "wrist": [
+     50,
+     100
+    ],
+    "index": [
+     20,
+     38
+    ],
+    "pinky": [
+     80,
+     46
+    ]
+   },
+   "shapes": [
+    {
+     "d": "M 30 106 C 16 94 8 76 8 56 C 8 42 14 33 24 31 L 76 38 C 86 40 90 48 88 60 C 86 78 76 94 70 106 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M 20 52 L 30 60 L 40 52 L 50 60 L 60 52 L 70 60 L 80 52 M 22 72 L 32 80 L 42 72 L 52 80 L 62 72 L 72 80",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.6
+    }
+   ]
+  },
+  "thumb_base": {
+   "length": 23,
+   "shapes": [
+    {
+     "d": "M -8.5 0 L -8.5 -23 A 8.5 8.5 0 0 1 8.5 -23 L 8.5 0 A 8.5 8.5 0 0 1 -8.5 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -5.1 -12.65 L 0 -6.8999999999999995 L 5.1 -12.65",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "thumb_mid": {
+   "length": 21,
+   "shapes": [
+    {
+     "d": "M -8 0 L -8 -21 A 8 8 0 0 1 8 -21 L 8 0 A 8 8 0 0 1 -8 0 Z",
+     "fill": "#43873f",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.8 -11.55 L 0 -6.3 L 4.8 -11.55",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "thumb_tip": {
+   "length": 16.5,
+   "shapes": [
+    {
+     "d": "M -7.4 0 L -7.4 -16.5 A 7.4 7.4 0 0 1 7.4 -16.5 L 7.4 0 A 7.4 7.4 0 0 1 -7.4 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.44 -9.075000000000001 L 0 -4.95 L 4.44 -9.075000000000001",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    },
+    {
+     "d": "M -3 -21.9 L 0 -31.9 L 3 -21.9 Z",
+     "fill": "#e11d48",
+     "stroke": "#7f1d1d",
+     "strokeWidth": 1
+    }
+   ]
+  },
+  "index_base": {
+   "length": 26,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -26 A 7 7 0 0 1 7 -26 L 7 0 A 7 7 0 0 1 -7 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.2 -14.3 L 0 -7.8 L 4.2 -14.3",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "index_mid": {
+   "length": 20,
+   "shapes": [
+    {
+     "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
+     "fill": "#43873f",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.9599999999999995 -11.0 L 0 -6.0 L 3.9599999999999995 -11.0",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "index_tip": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -6.2 0 L -6.2 -15 A 6.2 6.2 0 0 1 6.2 -15 L 6.2 0 A 6.2 6.2 0 0 1 -6.2 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.7199999999999998 -8.25 L 0 -4.5 L 3.7199999999999998 -8.25",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    },
+    {
+     "d": "M -3 -19.2 L 0 -29.2 L 3 -19.2 Z",
+     "fill": "#e11d48",
+     "stroke": "#7f1d1d",
+     "strokeWidth": 1
+    }
+   ]
+  },
+  "middle_base": {
+   "length": 30,
+   "shapes": [
+    {
+     "d": "M -7.4 0 L -7.4 -30 A 7.4 7.4 0 0 1 7.4 -30 L 7.4 0 A 7.4 7.4 0 0 1 -7.4 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.44 -16.5 L 0 -9.0 L 4.44 -16.5",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "middle_mid": {
+   "length": 22,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -22 A 7 7 0 0 1 7 -22 L 7 0 A 7 7 0 0 1 -7 0 Z",
+     "fill": "#43873f",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.2 -12.100000000000001 L 0 -6.6 L 4.2 -12.100000000000001",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "middle_tip": {
+   "length": 16.5,
+   "shapes": [
+    {
+     "d": "M -6.5 0 L -6.5 -16.5 A 6.5 6.5 0 0 1 6.5 -16.5 L 6.5 0 A 6.5 6.5 0 0 1 -6.5 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.9 -9.075000000000001 L 0 -4.95 L 3.9 -9.075000000000001",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    },
+    {
+     "d": "M -3 -21.0 L 0 -31.0 L 3 -21.0 Z",
+     "fill": "#e11d48",
+     "stroke": "#7f1d1d",
+     "strokeWidth": 1
+    }
+   ]
+  },
+  "ring_base": {
+   "length": 27,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -27 A 7 7 0 0 1 7 -27 L 7 0 A 7 7 0 0 1 -7 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.2 -14.850000000000001 L 0 -8.1 L 4.2 -14.850000000000001",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "ring_mid": {
+   "length": 20,
+   "shapes": [
+    {
+     "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
+     "fill": "#43873f",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.9599999999999995 -11.0 L 0 -6.0 L 3.9599999999999995 -11.0",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "ring_tip": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -6.1 0 L -6.1 -15 A 6.1 6.1 0 0 1 6.1 -15 L 6.1 0 A 6.1 6.1 0 0 1 -6.1 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.6599999999999997 -8.25 L 0 -4.5 L 3.6599999999999997 -8.25",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    },
+    {
+     "d": "M -3 -19.1 L 0 -29.1 L 3 -19.1 Z",
+     "fill": "#e11d48",
+     "stroke": "#7f1d1d",
+     "strokeWidth": 1
+    }
+   ]
+  },
+  "pinky_base": {
+   "length": 21,
+   "shapes": [
+    {
+     "d": "M -6 0 L -6 -21 A 6 6 0 0 1 6 -21 L 6 0 A 6 6 0 0 1 -6 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.5999999999999996 -11.55 L 0 -6.3 L 3.5999999999999996 -11.55",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "pinky_mid": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -5.6 0 L -5.6 -15 A 5.6 5.6 0 0 1 5.6 -15 L 5.6 0 A 5.6 5.6 0 0 1 -5.6 0 Z",
+     "fill": "#43873f",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.36 -8.25 L 0 -4.5 L 3.36 -8.25",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "pinky_tip": {
+   "length": 11.5,
+   "shapes": [
+    {
+     "d": "M -5.2 0 L -5.2 -11.5 A 5.2 5.2 0 0 1 5.2 -11.5 L 5.2 0 A 5.2 5.2 0 0 1 -5.2 0 Z",
+     "fill": "#4d9a4a",
+     "stroke": "#1f4d2b",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.12 -6.325 L 0 -3.4499999999999997 L 3.12 -6.325",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.4
+    },
+    {
+     "d": "M -3 -14.7 L 0 -24.7 L 3 -14.7 Z",
+     "fill": "#e11d48",
+     "stroke": "#7f1d1d",
+     "strokeWidth": 1
+    }
+   ]
+  }
+ },
+ "overlays": [],
+ "category": "fantasy",
+ "free": false,
+ "unlock": {
+  "method": "ad"
+ },
+ "particles": [
+  {
+   "effect": "embers",
+   "color": "#fb923c",
+   "where": "tips",
+   "rate": 5
+  }
+ ]
+}

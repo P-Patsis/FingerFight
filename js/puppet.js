@@ -5,6 +5,8 @@
 // Every finger is three segments (base, mid, tip) between consecutive landmarks; the palm is one shape mapped onto the
 // triangle wrist / index knuckle / pinky knuckle; each segment is a shape whose pivot is its origin and which points up (-y).
 
+import { parseMeta } from './layers.js';
+
 export const FINGER_NAMES = ['thumb', 'index', 'middle', 'ring', 'pinky'];
 export const SEGMENT_NAMES = ['base', 'mid', 'tip'];
 /** Landmark ids at the start of each finger chain: [first joint, ..., tip]. The thumb chain starts at its CMC joint (1). */
@@ -21,7 +23,7 @@ const PATH = /^[MmLlHhVvCcSsQqTtAaZz0-9eE.,\s+-]{1,4000}$/;      // path data on
 const num = v => typeof v === 'number' && Number.isFinite(v);
 const pt = v => Array.isArray(v) && v.length === 2 && v.every(num);
 
-function parseShapes(list, where) {
+export function parseShapes(list, where) {
   if (!Array.isArray(list) || !list.length || list.length > 12) throw new Error(where + ': shapes must be a list of 1-12 shapes');
   return list.map((s, i) => {
     const at = where + ' shape ' + i;
@@ -66,7 +68,7 @@ export function parseSkin(json) {
   });
   const order = json.order === undefined ? DEFAULT_ORDER : json.order;
   if (!Array.isArray(order) || order.some(p => !PART_NAMES.includes(p))) throw new Error('skin ' + json.id + ': order must list known part names');
-  return { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', parts, overlays, order };
+  return { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', parts, overlays, order, ...parseMeta(json, 'base') };
 }
 
 // ---- rig math (pixel space in, canvas matrices out) --------------------------------------------------------------------
@@ -97,7 +99,7 @@ export function segmentMatrix(A, B, length, sx) {
  * order, ready for the renderer (overlays follow the part they belong to, in that part's transform). Hands that cannot
  * be posed (collapsed or missing points) give an empty plan.
  */
-export function rigPlan(lm, skin) {
+export function rigPlan(lm, skin, layers = []) {
   if (!Array.isArray(lm) || lm.length < 21 || lm.slice(0, 21).some(p => !p || !num(p.x) || !num(p.y))) return [];
   const palm = skin.parts.palm;
   const ref = palm.ref;
@@ -113,6 +115,14 @@ export function rigPlan(lm, skin) {
     if (!matrices[name]) continue;
     plan.push({ part: name, m: matrices[name], shapes: skin.parts[name].shapes });
     for (const o of skin.overlays) if (o.part === name) plan.push({ part: name + '+', m: matrices[name], shapes: o.shapes });
+  }
+  // cosmetic layers (tattoo, nails, ring, glove...): one whole pass each, in z-order, so a glove covers a ring on ANY finger.
+  // Each layer item gives shapes per named part; they ride the same matrices as the base hand's parts.
+  for (const L of layers) {
+    for (const name of PART_NAMES) {
+      const shapes = L.parts?.[name];
+      if (shapes && matrices[name]) plan.push({ part: name + '@' + L.id, m: matrices[name], shapes });
+    }
   }
   return plan;
 }
@@ -144,8 +154,8 @@ export function drawPlan(ctx, plan) {
 }
 
 /** One call: pose [skin] on each hand ([hands]: lists of 21 {x, y} pixel points) and draw it. */
-export function drawPuppet(ctx, hands, skin) {
-  for (const lm of hands) drawPlan(ctx, rigPlan(lm, skin));
+export function drawPuppet(ctx, hands, skin, layers = []) {
+  for (const lm of hands) drawPlan(ctx, rigPlan(lm, skin, layers));
 }
 
 // ---- a pose for finger states (when there are no landmarks: simulator, filtered pictures, old clients) -----------------

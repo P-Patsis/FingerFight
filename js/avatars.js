@@ -3,6 +3,8 @@
 import { normalizeView } from './logic.js';
 import { drawPuppet, statesToLandmarks } from './puppet.js';
 import { getSkin } from './skins.js';
+import { resolveLoadout } from './cosmetics.js';
+import { snapshot } from './particles.js';
 
 // (The hand itself is the puppet: puppet.js poses a swappable skin from skins.js on the landmarks.)
 
@@ -83,10 +85,12 @@ export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = tru
 }
 
 /** Puppet picture: the skin posed on the landmarks, fitted to the picture like the skeleton (a little more room: it is wider than the bones). */
-export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers = true) {
+export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers = true, rec = null) {
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h);
   const px = fitter(lms, w, h, ar, 0.16);
-  drawPuppet(ctx, lms.map(hand => hand.map(px)), skin);
+  const pts = lms.map(hand => hand.map(px));
+  drawPuppet(ctx, pts, skin, rec?.layers || []);
+  if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead
   const tips = raisedTips(lms, hands, px);
   if (withNumbers) annotate(ctx, tips, Math.max(8, h * 0.07));
   return tips;
@@ -95,12 +99,12 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
 /** Profile preview: how my current choice looks to the viewer, drawn with the selected skin from a sample open hand.
  *  Photo views get a stand-in "camera picture" (a plain silhouette, never my real camera) with the hand drawn over it.
  *  Returns what was drawn: { camera: bool, hand: 'puppet' | 'skeleton' }. */
-export function drawViewPreview(ctx, w, h, mode, skin) {
+export function drawViewPreview(ctx, w, h, mode, skin, rec = null) {
   const puppet = String(mode).endsWith('puppet');
   const camera = String(mode).startsWith('photo');
   const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
   if (!camera) {
-    if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false);
+    if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false, rec); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false);
     return { camera, hand: puppet ? 'puppet' : 'skeleton' };
   }
   const g = ctx.createLinearGradient(0, 0, 0, h);
@@ -111,7 +115,7 @@ export function drawViewPreview(ctx, w, h, mode, skin) {
   ctx.beginPath(); ctx.ellipse(w * 0.2, h * 0.95, w * 0.17, h * 0.34, 0, 0, 7); ctx.fill();
   const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1);        // the hand sits in the right 60% of the picture
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
-  if (puppet) drawPuppet(ctx, lms.map(hand => hand.map(at)), skin);
+  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || []); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
   else {
     ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = '#22d3ee';
     for (const hand of lms) for (const [a, b] of BONES) { const A = at(hand[a]), B = at(hand[b]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
@@ -141,5 +145,13 @@ export function drawFromMessage(ctx, w, h, msg) {
     return [];
   }
   if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar);
-  return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, getSkin(msg.skin));
+  const rec = resolveLoadout(msg.skin, msg.cos);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
+  return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, rec);
+}
+
+/** The sample open hand used by the Profile preview and the Store, as pixel points in a w x h picture: for animating particles on it. */
+export function previewHandPx(w, h) {
+  const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
+  const px = fitter(lms, w, h, 1, 0.16);
+  return lms.map(hand => hand.map(px));
 }

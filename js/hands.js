@@ -4,7 +4,9 @@ import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './
 import { statesFromCount, annotate, FINGERS, TIP_ID } from './avatars.js';
 import { viewOf } from './logic.js';
 import { drawPuppet } from './puppet.js';
-import { getSkin, skinIdOf } from './skins.js';
+import { skinIdOf } from './skins.js';
+import { resolveLoadout, cleanCos } from './cosmetics.js';
+import { ParticleSystem } from './particles.js';
 
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
@@ -42,7 +44,9 @@ export class HandCam {
   constructor(video, canvas) {
     this.video = video; this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.facing = 'user';
-    this.overlay = { puppet: false, skin: 'cartoon' };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin
+    this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', {}) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
+    this.particles = new ParticleSystem();               // item effects; driven by the tracking loop below, no timers of their own
+    this.lastPts = null; this.lastDraw = 0;
     this.deviceId = null; this.exact = false; this.flipping = false;
     this.landmarker = null; this.stream = null;
     this.samples = []; this.running = false; this.lastTime = -1;
@@ -209,16 +213,28 @@ export class HandCam {
   }
 
   /** The picture drawn over MY camera view follows what my opponent sees: puppet views get the puppet, the others the skeleton. */
-  setOverlay(view, skin) {
+  setOverlay(view, skin, cos) {
     const v = viewOf(view);
-    this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin) };
+    const rec = resolveLoadout(skin, cos);
+    this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec };
+    this.particles.setEmitters(v.endsWith('puppet') ? rec.emitters : []);
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
   }
 
   #drawOverlay(hands) {
     const w = this.canvas.width, h = this.canvas.height;
     if (this.overlay.puppet && hands.length) {
-      try { drawPuppet(this.ctx, hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h }))), getSkin(this.overlay.skin)); return; }
+      try {
+        const pts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
+        const rec = this.overlay.rec;
+        drawPuppet(this.ctx, pts, rec.skin, rec.layers);
+        if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
+          const now = performance.now(), dt = this.lastDraw ? (now - this.lastDraw) / 1000 : 0;
+          this.lastDraw = now; this.lastPts = pts;
+          this.particles.update(dt, pts); this.particles.draw(this.ctx);
+        }
+        return;
+      }
       catch (e) {                            // a puppet that cannot be drawn must not take the camera down: show the skeleton and say why, once
         this.puppetBroken = true; this.overlay.puppet = false;
         try { this.onError?.('Puppet could not be drawn, showing the skeleton instead (' + (e?.name || 'Error') + ': ' + (e?.message || e) + ')'); } catch { /* ignore */ }
@@ -229,6 +245,7 @@ export class HandCam {
 
   pause() {
     this.running = false;
+    this.particles.clear(); this.lastDraw = 0; this.lastPts = null;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
@@ -273,12 +290,13 @@ export class HandCam {
     const q = x => Math.max(0, Math.min(1000, Math.round(x * 1000)));
     const lm = hands.length ? hands.map(h => h.map(p => [q(mirror ? 1 - p.x : p.x), q(p.y)])) : null;
     const photoMode = mode.startsWith('photo-');
-    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin)) : '';
+    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.cos) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands: states, lm, ar };
+    if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), cos: cleanCos(style.cos), hands: states, lm, ar };
   }
 
-  #photo(hands, states, mode, ar, skinId) {
+  #photo(hands, states, mode, ar, skinId, cos) {
     const v = this.video;
     if (!v.videoWidth) return '';
     const w = PHOTO_WIDTH, h = Math.round((w * v.videoHeight) / v.videoWidth);
@@ -292,7 +310,8 @@ export class HandCam {
     if (mode === 'photo-skeleton') drawSkeleton(ctx, hands, w, h, 2);
     ctx.restore();
     if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
-      drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), getSkin(skinId));
+      const rec = resolveLoadout(skinId, cos);
+      drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec.skin, rec.layers);
     }
     const tips = [];
     hands.forEach((lm, i) => {
@@ -330,6 +349,6 @@ export class SimCam {
       ctx.fillText(String(count), 120, 110);
       photo = c.toDataURL('image/jpeg', 0.6);
     }
-    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333 };
+    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, cos: cleanCos(style.cos) };
   }
 }

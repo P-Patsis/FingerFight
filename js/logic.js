@@ -188,10 +188,17 @@ export const validLandmarks = l => l === null || (Array.isArray(l) && l.length <
  * present, so the receiver can draw a cartoon hand itself. With [allowPhoto] false (random opponents, or the
  * receiver chose not to see photos) any message carrying a photo is rejected.
  */
+const COS_KEYS = ['tone', 'tattoo', 'nails', 'ring', 'glove'];
+/** The optional cosmetics of a picture: {tone, tattoo, nails, ring, glove} item ids (only those keys, 1-12 lower-case letters). The receiver
+ *  draws them from its own copies, so an id it does not know is simply not drawn; nothing else can travel in this field. */
+export const validCos = c => c === undefined || c === null
+  || (typeof c === 'object' && !Array.isArray(c) && Object.keys(c).length <= COS_KEYS.length
+    && Object.entries(c).every(([k, v]) => COS_KEYS.includes(k) && typeof v === 'string' && /^[a-z]{1,12}$/.test(v)));
+
 export function validPicture(m, allowPhoto) {
   return !!m && normalizeView(m.view) !== null
     && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
-    && validHands(m.hands) && validLandmarks(m.lm)
+    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos)
     && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
     && validPhoto(m.photo) && (allowPhoto || m.photo === '')
     && (allowPhoto || isSafeView(m.view));

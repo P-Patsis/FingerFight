@@ -38,8 +38,8 @@ test('Profile: Player card, then how the opponent sees my hand, then App setting
 
 test('skin picker: one button per loaded skin, the saved choice is marked, picking saves it and hides with non-puppet views', async () => {
   $('profileBtn').onclick();
-  await until(() => $('skinPicker').children.length === 3, 'three skins in the picker');
-  assert.deepEqual($('skinPicker').children.map(x => x.dataset.skin), ['cartoon', 'robot', 'neon']);
+  await until(() => $('skinPicker').children.length === 5, 'the five free hands in the picker (locked ones are unlocked in the Store)');
+  assert.deepEqual($('skinPicker').children.map(x => x.dataset.skin), ['cartoon', 'robot', 'neon', 'paw', 'gauntlet']);
   assert.deepEqual($('skinPicker').children.filter(x => x.classList.contains('sel')).map(x => x.dataset.skin), ['cartoon'], 'default is the built-in cartoon');
   $('skinPicker').children.find(x => x.dataset.skin === 'robot').onclick();
   assert.equal(globalThis.localStorage.getItem('ff-puppet'), 'robot');

@@ -125,3 +125,13 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - The match-code box is not sticky: a floating box over the settings was the problem; the join request is the thing that floats, because the host must act on it.
 - The profile preview never uses the real camera: photo views are a stand-in picture, so opening Profile cannot turn the camera on.
 - Top bars (Back/Leave) are transparent and let taps through; only the button itself is drawn.
+
+## Layered cosmetics and the Store (2026-10-29)
+- COSMETICS ARE LAYERS ON THE EXISTING RIG, AS DATA: base hand (a skin), tone, tattoo, nails, ring, glove, each a JSON item mapped onto the same 16 named parts. No rig change beyond "draw these extra shapes per part after the base". Spec: COSMETICS.md.
+- FREE STACKING, ORDERED BY Z ONLY. Nothing blocks a combination (ring over glove is allowed by giving the ring a higher z); default z puts gloves over rings over nails. One item per layer slot (simple equipment model, simple wire format).
+- Tone is a colour remap, not a separate hand, so it needs no art per tone and only applies where a base uses those colours. A premade whole hand is a finished piece and is never recoloured.
+- Particles are named presets in code, items only pick one and its parameters, so an item (or a future downloaded one) cannot carry script. Hard caps, no own loop, off under reduced motion, driven by the tracking loop that already exists. Opponents get a still snapshot (their picture is a still anyway); animating the reveal was not worth the fps risk.
+- Only item ids travel (`cos`), the receiver draws from its own copies. Cosmetics are allowed in random matches: they are drawn data, same rule as the skin id.
+- Ownership is a local flag (localStorage), not a security boundary: acceptable for a friendly game and for the stub. Real purchases will need a provider that verifies receipts (server side) before it says granted.
+- MONETISATION IS STUBBED, ON PURPOSE. All unlocks go through ONE function and ONE replaceable provider (js/unlock.js). The web app contains no ad SDK, no payment processor and no related network code; the native build installs a real provider. Labels say "(demo)" while the stub is active. The end screen only reserves an empty slot for a future banner.
+- The Profile skin picker shows owned hands only; the Store is the one place to see and unlock everything.

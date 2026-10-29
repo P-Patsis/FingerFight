@@ -33,6 +33,7 @@
     <button id="randomBtn" class="btn">Find a random opponent</button>
     <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>
+    <button id="storeBtn" class="btn ghost">Store</button>
     <button id="profileBtn" class="btn ghost">Profile &amp; settings</button>
     <button id="calibBtn" class="link">Camera test &amp; finger calibration</button>
     <p class="fine">Uses your camera to count your fingers. Against random opponents only a puppet or skeleton of your hand is ever shared, never a camera image.</p>
@@ -51,7 +52,24 @@
     </div>
     <div id="styleSlotProfile"></div>
     <div id="appSlotProfile"></div>
+    <button id="profileStore" class="btn ghost">Open the Store</button>
     <p class="fine">Your IP address is always hidden from strangers (random matches go through a relay). Your name, hand style, puppet skin and sound are saved on this phone and used in every match.</p>
+  </section>
+
+  <!-- ===== Store (cosmetics: browse, preview, unlock, equip) ===== -->
+  <section id="store" class="screen" hidden>
+    <div class="topbar"><button id="storeBack" class="btn small">← Back</button></div>
+    <h2 class="logo small">STORE</h2>
+    <div class="card store-live">
+      <canvas id="storePreview" width="240" height="180" aria-label="Your puppet with everything you have equipped"></canvas>
+      <div id="storeLoadout" class="fine"></div>
+      <div class="row center"><button id="storeSnap" class="btn small ghost">Test snap</button><button id="storeClear" class="btn small ghost">Take everything off</button></div>
+    </div>
+    <div id="storeCats" class="chips" aria-label="Category"></div>
+    <div id="storeLayers" class="chips" aria-label="Item type"></div>
+    <div id="storeGrid" class="store-grid"></div>
+    <p id="storeMsg" class="msg" role="status"></p>
+    <p class="fine">Demo store: locked items unlock for free for now. Real ads and purchases arrive with the app version.</p>
   </section>
 
   <!-- ===== Lobby ===== -->
@@ -143,6 +161,7 @@
     <button id="againBtn" class="btn big">Play again</button>
     <button id="settingsBtn" class="btn">Back to lobby (change settings)</button>
     <p id="overMsg" class="msg"></p>
+    <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-hidden="true"></div>   <!-- reserved for a native banner ad later: empty on purpose, no ad code -->
   </section>
 
   <!-- the camera lives here and is moved into the bottom panel when it is your turn to point -->

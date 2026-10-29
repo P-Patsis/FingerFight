@@ -316,3 +316,23 @@ input:focus { outline: none; border-color: var(--cyan); }
 /* ---------- Profile preview ---------- */
 .view-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0 2px; }
 .view-preview canvas { width: min(100%, 240px); height: auto; border-radius: 10px; border: 2px solid #334155; background: #0f172a; }
+
+/* ---------- Store ---------- */
+.store-live { align-items: center; text-align: center; }
+.store-live canvas { width: min(100%, 240px); height: auto; border-radius: 10px; border: 2px solid #334155; background: #0f172a; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: min(100%, 440px); }
+.chips button { border: 2px solid #475569; background: #1e293b; color: var(--ink); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.chips button.sel { border-color: var(--gold); background: #3b2f08; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; width: min(100%, 560px); }
+.item-card { display: flex; flex-direction: column; align-items: center; gap: 4px; background: #0f172acc; border: 2px solid #334155; border-radius: 12px; padding: 8px; text-align: center; }
+.item-card.eq { border-color: var(--gold); }
+.item-card.locked canvas { filter: grayscale(.8) brightness(.7); }
+.item-card canvas { width: 96px; height: 96px; border-radius: 8px; background: #0f172a; }
+.item-card b { font-size: 14px; }
+.item-card .tags { font-size: 11px; color: var(--muted); }
+.item-card .badge { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #334155; }
+.item-card .badge.own { background: #166534; } .item-card .badge.lock { background: #7f1d1d; }
+.item-card .btn { font-size: 13px; padding: 6px 10px; width: 100%; }
+
+/* ---------- end-screen ad slot: reserved space for a native banner (320x50) so adding one later moves nothing ---------- */
+.screen > .ad-slot { width: min(100%, 320px); min-height: 50px; margin-top: auto; margin-bottom: 0; flex: none; }

@@ -187,7 +187,7 @@ test('with no manifest the built-in plain skin still draws, and the picker would
   assert.equal(plain.id, 'plain');
   assert.equal(rigPlan(px(makeHand(ALL)), plain).length, 16);
   resetSkins();
-  assert.deepEqual(await loadSkins(), ['cartoon', 'robot', 'neon'], 'and it recovers: the real files load afterwards');
+  assert.deepEqual(await loadSkins(), ['cartoon', 'robot', 'neon', 'paw', 'dragon', 'gauntlet', 'goldhand'], 'and it recovers: the real files load afterwards');
 });
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -7,7 +7,7 @@ Adding a skin = drop `assets/skins/<id>.json` in, add `<id>` to `manifest.json`,
 `node tools/stamp.mjs`. It then appears in the Profile skin picker. Nothing else in the code changes.
 (`tools/make_skins.py` is only the script that drew the three built-in skins; skins can be written by hand or by any tool.)
 
-Built in: `cartoon` (default), `robot`, `neon`. The skin id travels with each picture (`skin` in the message, 1-12 lower-case
+Built in: `cartoon` (default), `robot`, `neon`, `paw`, `dragon`, `gauntlet`, `goldhand`. The skin id travels with each picture (`skin` in the message, 1-12 lower-case
 letters); the receiver draws with **its own copy** of that skin and falls back to the default if it does not have it, so a
 stranger can never push a drawing or an image through a skin id.
 
@@ -99,7 +99,7 @@ thumb base.
 A part may be `{ "use": "index_base" }` instead of a definition, to share another part's shape and length (one finger drawn
 once, reused for all 15 segments). Aliases may chain up to 4 deep; a loop is refused.
 
-### `overlays`: layers for later (rings, gloves, nail polish, tattoos)
+### `overlays`: shapes riding on one of the skin's own parts (cosmetic layers are separate items, see COSMETICS.md)
 
 ```json
 "overlays": [ { "part": "ring_base", "shapes": [ { "d": "M -8 -10 L 8 -10", "stroke": "#fbbf24", "strokeWidth": 3 } ] } ]
@@ -126,7 +126,9 @@ that is not a plain `#hex`, or palm points in a line. A skin that fails is skipp
 load. `tests/puppet.test.js` checks the shipped skins and the rig: every segment starts on its landmark and ends on the next
 one, the palm is pinned to its three landmarks, a mirrored hand flips the palm, and a hand that cannot be posed draws nothing.
 
-## Not built (on purpose)
+## Cosmetics, the Store, ads and payments
 
-No store, payments, ads or unlockables. The skin picker lists whatever is in the manifest. If skins ever become something
-players can get, the manifest/loader is the place to extend; the rig and the format do not need to change.
+Skins are now the **base-hand layer** of a stack of cosmetics (tone, tattoos, nails, rings, gloves, premade whole hands, particle
+effects), with a Store, a local inventory and a stubbed unlock path: see **COSMETICS.md**. A skin file may carry the extra optional
+metadata described there (`category`, `free`, `unlock`, `whole`, `particles`); the rig and everything above are unchanged.
+Real ads and payments are NOT built: the unlock path is a marked stub (`js/unlock.js`) for the future native app.
