@@ -291,3 +291,19 @@ input:focus { outline: none; border-color: var(--cyan); }
 .card-h { margin: 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .skin-picker button .nm { display: block; font-size: 11px; margin-top: 2px; color: var(--muted); }
 .mode-picker button[hidden] { display: none; }
+
+/* a drawn view (skeleton / puppet) is shown on a dark background: the live picture is not displayed (privacy, and cheaper to draw) */
+#camBox { background: radial-gradient(#1e293b, #020617); }
+#camBox video.feed-hidden { opacity: 0; }
+.mode-picker button .sub { display: block; font-size: 10px; color: #fca5a5; margin-top: 2px; }
+
+/* Settings cards: the slot wrappers are plain blocks, so a card inside sat on the left while the others were centred. Centre them
+   and give every card the same width; long labels wrap instead of pushing the switch off the card. */
+#styleSlot, #styleSlotProfile, #appSlot, #appSlotProfile { display: flex; justify-content: center; width: 100%; }
+#styleSlot .card, #styleSlotProfile .card, #appSlot .card, #appSlotProfile .card { box-sizing: border-box; }
+.card, .players { box-sizing: border-box; }
+.set > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.set > .toggle, .set > .stepper { flex: none; }
+.vol { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.vol input { flex: 1; min-width: 0; }
+.mode-picker button { min-width: 0; overflow-wrap: anywhere; }

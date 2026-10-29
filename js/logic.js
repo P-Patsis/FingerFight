@@ -124,6 +124,9 @@ export const isSafeView = v => SAFE_VIEWS.includes(normalizeView(v));
 export const safeViewOf = v => (viewOf(v).endsWith('puppet') ? 'puppet' : 'skeleton');
 /** A saved or stored choice -> a current view (older saved values are mapped; unknown gives the puppet). */
 export const viewOf = v => normalizeView(v) || 'puppet';
+/** The camera-image warning belongs to the photo views ONLY (they send a real JPEG); skeleton and puppet send finger data, never a picture. */
+export const CAMERA_WARNING = 'Warning: this sends a real camera image of you (maybe your face or room) to your opponent.';
+export const cameraWarning = v => (normalizeView(v) !== null && !isSafeView(v) ? CAMERA_WARNING : '');
 export const RANDOM_SLOTS = 8;                              // shared matchmaking slots (see main.js)
 
 /** A display name: letters, digits, space and _ . - only, at most 12 characters. */

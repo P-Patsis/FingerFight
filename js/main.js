@@ -13,7 +13,7 @@ import { statesToLandmarks } from './puppet.js';
 import { loadSkins, skinIds, getSkin, skinIdOf } from './skins.js';
 import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
-  sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, newIdle, trackIdle, IDLE_ROUNDS,
+  sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, cameraWarning, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, newIdle, trackIdle, IDLE_ROUNDS,
 } from './logic.js';
 import { cleanName, uniqueName, flagEmoji, countryCode, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
@@ -721,6 +721,7 @@ function buildStyleCard() {
   modes.replaceChildren();
   for (const v of VIEWS) {
     const b = el('button', isSafeView(v) ? '' : 'real', MODE_LABELS[v]);
+    if (!isSafeView(v)) b.append(el('span', 'sub', 'sends a real photo'));     // the hint lives on the photo buttons themselves
     b.type = 'button';
     b.dataset.mode = v;
     b.onclick = () => { if (!viewsFor(matchTypeNow()).includes(v)) return; style.mode = v; store.set('ff-mode', v); renderStyle(); };
@@ -748,12 +749,11 @@ function renderStyle() {
   $('photoBtn').classList.toggle('on', showPhotos);
   $('rudeBtn').textContent = hideRude ? 'On' : 'Off';
   $('rudeBtn').classList.toggle('on', hideRude);
-  const real = !isSafeView(mode);
+  const warn = random ? '' : cameraWarning(mode);                // only a photo view carries the warning
   $('styleNote').textContent = random
     ? 'Random opponent: only a drawn puppet or skeleton is shared. Your camera image never leaves this phone.'
-    : real ? 'Warning: this sends a real camera image of you (maybe your face or room) to your opponent.'
-    : 'Only drawn data is sent. Your camera image never leaves this phone.';
-  $('styleNote').classList.toggle('err', real && !random);
+    : warn || 'Only drawn data is sent. Your camera image never leaves this phone.';
+  $('styleNote').classList.toggle('err', !!warn);
   applyOverlay();
 }
 

@@ -18,6 +18,7 @@ const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : '–');
 export function formatSample(s) {
   if (!s) return 'No frames yet. Hold a hand in view.';
   const lines = [`count ${s.count ?? 0}  |  hands ${s.hands?.length ?? 0}  |  gesture ${s.gesture || '-'}  |  ${s.fps ? Math.round(s.fps) : '–'} fps`];
+  if (s.timing) lines.push(`per frame: model ${s.timing.detect.toFixed(0)} ms, drawing ${s.timing.draw.toFixed(0)} ms`);
   if (!s.hands?.length) lines.push('no hand detected');
   (s.hands || []).forEach((_, i) => {
     const sc = s.scores?.[i];

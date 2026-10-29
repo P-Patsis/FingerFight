@@ -112,3 +112,8 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - NO second tracking pass for the puppet: it is drawn from the landmarks the tracker already produced, in the same loop iteration, only when a new video frame was analysed. Two hands = about 70 canvas draw calls per frame.
 - No store, payments, ads or unlockables were built; the picker lists the manifest.
 
+
+## Desktop hardening, hidden feed, warning (2026-10-29)
+- Drawn views (skeleton, puppet) hide the live camera picture entirely rather than blur it: nothing of the room is rendered, and it is cheaper. Photo views keep it. Chosen over a blur because a blur still draws video every frame.
+- The camera warning is derived from the view (`cameraWarning`), never from the picker's position, so it cannot sit under a drawn option.
+- A failing tracking loop stops after 40 consecutive errors and says so; a failing puppet degrades to the skeleton. Visible error beats a hang.

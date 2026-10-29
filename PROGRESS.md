@@ -15,6 +15,15 @@
 
 Newest first.
 
+## 2026-10-29 (2) — Desktop hardening, feed hidden for drawn views, performance, warning, card layout (NOT YET TRIED ON PHONE OR LAPTOP)
+- LAPTOP (camera dead / no puppet / page unresponsive): the real cause is NOT proven from code (no desktop browser here). Verified by reading: the flip logic only asks for `exact` environment during a flip, a laptop's first start uses `ideal: user`, so no back-camera hang. Found and fixed real desktop failure paths: (1) the GPU delegate can be created fine and then fail on the FIRST frame on desktop GPUs: now switches once to the CPU delegate; (2) `video.play()` rejection and camera errors had no message: now "NotFoundError: ..." with name + message; (3) the puppet drawing is inside try/catch: on a throw it falls back to the skeleton and says "Puppet could not be drawn ... (name: message)" once; (4) a tracking error on EVERY frame backs off (250 ms after 3 in a row) and stops after 40 with "tracking stopped after repeated errors; reload", instead of spinning. If it still fails on the laptop: read the red text under the camera / in the Camera test and send it.
+- FEED HIDDEN: for Skeleton and Puppet (own side) the live video is not displayed (opacity 0 over a dark gradient); the analysis still reads it. Photo + skeleton / Photo + puppet still show it. Default = fully hidden (cleaner and cheaper than blur); no toggle.
+- PERFORMANCE (no phone here, so no measured before/after): camera request lowered from 640x480 to 480x360 at 30 fps (the model sees a 256 px picture anyway), live picture no longer composited for drawn views, and the debug panel now prints "per frame: model X ms, drawing Y ms" and fps so the split can be read off the phone. Neon stroke and puppet redraw left as is until those numbers say drawing matters. To measure: Camera test, note fps and the two ms values before/after.
+- WARNING: the camera-image warning is `cameraWarning(view)` in logic.js: non-empty only for photo views. It shows in the note only while a photo view is selected, and each photo button carries "sends a real photo". Skeleton/Puppet never show it.
+- LAYOUT: the settings slot wrappers were shrink-to-fit blocks, so each card took a different width; they now span the screen and centre one card width; long labels wrap.
+- Tests: 181 (new tests/laptop.test.js). Phone AND laptop re-test: camera starts, puppet follows, dark background with puppet/skeleton, photo modes still show the feed, fps/ms line, card alignment.
+- NOT done: the TEMPLATE.svg / how-to-make-a-skin / example-skin request that was pasted in the same message is separate and not started.
+
 ## 2026-10-29 — Profile redesign, opponent-view matrix, animated puppet hand + swappable skins (NOT YET TRIED ON PHONES)
 - Changed:
   - PROFILE: "Favourite arena" removed (the arena is only the host's lobby setting). Profile is now three cards: Player (name, flag, country), "How my opponent sees my hand" (view buttons + puppet skin picker), and "App settings" (Sound on/off, Volume, Hide rude gestures, Show my opponent's photos). The same two cards are moved into the lobby (as before) so they can be changed there.

@@ -12,6 +12,7 @@ const CONN = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5
   [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
 const SAMPLES = 15;         // frames kept for the snap (TUNING.frames of them vote)
 const PHOTO_WIDTH = 240;
+const MAX_BAD_FRAMES = 40;    // consecutive failing frames before the tracking loop gives up and says so
 
 /** Most common value; ties go to the most recent. */
 function mode_(values) {
@@ -51,6 +52,8 @@ export class HandCam {
     this.gen = 0;              // bumped by every start/stop, so a camera that arrives after it was cancelled is switched off again
     this.debug = false;        // when true, every sample also carries the raw numbers behind the decision
     this.fps = 0; this.frameTimes = [];
+    this.timing = { detect: 0, draw: 0 };   // milliseconds per frame (smoothed): where the frame time goes, shown in the debug panel
+    this.delegate = null; this.make = null; this.backoffMs = 250;
   }
 
   async load() {
@@ -59,7 +62,17 @@ export class HandCam {
     const fileset = await mod.FilesetResolver.forVisionTasks(MP + '/wasm');
     const make = delegate => mod.HandLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: MODEL, delegate }, runningMode: 'VIDEO', numHands: 2 });
-    try { this.landmarker = await make('GPU'); } catch { this.landmarker = await make('CPU'); }
+    try { this.landmarker = await make('GPU'); this.delegate = 'GPU'; } catch { this.landmarker = await make('CPU'); this.delegate = 'CPU'; }
+    this.make = make;
+  }
+
+  /** Some desktop GPUs create the GPU delegate fine and then fail on the first frame: switch to the CPU delegate once. */
+  async #fallbackToCpu() {
+    if (this.delegate !== 'GPU' || !this.make) return false;
+    this.delegate = 'CPU';
+    try { this.landmarker?.close?.(); } catch { /* ignore */ }
+    this.landmarker = await this.make('CPU');
+    return true;
   }
 
   /** @returns {Promise<string|null>} an error message, or null when the camera is running */
@@ -70,11 +83,11 @@ export class HandCam {
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { ...this.#videoConstraint(), width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        video: { ...this.#videoConstraint(), width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 30 } }, audio: false });   // the model looks at a 256 px picture anyway: a smaller frame is cheaper to copy and draw
     } catch (e) {
       return e.name === 'NotAllowedError' || e.name === 'SecurityError'
         ? 'Camera permission denied. Allow the camera in the browser site settings, then reload.'
-        : 'Could not open the camera (' + e.name + ').';
+        : 'Could not open the camera (' + e.name + (e.message ? ': ' + e.message : '') + ').';
     }
     if (gen !== this.gen) {                    // released (or restarted) while the permission prompt / camera start was pending
       try { stream.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
@@ -85,7 +98,10 @@ export class HandCam {
       t.addEventListener?.('ended', () => { if (this.stream === stream) { this.stopCamera(); this.pause(); this.onLost?.(); } });
     }
     this.video.srcObject = this.stream;
-    await this.video.play();
+    try { await this.video.play(); } catch (e) {
+      this.stopCamera();
+      return 'The camera opened but the video would not start (' + (e?.name || 'Error') + (e?.message ? ': ' + e.message : '') + ').';
+    }
     const real = stream.getVideoTracks?.()[0]?.getSettings?.().facingMode;     // what the browser really gave us
     if (real === 'user' || real === 'environment') this.facing = real;
     const mirror = this.facing === 'user';
@@ -139,7 +155,14 @@ export class HandCam {
       if (v.readyState >= 2 && v.currentTime !== this.lastTime) {
         this.lastTime = v.currentTime;
         if (this.canvas.width !== v.videoWidth) { this.canvas.width = v.videoWidth; this.canvas.height = v.videoHeight; }
-        const res = this.landmarker.detectForVideo(v, performance.now());
+        const t0 = performance.now();
+        let res;
+        try { res = this.landmarker.detectForVideo(v, t0); } catch (e) {
+          if (this.pendingCpu) throw e;
+          this.pendingCpu = this.#fallbackToCpu().finally(() => { this.pendingCpu = null; }).catch(() => {});   // retried on the next frame with the CPU delegate
+          throw e;
+        }
+        const t1 = performance.now();
         let hands = res.landmarks || [];
         const handed = res.handednesses || res.handedness || [];
         // the model's own confidence for each detected hand (the "raw landmark confidence"), and which hand it thinks it is
@@ -158,28 +181,50 @@ export class HandCam {
         if (this.samples.length > SAMPLES) this.samples.shift();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.#drawOverlay(hands);
+        const t2 = performance.now();
+        this.timing = { detect: this.timing.detect * 0.8 + (t1 - t0) * 0.2, draw: this.timing.draw * 0.8 + (t2 - t1) * 0.2 };
+        s.timing = this.timing;
         this.onFrame?.(s);
       }
     };
-    let lastErr = '';
+    let lastErr = '', bad = 0;
     const loop = () => {
       if (!this.running) return;
-      try { step(); } catch (e) {            // one bad frame (or a model hiccup) must not stop the tracking for good
-        const msg = String(e?.message || e);
+      let wait = 0;
+      if (this.pendingCpu) wait = 50;        // the CPU delegate is being prepared
+      else try { step(); bad = 0; } catch (e) {   // one bad frame (or a model hiccup) must not stop the tracking for good ...
+        const msg = (e?.name && e.name !== 'Error' ? e.name + ': ' : '') + String(e?.message || e);
         if (msg !== lastErr) { lastErr = msg; try { this.onError?.(msg); } catch { /* ignore */ } }
+        bad++;
+        if (bad >= MAX_BAD_FRAMES) {         // ... but an error on EVERY frame must not spin the page forever
+          this.running = false;
+          try { this.onError?.(lastErr + ' (tracking stopped after repeated errors; reload the page)'); } catch { /* ignore */ }
+          return;
+        }
+        wait = bad > 3 ? this.backoffMs : 0;            // back off while it keeps failing
       }
-      requestAnimationFrame(loop);
+      if (wait) setTimeout(() => requestAnimationFrame(loop), wait); else requestAnimationFrame(loop);
     };
     loop();
   }
 
   /** The picture drawn over MY camera view follows what my opponent sees: puppet views get the puppet, the others the skeleton. */
-  setOverlay(view, skin) { this.overlay = { puppet: viewOf(view).endsWith('puppet'), skin: skinIdOf(skin) }; }
+  setOverlay(view, skin) {
+    const v = viewOf(view);
+    this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin) };
+    this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
+  }
 
   #drawOverlay(hands) {
     const w = this.canvas.width, h = this.canvas.height;
-    if (this.overlay.puppet && hands.length) drawPuppet(this.ctx, hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h }))), getSkin(this.overlay.skin));
-    else drawSkeleton(this.ctx, hands, w, h, 3);       // the same landmarks the tracker just produced: no second pass over the frame
+    if (this.overlay.puppet && hands.length) {
+      try { drawPuppet(this.ctx, hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h }))), getSkin(this.overlay.skin)); return; }
+      catch (e) {                            // a puppet that cannot be drawn must not take the camera down: show the skeleton and say why, once
+        this.puppetBroken = true; this.overlay.puppet = false;
+        try { this.onError?.('Puppet could not be drawn, showing the skeleton instead (' + (e?.name || 'Error') + ': ' + (e?.message || e) + ')'); } catch { /* ignore */ }
+      }
+    }
+    drawSkeleton(this.ctx, hands, w, h, 3);       // the same landmarks the tracker just produced: no second pass over the frame
   }
 
   pause() {
