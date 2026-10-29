@@ -120,6 +120,13 @@ export function installBrowser(search, hash = '') {
   const mem = new Map();
   globalThis.localStorage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
   Object.defineProperty(globalThis, 'navigator', { value: { clipboard: { writeText: async () => {} } }, configurable: true });
+  // site files (assets/skins/...) are read from disk; everything else goes to the real fetch
+  const realFetch = globalThis.__realFetch ||= globalThis.fetch;
+  globalThis.fetch = async (url, ...rest) => {
+    if (/^[a-z]+:/i.test(String(url))) return realFetch(url, ...rest);
+    try { const buf = fs.readFileSync(path.join(root, String(url))); return { ok: true, status: 200, json: async () => JSON.parse(buf.toString('utf8')), text: async () => buf.toString('utf8'), arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) }; }
+    catch { return { ok: false, status: 404, json: async () => { throw new Error('404'); }, arrayBuffer: async () => new ArrayBuffer(0) }; }
+  };
   globalThis.Peer = FakePeer;
   setTurnServers([{ urls: 'turn:relay.test.invalid:3478', username: 'u', credential: 'c' }]);   // a configured relay, so random matches are allowed
   network.clear();

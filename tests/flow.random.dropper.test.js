@@ -9,7 +9,7 @@ const $ = id => b.byId.get(id);
 await import('../js/main.js');
 
 const simButton = (sel, value) => $('bottomContent').querySelectorAll(sel).find(x => Object.values(x.dataset)[0] === value);
-const picture = (over = {}) => ({ view: 'avatar', skin: 'zombie', hands: [{ thumb: false, index: true, middle: true, ring: true, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
+const picture = (over = {}) => ({ view: 'puppet', skin: 'robot', hands: [{ thumb: false, index: true, middle: true, ring: true, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
 const slotHeld = () => [...network.keys()].filter(k => k.startsWith('ffight-r-'));
 
 test('searching shows a cancel button; with nobody around it claims a slot and waits', async () => {
@@ -48,13 +48,14 @@ test('a stranger connects and is accepted at once (no approval); the lobby is th
   assert.equal($('randomBtn').hidden, false, 'search UI is reset');
 });
 
-test('photo reveal styles are unavailable against a random opponent and cannot be forced', async () => {
+test('photo reveal styles are not offered against a random opponent and cannot be forced', async () => {
   const modes = $('modePicker').children;
-  assert.deepEqual(modes.filter(x => x.disabled).map(x => x.dataset.mode).sort(), ['blur', 'photo', 'photo-skeleton']);
-  modes.find(x => x.dataset.mode === 'photo').onclick();
-  assert.notEqual(modes.find(x => x.classList.contains('sel')).dataset.mode, 'photo');
+  assert.deepEqual(modes.filter(x => !x.hidden).map(x => x.dataset.mode).sort(), ['puppet', 'skeleton'], 'strangers see only the two drawn options');
+  assert.ok(modes.filter(x => x.hidden).map(x => x.dataset.mode).sort().join() === 'photo-puppet,photo-skeleton');
+  modes.find(x => x.dataset.mode === 'photo-puppet').onclick();
+  assert.ok(['puppet', 'skeleton'].includes(modes.find(x => x.classList.contains('sel')).dataset.mode), 'the click was refused');
   assert.equal($('photoRow').hidden, true);
-  assert.match($('styleNote').textContent, /only drawn data/i);
+  assert.match($('styleNote').textContent, /only a drawn puppet or skeleton/i);
 });
 
 test('if MY connection died I lose, and say so', async () => {

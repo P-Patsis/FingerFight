@@ -27,23 +27,23 @@ Critical gestures can be switched off in the lobby. An open palm (five fingers) 
 - **Join:** paste (or type) a friend's code. A shared link carries the code after the `#`, which browsers never send to any
   server, and the page removes it from the address bar after reading it.
 - **Find a random opponent:** matchmaking with strangers. Strangers get generated names ("Fighter 4821"), and **no camera
-  image is ever sent or shown**: phones exchange only finger data, and each phone *draws* the other's cartoon hand or
+  image is ever sent or shown**: phones exchange only finger data, and each phone *draws* the other's puppet hand or
   skeleton itself. A message carrying a photo is rejected, so a modified client can't push one at you.
 - In a private match the host sets seconds, hits to win, critical gestures and one of 5 arenas. Both players tap
   **Enable camera**. A random match starts by itself when both cameras are on.
 - No camera? Add `?sim=1` to the address to set the hand by tapping (also how the tests drive the game).
 
-## What your opponent sees of your hand (you choose, in the lobby)
-| Style | What leaves your phone | Allowed vs random |
-|---|---|---|
-| Cartoon hand (default, 8 skins: light, tan, dark, robot, zombie, gold, alien, lava) | finger data only; drawn on their phone | yes |
-| Skeleton | hand landmarks only; drawn on their phone | yes |
-| Blurred photo + skeleton | a heavily blurred JPEG | no |
-| Photo + skeleton | a real JPEG with the skeleton drawn on it | no |
-| Photo | a real JPEG, with numbers on the raised fingertips | no |
+## What your opponent sees of your hand (you choose, in Profile or the lobby)
+| Style | What leaves your phone | Friends (private) | Strangers (random) |
+|---|---|---|---|
+| Skeleton | hand landmarks only; drawn on their phone | yes | yes |
+| Puppet (an animated hand in a skin you pick, see [SKINS.md](SKINS.md)) | hand landmarks only; drawn on their phone in the skin you chose | yes | yes |
+| Photo + skeleton | a real JPEG with the skeleton drawn on it | yes | **never** |
+| Photo + puppet | a real JPEG with the puppet drawn on it | yes | **never** |
 
-The photo styles show a warning (a camera frame can include your face or room) and exist only for private matches.
-Receivers can also switch "Show my opponent's photos" off and get a cartoon instead.
+The photo styles show a warning (a camera frame can include your face or room) and exist only for private matches; against
+a stranger they are not even offered, and a message carrying a photo is rejected by the receiver. Receivers can also switch
+"Show my opponent's photos" off and get the drawn version instead. The puppet is also drawn over your own camera view.
 
 ## Run it locally
 ```
@@ -68,5 +68,5 @@ browser) and the PeerJS introduction server.
 
 ## Layout
 `js/logic.js` rules + message validation, `js/gestures.js` finger/gesture geometry, `js/net.js` PeerJS link,
-`js/hands.js` camera + MediaPipe (and the simulator), `js/avatars.js` cartoon hands + skeleton drawing, `js/fighters.js` artwork, `js/audio.js` sounds,
+`js/hands.js` camera + MediaPipe (and the simulator), `js/puppet.js` the 2D puppet rig, `js/skins.js` skin loader (`assets/skins/*.json`, see SKINS.md), `js/avatars.js` puppet/skeleton pictures, `js/fighters.js` artwork, `js/audio.js` sounds,
 `js/main.js` screens and the round state machine, `vendor/peerjs.min.js` (PeerJS 1.5.4, bundled).

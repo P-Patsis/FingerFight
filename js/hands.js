@@ -1,8 +1,10 @@
 // Camera + hand tracking, and a camera-free simulator with the same interface (?sim=1) for testing.
 // The MediaPipe runtime and hand model are loaded from the CDN, as in the original fingers app (about 17 MB, once).
 import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './gestures.js';
-import { skinById, statesFromCount, annotate, FINGERS, TIP_ID } from './avatars.js';
-import { VIEWS } from './logic.js';
+import { statesFromCount, annotate, FINGERS, TIP_ID } from './avatars.js';
+import { viewOf } from './logic.js';
+import { drawPuppet } from './puppet.js';
+import { getSkin, skinIdOf } from './skins.js';
 
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
@@ -39,6 +41,7 @@ export class HandCam {
   constructor(video, canvas) {
     this.video = video; this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.facing = 'user';
+    this.overlay = { puppet: false, skin: 'cartoon' };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin
     this.deviceId = null; this.exact = false; this.flipping = false;
     this.landmarker = null; this.stream = null;
     this.samples = []; this.running = false; this.lastTime = -1;
@@ -154,7 +157,7 @@ export class HandCam {
         this.samples.push(s);
         if (this.samples.length > SAMPLES) this.samples.shift();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        drawSkeleton(this.ctx, hands, this.canvas.width, this.canvas.height, 3);
+        this.#drawOverlay(hands);
         this.onFrame?.(s);
       }
     };
@@ -168,6 +171,15 @@ export class HandCam {
       requestAnimationFrame(loop);
     };
     loop();
+  }
+
+  /** The picture drawn over MY camera view follows what my opponent sees: puppet views get the puppet, the others the skeleton. */
+  setOverlay(view, skin) { this.overlay = { puppet: viewOf(view).endsWith('puppet'), skin: skinIdOf(skin) }; }
+
+  #drawOverlay(hands) {
+    const w = this.canvas.width, h = this.canvas.height;
+    if (this.overlay.puppet && hands.length) drawPuppet(this.ctx, hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h }))), getSkin(this.overlay.skin));
+    else drawSkeleton(this.ctx, hands, w, h, 3);       // the same landmarks the tracker just produced: no second pass over the frame
   }
 
   pause() {
@@ -198,7 +210,7 @@ export class HandCam {
    * cartoon or skeleton itself; `photo` is a JPEG only for the photo-based modes, otherwise ''.
    */
   snap(style = {}) {
-    const mode = VIEWS.includes(style.mode) ? style.mode : 'avatar';
+    const mode = viewOf(style.mode);
     const recent = this.samples.slice(-Math.round(TUNING.frames));
     const seen = recent.filter(s => s.has);
     const noHand = recent.length === 0 || seen.length * 2 < recent.length;
@@ -215,13 +227,13 @@ export class HandCam {
     const mirror = this.facing === 'user';
     const q = x => Math.max(0, Math.min(1000, Math.round(x * 1000)));
     const lm = hands.length ? hands.map(h => h.map(p => [q(mirror ? 1 - p.x : p.x), q(p.y)])) : null;
-    const photoMode = mode === 'photo' || mode === 'photo-skeleton' || mode === 'blur';
-    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar) : '';
+    const photoMode = mode.startsWith('photo-');
+    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin)) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
-    return { count, gesture, noHand, photo, view: mode, skin: skinById(style.skin).id, hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands: states, lm, ar };
   }
 
-  #photo(hands, states, mode, ar) {
+  #photo(hands, states, mode, ar, skinId) {
     const v = this.video;
     if (!v.videoWidth) return '';
     const w = PHOTO_WIDTH, h = Math.round((w * v.videoHeight) / v.videoWidth);
@@ -231,17 +243,12 @@ export class HandCam {
     const mirror = this.facing === 'user';
     ctx.save();
     if (mirror) { ctx.translate(w, 0); ctx.scale(-1, 1); }
-    if (mode === 'blur') {                       // heavy blur: draw tiny, scale up (works in every browser)
-      const t = document.createElement('canvas');
-      t.width = 16; t.height = Math.max(1, Math.round((16 * h) / w));
-      t.getContext('2d').drawImage(v, 0, 0, t.width, t.height);
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(t, 0, 0, w, h);
-    } else {
-      ctx.drawImage(v, 0, 0, w, h);
-    }
-    if (mode !== 'photo') drawSkeleton(ctx, hands, w, h, 2);
+    ctx.drawImage(v, 0, 0, w, h);
+    if (mode === 'photo-skeleton') drawSkeleton(ctx, hands, w, h, 2);
     ctx.restore();
+    if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
+      drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), getSkin(skinId));
+    }
     const tips = [];
     hands.forEach((lm, i) => {
       for (const f of FINGERS) if (states[i] && states[i][f]) { const p = lm[TIP_ID[f]]; tips.push({ finger: f, x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }); }
@@ -264,10 +271,10 @@ export class SimCam {
   get cameraOn() { return false; }
   set(patch) { Object.assign(this.sim, patch); this.run(); }
   snap(style = {}) {
-    const mode = VIEWS.includes(style.mode) ? style.mode : 'avatar';
+    const mode = viewOf(style.mode);
     const { count, gesture, noHand } = this.sim;
     const hands = noHand ? [] : statesFromCount(count);
-    const photoMode = mode === 'photo' || mode === 'photo-skeleton' || mode === 'blur';
+    const photoMode = mode.startsWith('photo-');
     let photo = '';
     if (photoMode && !noHand) {              // a stand-in "photo" so the photo path can be tested without a camera
       const c = document.createElement('canvas');
@@ -278,6 +285,6 @@ export class SimCam {
       ctx.fillText(String(count), 120, 110);
       photo = c.toDataURL('image/jpeg', 0.6);
     }
-    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinById(style.skin).id, hands, lm: null, ar: 1.333 };
+    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333 };
   }
 }

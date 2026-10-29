@@ -13,7 +13,7 @@ const simButton = (sel, value) => $('bottomContent').querySelectorAll(sel).find(
 let conn;                                   // the accepted friend's connection (the test's side of it is `conn.remote`)
 const hostPeer = () => peers.find(p => p.id?.startsWith('ffight-p-'));
 const connect = () => { const c = new Conn(); hostPeer().emit('connection', c); c.emit('open'); return c; };
-const picture = (over = {}) => ({ view: 'avatar', skin: 'gold', hands: [{ thumb: false, index: true, middle: false, ring: false, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
+const picture = (over = {}) => ({ view: 'puppet', skin: 'cartoon', hands: [{ thumb: false, index: true, middle: false, ring: false, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
 
 test('the menu offers create / join / random; creating a match gives a long unique code', async () => {
   assert.deepEqual(b.visible(), ['menu']);
@@ -88,7 +88,7 @@ test('game 1: the host points, the guesser is right, the host loses', async () =
   await until(() => sentOf(conn, 'reveal').length === 1, 'the pointer snaps and sends at 0', 9000);
   const rev = sentOf(conn, 'reveal')[0];
   assert.equal(rev.count, 4); assert.equal(rev.noHand, false); assert.equal(rev.gesture, null);
-  assert.equal(rev.view, 'avatar', 'default reveal style is the cartoon hand'); assert.equal(rev.photo, '', 'no image leaves the phone');
+  assert.equal(rev.view, 'puppet', 'default reveal style is the puppet hand'); assert.equal(rev.photo, '', 'no image leaves the phone');
   assert.equal(rev.hands[0].index && rev.hands[0].pinky, true, 'finger data for 4 fingers');
 
   for (const bad of [{ guess: 99, ...picture() }, { guess: 4, ...picture({ view: 'gif' }) }, { guess: 4, ...picture({ photo: 'http://evil/x.jpg' }) }, { guess: 4 }]) {

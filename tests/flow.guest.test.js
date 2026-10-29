@@ -11,7 +11,7 @@ await import('../js/main.js');
 
 const SETTINGS = { seconds: 3, hits: 1, maxFingers: 10, background: 2 };
 const simButton = (sel, value) => $('bottomContent').querySelectorAll(sel).find(x => Object.values(x.dataset)[0] === value);
-const picture = (over = {}) => ({ view: 'avatar', skin: 'gold', hands: [{ thumb: false, index: true, middle: true, ring: true, pinky: true }], lm: null, ar: 1.333, photo: '', ...over });
+const picture = (over = {}) => ({ view: 'puppet', skin: 'cartoon', hands: [{ thumb: false, index: true, middle: true, ring: true, pinky: true }], lm: null, ar: 1.333, photo: '', ...over });
 
 // The test plays the HOST: a fake peer holding the room id and answering the guest's hello.
 let hostConn, hostPeer, hello;
@@ -86,7 +86,7 @@ test('game 1: the guesser shows 4 fingers and is right; the friend\'s photo is d
   simButton('[data-count]', '4').onclick();
   await until(() => sentByGuest('guess').length === 1, 'the guesser snaps and sends at 0', 9000);
   const g = sentByGuest('guess')[0];
-  assert.equal(g.n, 1); assert.equal(g.guess, 4); assert.equal(g.view, 'avatar'); assert.equal(g.photo, '');
+  assert.equal(g.n, 1); assert.equal(g.guess, 4); assert.equal(g.view, 'puppet'); assert.equal(g.photo, '');
 
   for (const bad of [{ count: 99 }, { gesture: 'rude' }, { photo: 'http://evil/x.jpg', view: 'photo' }]) {
     hostConn.send({ t: 'reveal', n: 1, count: 4, gesture: null, noHand: false, ...picture(), ...bad });

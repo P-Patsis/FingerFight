@@ -77,7 +77,7 @@ import { sanitizeName, validGuess, validReveal, validPhoto, validGuessMsg, valid
 
 const hand = (over = {}) => ({ thumb: false, index: true, middle: false, ring: false, pinky: false, ...over });
 const lm = () => [Array.from({ length: 21 }, (_, i) => [i * 10, 1000 - i * 10])];
-const pic = (over = {}) => ({ view: 'avatar', skin: 'gold', hands: [hand()], lm: null, ar: 1.333, photo: '', ...over });
+const pic = (over = {}) => ({ view: 'puppet', skin: 'cartoon', hands: [hand()], lm: null, ar: 1.333, photo: '', ...over });
 
 test('names are cleaned: any language, symbols and emoji stay; markup, invisible tricks and pile-ups go', () => {
   assert.equal(sanitizeName('  Alex  '), 'Alex');
@@ -117,7 +117,7 @@ test('pictures: cartoon and skeleton views never need a photo; photos only where
   const photo = 'data:image/jpeg;base64,AAAA';
   assert.ok(validPicture(pic({ view: 'photo', photo }), true), 'friends may send photos');
   assert.ok(!validPicture(pic({ view: 'photo', photo }), false), 'a random opponent may not');
-  assert.ok(!validPicture(pic({ view: 'avatar', photo }), false), 'not even tucked into a cartoon message');
+  assert.ok(!validPicture(pic({ view: 'puppet', photo }), false), 'not even tucked into a puppet message');
   assert.ok(!validPicture(pic({ view: 'blur', photo: '' }), false), 'photo-based views are refused outright');
   assert.ok(!validPicture(pic({ view: 'gif' }), true));
   assert.ok(!validPicture(pic({ skin: '../../x' }), true));

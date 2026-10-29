@@ -9,7 +9,7 @@ const b = installBrowser('?sim=1');
 const $ = id => b.byId.get(id);
 Object.defineProperty(globalThis.navigator, 'languages', { value: ['el'], configurable: true });   // a Greek phone that reports the language only
 globalThis.localStorage.setItem('ff-flag', '1');
-globalThis.localStorage.setItem('ff-mode', 'photo');
+globalThis.localStorage.setItem('ff-mode', 'photo-puppet');
 
 // ---- a fake AudioContext, so the real audio.js can "play"
 const started = [];
@@ -87,7 +87,7 @@ test('flag: a Greek phone (language "el" only) shows the flag; a guest that send
 
 test('hand style: a photo choice survives a random match (it used to be overwritten with the cartoon) and is used again in the next private match', async () => {
   const sel = () => $('modePicker').children.filter(x => x.classList.contains('sel')).map(x => x.dataset.mode);
-  assert.deepEqual(sel(), ['photo'], 'private lobby shows my photo choice');
+  assert.deepEqual(sel(), ['photo-puppet'], 'private lobby shows my photo choice');
   $('leaveBtn').onclick();
   await until(() => b.visible()[0] === 'menu', 'menu');
   $('randomBtn').onclick();
@@ -96,12 +96,12 @@ test('hand style: a photo choice survives a random match (it used to be overwrit
   const stranger = new FakePeer(); const c = stranger.connect('ffight-r-0');
   c.on('open', () => c.send({ t: 'hello', v: 2, kind: 'random', name: 'Stranger' }));
   await until(() => b.visible()[0] === 'lobby', 'random lobby');
-  assert.deepEqual(sel(), ['avatar'], 'against a stranger the cartoon is shown');
-  assert.equal(globalThis.localStorage.getItem('ff-mode'), 'photo', 'the saved choice is untouched');
+  assert.deepEqual(sel(), ['puppet'], 'against a stranger the drawn twin (puppet) is shown');
+  assert.equal(globalThis.localStorage.getItem('ff-mode'), 'photo-puppet', 'the saved choice is untouched');
   $('leaveBtn').onclick();
   await until(() => b.visible()[0] === 'menu', 'menu again');
   await $('createBtn').onclick();
   await until(() => b.visible()[0] === 'lobby', 'private lobby again');
-  assert.deepEqual(sel(), ['photo'], 'photo is back for friends');
+  assert.deepEqual(sel(), ['photo-puppet'], 'photo is back for friends');
   setTimeout(() => process.exit(0), 50).unref();
 });

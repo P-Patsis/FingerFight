@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SKINS, skinById, statesFromCount, drawAvatar, FINGERS } from '../js/avatars.js';
+import { statesFromCount, FINGERS, drawPuppetPicture, landmarksOf } from '../js/avatars.js';
+import { loadSkins, skinIds, getSkin } from '../js/skins.js';
+import { installBrowser } from './harness.js';
+installBrowser('?');                                   // gives the skin loader a fetch that reads assets/skins from disk
 
 /** A canvas context that records calls and never fails. */
 function fakeCtx() {
@@ -23,36 +26,24 @@ test('counts 0..10 split into at most two hands that add up', () => {
   assert.equal(statesFromCount(99).reduce((s, h) => s + up(h), 0), 10, 'clamped');
 });
 
-test('every skin draws every count, with one numbered fingertip per raised finger', () => {
-  assert.ok(SKINS.length >= 8);
-  assert.equal(new Set(SKINS.map(s => s.id)).size, SKINS.length, 'unique ids');
-  for (const skin of SKINS) {
+test('the puppet picture draws every count from finger data alone, one numbered fingertip per raised finger, inside the picture', async () => {
+  await loadSkins();
+  assert.ok(skinIds().length >= 3, 'the built-in skins loaded');
+  for (const id of skinIds()) {
     for (let n = 0; n <= 10; n++) {
-      const ctx = fakeCtx();
-      const tips = drawAvatar(ctx, 240, 180, statesFromCount(n), skin);
-      assert.equal(tips.length, n, skin.id + ' count ' + n);
-      for (const t of tips) { assert.ok(FINGERS.includes(t.finger)); assert.ok(Number.isFinite(t.x) && Number.isFinite(t.y)); }
-      assert.ok(ctx.calls.includes('fill'), 'something was drawn');
+      const hands = statesFromCount(n);
+      const { lms, ar } = landmarksOf({ hands, lm: null });
+      const tips = drawPuppetPicture(fakeCtx(), 240, 180, lms, hands, ar, getSkin(id));
+      assert.equal(tips.length, n, id + ' count ' + n);
+      for (const t of tips) { assert.ok(FINGERS.includes(t.finger)); assert.ok(t.x > 0 && t.x < 240 && t.y > 0 && t.y < 180, id + ' count ' + n + ' tip ' + Math.round(t.x) + ',' + Math.round(t.y)); }
     }
   }
 });
 
-test('no hand draws a question mark; unknown skin ids fall back', () => {
+test('no hand draws a question mark', () => {
   const ctx = fakeCtx();
-  assert.deepEqual(drawAvatar(ctx, 240, 180, [], SKINS[0]), []);
+  assert.deepEqual(drawFromMessage(ctx, 240, 180, { view: 'puppet', skin: 'cartoon', hands: [], lm: null, ar: 1 }), []);
   assert.ok(ctx.calls.includes('fillText'));
-  assert.equal(skinById('nope').id, SKINS[0].id);
-  assert.equal(skinById('gold').id, 'gold');
-});
-
-test('tips stay inside the picture, at the sizes the game uses', () => {
-  for (const [w, h] of [[240, 180], [240, 320], [240, 135]]) {
-    for (let n = 1; n <= 10; n++) {
-      for (const t of drawAvatar(fakeCtx(), w, h, statesFromCount(n), SKINS[0])) {
-        assert.ok(t.x > 0 && t.x < w && t.y > 0 && t.y < h, w + 'x' + h + ' count ' + n + ' tip ' + Math.round(t.x) + ',' + Math.round(t.y));
-      }
-    }
-  }
 });
 
 import { drawSkeletonPicture, drawFromMessage } from '../js/avatars.js';
@@ -68,9 +59,10 @@ test('the skeleton picture numbers the raised fingertips and stays inside', () =
 test('a message is drawn from its finger data only (never from an image)', () => {
   const hands = [{ thumb: true, index: true, middle: true, ring: true, pinky: true }];
   const lm = [Array.from({ length: 21 }, () => [500, 500])];
-  assert.equal(drawFromMessage(fakeCtx(), 240, 180, { view: 'avatar', skin: 'gold', hands, lm: null, ar: 1.33 }).length, 5);
+  assert.equal(drawFromMessage(fakeCtx(), 240, 180, { view: 'puppet', skin: 'cartoon', hands, lm: null, ar: 1.33 }).length, 5);
+  assert.equal(drawFromMessage(fakeCtx(), 240, 180, { view: 'avatar', skin: 'gold', hands, lm: null, ar: 1.33 }).length, 5, 'an older phone\'s cartoon view is shown as the puppet');
   assert.equal(drawFromMessage(fakeCtx(), 240, 180, { view: 'skeleton', skin: 'gold', hands, lm, ar: 1.33 }).length, 5);
-  // views that need a photo (or a skeleton with no landmarks) fall back to the cartoon hand
-  assert.equal(drawFromMessage(fakeCtx(), 240, 180, { view: 'photo', skin: 'gold', hands, lm: null, ar: 1.33 }).length, 5);
+  // views that need a photo (or a skeleton with no landmarks) fall back to the drawn twin
+  assert.equal(drawFromMessage(fakeCtx(), 240, 180, { view: 'photo-puppet', skin: 'cartoon', hands, lm: null, ar: 1.33 }).length, 5);
   assert.equal(drawFromMessage(fakeCtx(), 240, 180, { view: 'skeleton', skin: 'gold', hands, lm: null, ar: 1.33 }).length, 5);
 });

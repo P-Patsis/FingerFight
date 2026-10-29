@@ -8,10 +8,12 @@ import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
 import { createWakeLock } from './wake.js';
-import { SKINS, drawAvatar, drawFromMessage, statesFromCount, skinById } from './avatars.js';
+import { drawFromMessage, drawPuppetPicture, statesFromCount } from './avatars.js';
+import { statesToLandmarks } from './puppet.js';
+import { loadSkins, skinIds, getSkin, skinIdOf } from './skins.js';
 import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
-  sanitizeName, validGuessMsg, validReveal, VIEWS, SAFE_VIEWS, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, newIdle, trackIdle, IDLE_ROUNDS,
+  sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, newIdle, trackIdle, IDLE_ROUNDS,
 } from './logic.js';
 import { cleanName, uniqueName, flagEmoji, countryCode, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
@@ -56,7 +58,7 @@ let idle = newIdle();                          // consecutive rounds each player
 let token = 0;                          // bumped to cancel pending timeouts from an old round or game
 let bannerTimer = null;
 
-let matchKind = null;                   // 'private' (friends, long code) | 'random' (strangers: cartoon/skeleton only)
+let matchKind = null;                   // 'private' (friends, long code) | 'random' (strangers: puppet/skeleton only)
 let roomCodeRaw = '';                   // the private match code, without dashes
 let pendingGuest = null;                // private match: a guest waiting for the host to accept
 let requireApproval = true;             // host: ask before someone joins a private match
@@ -70,17 +72,9 @@ let opponentGone = false;               // the other phone closed after the figh
 const hideIp = true;                            // always on: random matches go through the relay only, so a stranger never sees my IP address
 let guestToken = null;                  // host: the resume token the pending guest offered in hello
 
-const MODE_LABELS = {
-  avatar: 'Cartoon hand', skeleton: 'Skeleton', blur: 'Blurred photo + skeleton', 'photo-skeleton': 'Photo + skeleton', photo: 'Photo (real camera)',
-};
-// what I show my opponent: a view mode and a cartoon skin (remembered on this phone)
-let style = { mode: VIEWS.includes(store_get('ff-mode')) ? store_get('ff-mode') : 'avatar', skin: initialSkin() };
-
-/** The skin I draw with: the one I picked, or (default / 'random') a different random skin every time I start. */
-function initialSkin() {
-  const saved = store_get('ff-skin');
-  return saved && saved !== 'random' && SKINS.some(s => s.id === saved) ? saved : SKINS[Math.floor(Math.random() * SKINS.length)].id;
-}
+const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
+// what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
+let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon' };
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
 const store = {
   get: store_get,
@@ -120,8 +114,8 @@ function show(id) {
   currentScreen = id;
   wake.want(id === 'game');
   // the style and sound cards are shared by the Profile screen and the lobby: the same controls, so nothing is duplicated or out of step
-  if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('soundSlotProfile').append($('soundCard')); }
-  else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('soundSlot').append($('soundCard')); }
+  if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('appSlotProfile').append($('appCard')); }
+  else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('appSlot').append($('appCard')); }
   if (id === 'menu') { updateRejoin(); music.stop(); }
   else if (currentBg >= 0) music.setArena(currentBg);      // lobby / game / result: the arena's loop (lazy, silent if the file is missing)
   navSync(id);
@@ -168,7 +162,7 @@ function el(tag, cls, text) {
 // Menu
 // ---------------------------------------------------------------------------------------------
 $('nameInput').value = store.get('ff-name') || '';
-profile = { flag: store.get('ff-flag') === '1', country: store.get('ff-country') || detectCountry(), arena: Number(store.get('ff-arena')) };
+profile = { flag: store.get('ff-flag') === '1', country: store.get('ff-country') || detectCountry() };
 /** A guess for the flag field only: the region of the browser's language setting (el-GR -> GR). No network, no IP involved. */
 function detectCountry() {
   try {
@@ -179,7 +173,7 @@ function detectCountry() {
   return '';                                                                            // unknown: no flag is shown
 }
 const myFlag = () => (profile.flag ? countryCode(profile.country) || undefined : undefined);
-const freshSettings = () => ({ ...DEFAULTS, background: Number.isInteger(profile.arena) && profile.arena >= 0 && profile.arena < BACKGROUNDS.length ? profile.arena : DEFAULTS.background });
+const freshSettings = () => ({ ...DEFAULTS });             // the arena is a per-match choice of the host (lobby), not a profile setting
 {
   // a shared link carries the code after the "#": browsers never send that part to any server
   const m = /(?:^|[#&])room=([A-Za-z0-9-]+)/.exec(location.hash || '');
@@ -211,7 +205,6 @@ function renderProfile() {
   $('flagBtn').classList.toggle('on', profile.flag);
   $('countryRow').hidden = !profile.flag;
   $('countryInput').value = profile.country || '';
-  for (const b of $('arenaDefault').children) b.classList.toggle('sel', Number(b.dataset.i) === profile.arena);
   renderWho();
 }
 $('nameInput').oninput = () => { store.set('ff-name', sanitizeName($('nameInput').value)); renderProfile(); };
@@ -220,12 +213,6 @@ $('countryInput').oninput = e => {
   const c = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
   e.target.value = c; profile.country = c; store.set('ff-country', c);
 };
-BACKGROUNDS.forEach((name, i) => {
-  const b = el('button', 'thumb-' + i, name);
-  b.type = 'button'; b.dataset.i = String(i);
-  b.onclick = () => { profile.arena = i; store.set('ff-arena', String(i)); if (!link) settings = freshSettings(); renderProfile(); };
-  $('arenaDefault').append(b);
-});
 $('profileBtn').onclick = () => { buildStyleCard(); renderProfile(); show('profile'); };
 $('profileBack').onclick = () => show('menu');
 renderWho();
@@ -701,37 +688,45 @@ function buildBgPicker() {
 }
 
 // ---- what my opponent sees of my hand
-const effectiveStyle = () => (matchKind === 'random' && !SAFE_VIEWS.includes(style.mode) ? { ...style, mode: 'avatar' } : style);
+// The whole matrix: friends (private) may get any of VIEWS; strangers (random) only the drawn ones. A photo choice is KEPT while a
+// random match is on screen (only displayed as its drawn twin), so it is back for the next private match.
+const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
+const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
+/** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
+const applyOverlay = () => cam?.setOverlay?.(effectiveStyle().mode, style.skin);
+
+function skinPreview(id) {
+  const c = document.createElement('canvas');
+  c.width = 80; c.height = 80;
+  try { drawPuppetPicture(c.getContext('2d'), 80, 80, [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })], [], 1, getSkin(id), false); } catch { /* the preview is decoration */ }
+  return c;
+}
+
+function buildSkinPicker() {
+  const box = $('skinPicker');
+  box.replaceChildren();
+  for (const id of skinIds()) {
+    const b = el('button', '');
+    b.type = 'button';
+    b.dataset.skin = id;
+    b.title = getSkin(id).name;
+    b.append(skinPreview(id), el('span', 'nm', getSkin(id).name));
+    b.onclick = () => { style.skin = id; store.set('ff-puppet', id); renderStyle(); };
+    box.append(b);
+  }
+}
 
 function buildStyleCard() {
   const modes = $('modePicker');
   modes.replaceChildren();
   for (const v of VIEWS) {
-    const b = el('button', SAFE_VIEWS.includes(v) ? '' : 'real', MODE_LABELS[v]);
+    const b = el('button', isSafeView(v) ? '' : 'real', MODE_LABELS[v]);
     b.type = 'button';
     b.dataset.mode = v;
-    b.onclick = () => { if (matchKind === 'random' && !SAFE_VIEWS.includes(v)) return; style.mode = v; store.set('ff-mode', v); renderStyle(); };
+    b.onclick = () => { if (!viewsFor(matchTypeNow()).includes(v)) return; style.mode = v; store.set('ff-mode', v); renderStyle(); };
     modes.append(b);
   }
-  const skins = $('skinPicker');
-  skins.replaceChildren();
-  for (const sk of SKINS) {
-    const b = el('button', '');
-    b.type = 'button';
-    b.dataset.skin = sk.id;
-    b.title = sk.name;
-    const c = document.createElement('canvas');
-    c.width = 80; c.height = 80;
-    drawAvatar(c.getContext('2d'), 80, 80, statesFromCount(5), sk, false);
-    b.append(c);
-    b.onclick = () => { style.skin = sk.id; store.set('ff-skin', sk.id); renderStyle(); };
-    skins.append(b);
-  }
-  const dice = el('button', 'dice', '🎲');
-  dice.type = 'button'; dice.title = 'A random skin every match';
-  dice.dataset.skin = 'random';
-  dice.onclick = () => { store.set('ff-skin', 'random'); style.skin = initialSkin(); renderStyle(); };
-  skins.append(dice);
+  buildSkinPicker();
   $('photoBtn').onclick = () => { showPhotos = !showPhotos; renderStyle(); };
   $('rudeBtn').onclick = () => { hideRude = !hideRude; store.set('ff-rude', hideRude ? '1' : '0'); renderStyle(); };
   renderStyle();
@@ -739,26 +734,31 @@ function buildStyleCard() {
 
 function renderStyle() {
   const random = matchKind === 'random';
-  const mode = effectiveStyle().mode;               // against a stranger a photo style is shown as the cartoon, but MY choice (style.mode) is kept for the next private match
+  const mode = effectiveStyle().mode;
+  const offered = viewsFor(matchTypeNow());
   for (const b of $('modePicker').children) {
+    b.hidden = !offered.includes(b.dataset.mode);                 // strangers never even see a photo option
     b.classList.toggle('sel', b.dataset.mode === mode);
-    b.disabled = random && !SAFE_VIEWS.includes(b.dataset.mode);
   }
-  const randomPick = store.get('ff-skin') === 'random' || !store.get('ff-skin');
-  for (const b of $('skinPicker').children) b.classList.toggle('sel', b.dataset.skin === 'random' ? randomPick : (!randomPick && b.dataset.skin === style.skin));
-  $('skinRow').hidden = mode !== 'avatar';
+  const chosen = skinIdOf(style.skin);                          // shown as selected; the saved choice itself is only replaced by a click
+  for (const b of $('skinPicker').children) b.classList.toggle('sel', b.dataset.skin === chosen);
+  $('skinRow').hidden = !mode.endsWith('puppet') || skinIds().length < 1;
   $('photoRow').hidden = random;
   $('photoBtn').textContent = showPhotos ? 'On' : 'Off';
   $('photoBtn').classList.toggle('on', showPhotos);
   $('rudeBtn').textContent = hideRude ? 'On' : 'Off';
   $('rudeBtn').classList.toggle('on', hideRude);
-  const real = !SAFE_VIEWS.includes(mode);
+  const real = !isSafeView(mode);
   $('styleNote').textContent = random
-    ? 'Random opponent: only drawn data is shared. Your camera image never leaves this phone.'
+    ? 'Random opponent: only a drawn puppet or skeleton is shared. Your camera image never leaves this phone.'
     : real ? 'Warning: this sends a real camera image of you (maybe your face or room) to your opponent.'
     : 'Only drawn data is sent. Your camera image never leaves this phone.';
   $('styleNote').classList.toggle('err', real && !random);
+  applyOverlay();
 }
+
+// the skin files load in the background; the picker and the saved choice are checked against what actually loaded
+loadSkins().then(() => { style.skin = skinIdOf(style.skin); if ($('modePicker').children.length) { buildSkinPicker(); renderStyle(); } }).catch(() => {});
 
 function renderLobby() {
   const random = matchKind === 'random';
@@ -1031,6 +1031,7 @@ const debugPanel = () => (dbg = dbg || createDebugPanel(document.body));
 /** If the camera stops by itself (permission taken away, another app, unplugged) the badge must go out and the player is told. */
 function hookCamera() {
   if (!cam || SIM) return;
+  applyOverlay();
   cam.onError = e => {                              // the tracking loop threw: say so on the screen instead of freezing silently
     const t = 'Hand tracking error: ' + e;
     if (!$('calib').hidden) $('calibMsg').textContent = t; else $('camCaption').textContent = t;
@@ -1105,7 +1106,7 @@ function releaseCamera() {
 function endGuessPhase() {
   if (!round || round.phase !== 'guess') return;
   round.phase = 'waiting';
-  const snap = cam.snap(effectiveStyle());         // both phones snap at 0, in the style I chose (cartoon/skeleton only in random matches)
+  const snap = cam.snap(effectiveStyle());         // both phones snap at 0, in the style I chose (puppet/skeleton only in random matches)
   releaseCamera();
   if (round.pointer === me) {
     round.reveal = { count: snap.count, gesture: snap.gesture, noHand: snap.noHand, ...pictureOf(snap) };
@@ -1131,7 +1132,7 @@ function tryResolve() {
   const { pointer } = round;
   // quicker matches: anything above the limit counts as the limit (and is drawn as a plain hand of that many fingers)
   const max = curMax();
-  const plain = (m, n) => ({ ...m, view: 'avatar', photo: '', lm: null, gesture: null, hands: statesFromCount(n) });
+  const plain = (m, n) => ({ ...m, view: 'puppet', photo: '', lm: null, gesture: null, hands: statesFromCount(n) });
   const reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
   const guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
   const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, noHand: reveal.noHand });
@@ -1155,7 +1156,7 @@ function tryResolve() {
  * everything else, and every fallback, is DRAWN here from the finger data, so a stranger can't push an image at me.
  */
 function buildPicture(msg) {
-  const photoView = !SAFE_VIEWS.includes(msg.view);
+  const photoView = !isSafeView(msg.view);
   if (photoView && msg.photo && allowPhotos() && showPhotos) {
     const img = el('img');
     img.alt = 'Hand';
@@ -1172,7 +1173,7 @@ function buildPicture(msg) {
 function filtered(msg) {
   if (!hideRude || !looksRude(msg)) return msg;
   const n = Array.isArray(msg.hands) ? msg.hands.reduce((a, h) => a + Object.values(h).filter(Boolean).length, 0) : 0;
-  return { ...msg, gesture: null, view: 'avatar', photo: '', lm: null, hands: statesFromCount(Math.min(10, Number.isInteger(msg.count) ? msg.count : n)) };
+  return { ...msg, gesture: null, view: 'puppet', photo: '', lm: null, hands: statesFromCount(Math.min(10, Number.isInteger(msg.count) ? msg.count : n)) };
 }
 
 function showReveal(pointer, reveal, guessMsg, result) {

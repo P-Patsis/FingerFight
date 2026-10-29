@@ -106,9 +106,24 @@ export function describe(result, pointer, me) {
 
 const MAX_PHOTO_CHARS = 150_000;
 
-/** How a player's hand is shown to the opponent. The first two never involve camera pixels. */
-export const VIEWS = ['avatar', 'skeleton', 'blur', 'photo-skeleton', 'photo'];
-export const SAFE_VIEWS = ['avatar', 'skeleton'];          // the only ones allowed against a random opponent
+/**
+ * How a player's hand is shown to the opponent: the whole matrix of choices. The first two never involve camera pixels;
+ * the "photo-" ones put the player's real photo behind the skeleton / puppet and exist in private (friends) matches only.
+ */
+export const VIEWS = ['skeleton', 'puppet', 'photo-skeleton', 'photo-puppet'];
+export const SAFE_VIEWS = ['skeleton', 'puppet'];          // the only ones allowed against a random opponent
+/** Views older versions of the game sent. Still ACCEPTED from an older phone (and shown as the nearest new view), never offered or sent. */
+export const LEGACY_VIEWS = { avatar: 'puppet', blur: 'photo-skeleton', photo: 'photo-skeleton' };
+/** The view to show for any received value, or null when it is unknown. */
+export const normalizeView = v => (VIEWS.includes(v) ? v : (LEGACY_VIEWS[v] || null));
+/** The options a player may pick for a kind of match: strangers get the drawn views only, never a photo. */
+export const viewsFor = kind => (kind === 'random' ? SAFE_VIEWS : VIEWS);
+/** A view that is allowed against a random opponent (drawn from finger data on the receiver's phone). */
+export const isSafeView = v => SAFE_VIEWS.includes(normalizeView(v));
+/** What a stranger gets of a chosen view: the drawn twin (photo + puppet -> puppet), never a photo. */
+export const safeViewOf = v => (viewOf(v).endsWith('puppet') ? 'puppet' : 'skeleton');
+/** A saved or stored choice -> a current view (older saved values are mapped; unknown gives the puppet). */
+export const viewOf = v => normalizeView(v) || 'puppet';
 export const RANDOM_SLOTS = 8;                              // shared matchmaking slots (see main.js)
 
 /** A display name: letters, digits, space and _ . - only, at most 12 characters. */
@@ -151,12 +166,12 @@ export const validLandmarks = l => l === null || (Array.isArray(l) && l.length <
  * receiver chose not to see photos) any message carrying a photo is rejected.
  */
 export function validPicture(m, allowPhoto) {
-  return !!m && VIEWS.includes(m.view)
+  return !!m && normalizeView(m.view) !== null
     && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
     && validHands(m.hands) && validLandmarks(m.lm)
     && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
     && validPhoto(m.photo) && (allowPhoto || m.photo === '')
-    && (allowPhoto || SAFE_VIEWS.includes(m.view));
+    && (allowPhoto || isSafeView(m.view));
 }
 
 /** The pointer's answer: {count, gesture, noHand} + picture. */

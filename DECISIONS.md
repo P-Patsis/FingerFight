@@ -101,3 +101,14 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - HAND STYLE is the player's saved choice; a random match only DISPLAYS the cartoon (`effectiveStyle`), it never overwrites the choice.
 - MUSIC: only a real 404 is remembered as "no file"; a failed download or decode is retried after 15 s.
 - TRACKING LOOP must never die silently: each frame is guarded, errors go to `cam.onError` and onto the screen.
+
+## Opponent view, puppet and skins (2026-10-29)
+- VIEW MATRIX: private = skeleton, puppet, photo+skeleton, photo+puppet; random = skeleton, puppet only. Enforced three times: the UI hides the photo options in a random match, the sender maps a photo choice to its drawn twin (`effectiveStyle`), and the RECEIVER refuses any photo / photo view (`validPicture(m, allowPhoto=false)`). Older views stay ACCEPTED from older phones (`LEGACY_VIEWS`) and are mapped to the nearest new one; they are never sent.
+- ARENA is not a profile setting any more; the host picks it per match in the lobby.
+- PROFILE LAYOUT: Player / How my opponent sees my hand / App settings (sound, volume, hide rude gestures, show opponent photos). One set of controls, moved between Profile and lobby (no duplicate ids).
+- THE PUPPET IS A RIG + A SKIN. The rig (js/puppet.js) is pure geometry and knows only the 16 part names, pivots, lengths and the palm's 3 reference points. Everything visual is data in assets/skins/*.json (format in SKINS.md). New skin = new file + manifest entry; no code change. Overlays and part order are part of the format so rings, gloves, nails, tattoos and animal hands can be added later as more shapes.
+- SKINS ARE VALIDATED like network input: plain #hex colours, path-data-only strings, bounded sizes, no url()/references, so a skin file (or one day a downloaded one) cannot carry script or external references. A skin that fails is skipped; a built-in 'plain' skin guarantees the puppet always draws.
+- THE SKIN ID IS ALL THAT TRAVELS. The receiver draws with its own copy; an id it does not have gives the manifest default. Nothing drawn by a sender is ever shown.
+- NO second tracking pass for the puppet: it is drawn from the landmarks the tracker already produced, in the same loop iteration, only when a new video frame was analysed. Two hands = about 70 canvas draw calls per frame.
+- No store, payments, ads or unlockables were built; the picker lists the manifest.
+

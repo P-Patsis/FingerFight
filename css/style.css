@@ -287,3 +287,7 @@ input:focus { outline: none; border-color: var(--cyan); }
 #nameNote:empty { display: none; }
 /* names can be any script, including right-to-left: keep each name in its own box so it can't reorder the text around it */
 .pl span, .pname, .who b { unicode-bidi: isolate; }
+
+.card-h { margin: 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.skin-picker button .nm { display: block; font-size: 11px; margin-top: 2px; color: var(--muted); }
+.mode-picker button[hidden] { display: none; }

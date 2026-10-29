@@ -9,7 +9,7 @@ await import('../js/main.js');
 
 const sentOf = (conn, t) => conn.sent.filter(m => m.t === t);
 const hostPeer = () => peers.find(p => p.id?.startsWith('ffight-p-'));
-const picture = (over = {}) => ({ view: 'avatar', skin: 'gold', hands: [{ thumb: false, index: false, middle: false, ring: false, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
+const picture = (over = {}) => ({ view: 'puppet', skin: 'cartoon', hands: [{ thumb: false, index: false, middle: false, ring: false, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
 let conn;
 
 test('a guest who never shows a hand forfeits after 3 rounds; the host wins and the room stays', async () => {

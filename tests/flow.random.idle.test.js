@@ -13,7 +13,7 @@ Object.defineProperty(globalThis.navigator, 'wakeLock', {
 });
 await import('../js/main.js');
 
-const picture = (over = {}) => ({ view: 'avatar', skin: 'zombie', hands: [{ thumb: false, index: false, middle: false, ring: false, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
+const picture = (over = {}) => ({ view: 'puppet', skin: 'robot', hands: [{ thumb: false, index: false, middle: false, ring: false, pinky: false }], lm: null, ar: 1.333, photo: '', ...over });
 let stranger, conn, got = [];
 const of = t => got.filter(m => m.t === t);
 

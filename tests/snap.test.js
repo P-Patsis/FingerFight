@@ -9,6 +9,7 @@ import { countHands, classifyHands } from '../js/gestures.js';
 const b = installBrowser('?');
 const { HandCam } = await import('../js/hands.js');
 const { validReveal, validGuessMsg, VIEWS, SAFE_VIEWS } = await import('../js/logic.js');
+await (await import('../js/skins.js')).loadSkins();
 
 function camWith(hands, { facing = 'user', frames = 7 } = {}) {
   const video = b.byId.get('video'); video.videoWidth = 640; video.videoHeight = 480;
@@ -38,10 +39,10 @@ test('every style produces a message the opponent accepts; only photo styles car
 });
 
 test('finger data matches the count; two hands add up; a fist is a hand with no fingers up', () => {
-  const m = camWith([open, peace]).snap({ mode: 'avatar' });
+  const m = camWith([open, peace]).snap({ mode: 'puppet' });
   assert.equal(m.count, 7); assert.equal(m.hands.length, 2);
   assert.equal(m.hands.flatMap(h => Object.values(h)).filter(Boolean).length, 7);
-  const fist = camWith([makeHand({})]).snap({ mode: 'avatar' });
+  const fist = camWith([makeHand({})]).snap({ mode: 'puppet' });
   assert.equal(fist.count, 0); assert.equal(fist.noHand, false); assert.equal(fist.hands.length, 1);
   assert.deepEqual(Object.values(fist.hands[0]), [false, false, false, false, false]);
   assert.ok(validReveal(fist, false));
@@ -64,12 +65,12 @@ test('no hand seen: count 0, no landmarks, no photo, still a valid message', () 
   assert.equal(none.noHand, true); assert.equal(none.count, 0); assert.equal(none.lm, null); assert.deepEqual(none.hands, []); assert.equal(none.photo, '');
   assert.ok(validReveal(none, true));
   const brief = camWith([peace], { frames: 7 }); brief.samples = brief.samples.map((s, i) => (i < 5 ? { ...s, has: false, hands: [], count: 0, gesture: null } : s));
-  assert.equal(brief.snap({ mode: 'avatar' }).noHand, true, 'a hand seen in fewer than half the recent frames does not count');
+  assert.equal(brief.snap({ mode: 'puppet' }).noHand, true, 'a hand seen in fewer than half the recent frames does not count');
   assert.equal(new HandCam(b.byId.get('video'), b.byId.get('overlayCanvas')).snap({}).noHand, true, 'no frames at all');
 });
 
 test('an unknown style or skin falls back safely', () => {
   const m = camWith([peace]).snap({ mode: 'hologram', skin: '../../etc' });
-  assert.equal(m.view, 'avatar'); assert.match(m.skin, /^[a-z]{1,12}$/);
+  assert.equal(m.view, 'puppet'); assert.match(m.skin, /^[a-z]{1,12}$/);
   assert.ok(validReveal(m, false));
 });

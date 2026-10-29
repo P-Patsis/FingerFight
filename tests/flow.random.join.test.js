@@ -44,7 +44,7 @@ test('against a random host: skeleton reveals are drawn locally, photo-carrying 
   simButton('[data-count]', '3').onclick();
   await until(() => hostConn.received.some(m => m.t === 'guess'), 'guess sent', 9000);
   const g = hostConn.received.find(m => m.t === 'guess');
-  assert.equal(g.photo, ''); assert.ok(['avatar', 'skeleton'].includes(g.view));
+  assert.equal(g.photo, ''); assert.ok(['puppet', 'skeleton'].includes(g.view));
 
   const photo = 'data:image/jpeg;base64,AAAA';
   hostConn.send({ t: 'reveal', n: 1, count: 3, gesture: null, noHand: false, ...picture({ view: 'photo', photo }) });
