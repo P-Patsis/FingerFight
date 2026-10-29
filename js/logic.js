@@ -195,10 +195,18 @@ export const validCos = c => c === undefined || c === null
   || (typeof c === 'object' && !Array.isArray(c) && Object.keys(c).length <= COS_KEYS.length
     && Object.entries(c).every(([k, v]) => COS_KEYS.includes(k) && typeof v === 'string' && /^[a-z]{1,12}$/.test(v)));
 
+/** The worn items of a picture: `lay`, a list of at most 12 {id, c?}: an item id (1-12 lower-case letters) and optionally a plain #rrggbb colour.
+ *  Nothing else can travel in it; the receiver draws from its own copies in this order. `bc` is the base hand's colour (plain #rrggbb). */
+export const validLay = l => l === undefined || l === null
+  || (Array.isArray(l) && l.length <= 12 && l.every(e => e && typeof e === 'object' && !Array.isArray(e)
+    && Object.keys(e).every(k => k === 'id' || k === 'c') && typeof e.id === 'string' && /^[a-z]{1,12}$/.test(e.id)
+    && (e.c === undefined || /^#[0-9a-fA-F]{6}$/.test(e.c))));
+export const validBc = c => c === undefined || c === null || (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c));
+
 export function validPicture(m, allowPhoto) {
   return !!m && normalizeView(m.view) !== null
     && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
-    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos)
+    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc)
     && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
     && validPhoto(m.photo) && (allowPhoto || m.photo === '')
     && (allowPhoto || isSafeView(m.view));

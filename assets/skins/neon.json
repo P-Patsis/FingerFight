@@ -298,5 +298,23 @@
   }
  },
  "overlays": [],
- "category": "scifi"
+ "category": "scifi",
+ "tint": {
+  "default": "#22d3ee",
+  "map": {
+   "#22d3ee": "main",
+   "#67e8f9": "light"
+  },
+  "swatches": [
+   "#ef4444",
+   "#f97316",
+   "#facc15",
+   "#22c55e",
+   "#22d3ee",
+   "#3b82f6",
+   "#a855f7",
+   "#ec4899",
+   "#f8fafc"
+  ]
+ }
 }

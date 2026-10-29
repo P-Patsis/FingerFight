@@ -2,11 +2,14 @@
 // every cosmetic item carries. Pure data and checks: no canvas, no DOM.
 import { parseParticles } from './particles.js';
 
-/** The layer types. One item per layer can be equipped; a hand is built bottom to top in this order. */
-export const LAYERS = Object.freeze(['base', 'tone', 'tattoo', 'nails', 'ring', 'glove']);
-/** Default z-order. Layers are drawn by z, lowest first, so a glove (50) covers rings (40) and nails (30). Items may set their own `z`. */
-export const LAYER_Z = Object.freeze({ base: 0, tone: 10, tattoo: 20, nails: 30, ring: 40, glove: 50 });
-export const LAYER_LABELS = Object.freeze({ base: 'Hand', tone: 'Skin tone', tattoo: 'Tattoo / scar', nails: 'Nail polish', ring: 'Ring', glove: 'Glove' });
+/** The item TYPES (used for browsing and for what an item is). They do NOT decide the drawing order: the order the player equipped
+ *  things in (the stack, see js/inventory.js) does. Only `base` is special: one hand, always the bottom. `tone` is a colour for the
+ *  base hand (one at a time) and `effect` is a particle effect (it draws no shapes); the rest are shapes drawn over the hand. */
+export const LAYERS = Object.freeze(['base', 'tone', 'tattoo', 'nails', 'ring', 'glove', 'effect']);
+export const LAYER_LABELS = Object.freeze({ base: 'Hand', tone: 'Skin tone', tattoo: 'Tattoo / scar', nails: 'Nail polish', ring: 'Ring', glove: 'Glove', effect: 'Effect' });
+export const MAX_STACK = 12;                       // most items worn at once (on top of the base hand)
+export const HEX = /^#[0-9a-fA-F]{6}$/;            // the only colour form that is ever stored or sent: plain #rrggbb
+export const ROLES = Object.freeze(['main', 'dark', 'mid', 'light']);
 /** Browsing tags (pure metadata: nothing in the game depends on them). */
 export const CATEGORIES = Object.freeze(['human', 'animal', 'scifi', 'fantasy', 'premade']);
 export const CATEGORY_LABELS = Object.freeze({ human: 'Human', animal: 'Animal', scifi: 'Sci-fi', fantasy: 'Fantasy', premade: 'Premade hands' });
@@ -30,7 +33,40 @@ export function parseMeta(json, layer) {
   const price = !free && u && typeof u.price === 'string' ? u.price.slice(0, 12) : '';
   const whole = json.whole === true;
   if (whole && layer !== 'base') throw new Error(json.id + ': only a base hand can be a premade whole hand');
-  const z = json.z === undefined ? LAYER_Z[layer] : json.z;
-  if (!(Number.isFinite(z) && z >= 0 && z <= 100)) throw new Error(json.id + ': z must be 0-100');
-  return { layer, category, free, unlock: { method, price }, whole, z, particles: parseParticles(json.particles) };
+  return { layer, category, free, unlock: { method, price }, whole, particles: parseParticles(json.particles), tint: parseTint(json.tint, json.id) };
 }
+
+// ---- colour pickers -----------------------------------------------------------------------------------------------------------
+// An item that can be recoloured carries a "tint": the colours it is drawn with and what each one is for. The player picks ONE colour
+// and every listed colour is derived from it by role: main = the picked colour, dark / mid = darker, light = lighter. Only plain
+// #rrggbb values are ever stored or sent; the colour is never code.
+//   "tint": { "default": "#dc2626", "map": { "#dc2626": "main", "#7f1d1d": "dark" }, "swatches": ["#dc2626", ...] }
+
+/** Checks a "tint" (missing = not recolourable = null). */
+export function parseTint(t, id = 'item') {
+  if (t === undefined || t === null) return null;
+  if (typeof t !== 'object' || Array.isArray(t)) throw new Error(id + ': tint must be an object');
+  if (typeof t.default !== 'string' || !HEX.test(t.default)) throw new Error(id + ': tint.default must be #rrggbb');
+  const map = {};
+  if (!t.map || typeof t.map !== 'object' || !Object.keys(t.map).length || Object.keys(t.map).length > 8) throw new Error(id + ': tint.map needs 1-8 entries');
+  for (const [from, role] of Object.entries(t.map)) {
+    if (!/^#[0-9a-fA-F]{3,8}$/.test(from) || !ROLES.includes(role)) throw new Error(id + ': tint.map entries are "#colour": ' + ROLES.join(' | '));
+    map[from.toLowerCase()] = role;
+  }
+  const sw = t.swatches === undefined ? [] : t.swatches;
+  if (!Array.isArray(sw) || sw.length > 16 || sw.some(c => typeof c !== 'string' || !HEX.test(c))) throw new Error(id + ': tint.swatches must be up to 16 #rrggbb colours');
+  return { default: t.default.toLowerCase(), map, swatches: sw.map(c => c.toLowerCase()) };
+}
+
+const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgbToHex = c => '#' + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+/** The colour for a role, derived from the picked [hex]: main is itself, dark / mid mix towards black, light towards white. */
+export function roleColor(hex, role) {
+  const c = hexToRgb(hex);
+  if (role === 'dark') return rgbToHex(c.map(v => v * 0.45));
+  if (role === 'mid') return rgbToHex(c.map(v => v * 0.78));
+  if (role === 'light') return rgbToHex(c.map(v => v + (255 - v) * 0.3));
+  return hex.toLowerCase();
+}
+/** A picked colour, cleaned: lower-case #rrggbb, or null when it is anything else (so nothing but a plain colour is ever kept). */
+export const cleanColor = c => (typeof c === 'string' && HEX.test(c) ? c.toLowerCase() : null);

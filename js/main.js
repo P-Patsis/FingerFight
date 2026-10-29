@@ -11,8 +11,8 @@ import { createWakeLock } from './wake.js';
 import { drawFromMessage, drawPuppetPicture, drawViewPreview, statesFromCount, previewHandPx } from './avatars.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf } from './skins.js';
-import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, COS_LAYERS } from './cosmetics.js';
-import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS } from './layers.js';
+import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout } from './cosmetics.js';
+import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK } from './layers.js';
 import { Inventory } from './inventory.js';
 import { unlockItem, unlockLabel } from './unlock.js';
 import { ParticleSystem } from './particles.js';
@@ -80,14 +80,15 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
-let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', cos: {} };   // cos = equipped layer items (tone, tattoo, nails, ring, glove); see COSMETICS.md
+let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
+const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
 const store = {
   get: store_get,
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
 const inv = new Inventory({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // owned items and equipment (this phone only)
-style.skin = inv.baseId; style.cos = inv.loadout().cos;
+{ const L = inv.loadout(); style.skin = L.base; style.baseColor = L.baseColor; style.stack = L.stack; }
 
 // ---------------------------------------------------------------------------------------------
 // Small helpers
@@ -118,11 +119,13 @@ globalThis.addEventListener?.('popstate', () => {
 });
 
 function show(id) {
+  if (tryOn.on || tryOn.busy) stopTryOn();                // the try-on camera never outlives its screen
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   currentScreen = id;
   wake.want(id === 'game');
   // the style and sound cards are shared by the Profile screen and the lobby: the same controls, so nothing is duplicated or out of step
-  if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('appSlotProfile').append($('appCard')); }
+  if (id === 'store') $('wearSlotStore').append($('wearCard'));
+  if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('appSlotProfile').append($('appCard')); $('wearSlotProfile').append($('wearCard')); renderProfileItems(); }
   else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('appSlot').append($('appCard')); }
   if (id === 'menu') { updateRejoin(); music.stop(); }
   else if (currentBg >= 0) music.setArena(currentBg);      // lobby / game / result: the arena's loop (lazy, silent if the file is missing)
@@ -402,7 +405,7 @@ $('randomBtn').onclick = async () => {
 // Network
 // ---------------------------------------------------------------------------------------------
 const allowPhotos = () => matchKind === 'private';          // random opponents never send, and are never shown, photos
-const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
+const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
   if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
@@ -701,7 +704,7 @@ function buildBgPicker() {
 const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
 const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
 /** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
-const applyOverlay = () => cam?.setOverlay?.(effectiveStyle().mode, style.skin, style.cos);
+const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? 'photo-puppet' : effectiveStyle().mode, style.skin, style.stack, style.baseColor);   // a try-on shows the puppet over my own live picture
 
 function skinPreview(id) {
   const c = document.createElement('canvas');
@@ -719,7 +722,7 @@ function buildSkinPicker() {
     b.dataset.skin = id;
     b.title = getSkin(id).name;
     b.append(skinPreview(id), el('span', 'nm', getSkin(id).name));
-    b.onclick = () => { inv.equip(id); syncStyle(); };
+    b.onclick = () => { inv.toggle(id); syncStyle(); };
     box.append(b);
   }
 }
@@ -744,7 +747,7 @@ function buildStyleCard() {
 /** The Profile/lobby preview of the current choice, drawn with the selected skin (a stand-in picture, never the real camera). */
 function renderViewPreview(mode) {
   const c = $('viewPreview');
-  try { const rec = resolveLoadout(style.skin, style.cos); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, rec); } catch { /* the preview is decoration */ }
+  try { const rec = resolveLoadout(style.skin, style.stack, style.baseColor); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, rec); } catch { /* the preview is decoration */ }
   $('viewPreviewLabel').textContent = 'Preview: ' + ({ skeleton: 'skeleton of your hand', puppet: 'your puppet', 'photo-skeleton': 'camera picture + skeleton', 'photo-puppet': 'camera picture + puppet' }[mode] || '');
 }
 
@@ -778,9 +781,11 @@ loadCatalog().then(() => { inv.load(); syncStyle(); }).catch(() => {});
 
 /** The equipment changed (Store, picker, or the catalogue just loaded): refresh what depends on it. */
 function syncStyle() {
-  style.skin = inv.baseId; style.cos = inv.loadout().cos;
-  if ($('modePicker').children.length) { buildSkinPicker(); renderStyle(); }
+  const L = inv.loadout();
+  style.skin = L.base; style.baseColor = L.baseColor; style.stack = L.stack;
+  if ($('modePicker').children.length) { buildSkinPicker(); renderStyle(); } else applyOverlay();
   if (!$('store').hidden) renderStore();
+  if (!$('profile').hidden) renderProfileItems();
 }
 
 function renderLobby() {
@@ -904,99 +909,263 @@ $('startBtn').onclick = () => {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Store (cosmetics). Browse by category and item type, see each item on the puppet, equip what is owned, unlock what is not.
-// Unlocking goes through js/unlock.js, which is a STUB for now (no ads, no payments): see the boundary comment there.
+// Store and Profile items (cosmetics). TAP an item to wear it, tap it again to take it off. What is worn is an ordered stack
+// (the order you tapped; the last is drawn on top) that can be re-ordered in the "Wearing" card, where each colourable item also
+// has a colour picker. Unlocking goes through js/unlock.js, which is a STUB for now (no ads, no payments): see the boundary comment there.
 // ---------------------------------------------------------------------------------------------
 const storeView = { category: 'all', layer: 'all' };
-let storeAnim = { raf: 0, ps: null, last: 0, snapAt: 0 };
+const profileView = { category: 'all', layer: 'all' };
+let storeAnim = { raf: 0, ps: null, last: 0, rec: null };
+let pickerOpen = null;                                             // id of the worn item whose colour picker is open
+const wearVisible = () => !$('store').hidden || !$('profile').hidden;
+const storeMsg = t => { $('storeMsg').textContent = t; };
 
 function sampleLandmarks() { return [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })]; }
 
-/** A small still of the puppet wearing [load] ({base, cos}): used on every item card. */
+/** A small still of the puppet wearing [load] ({base, baseColor, stack}): used on every item card. */
 function drawCard(canvas, load) {
   try {
-    const rec = resolveLoadout(load.base, load.cos);
-    drawPuppetPicture(canvas.getContext('2d'), canvas.width, canvas.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, seed: load.base + JSON.stringify(load.cos) });
+    const rec = resolveLoadout(load.base, load.stack, load.baseColor);
+    drawPuppetPicture(canvas.getContext('2d'), canvas.width, canvas.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, seed: load.base + JSON.stringify(load.stack) });
   } catch { /* previews are decoration */ }
 }
 
-function chip(box, value, label, current, onPick) {
+function chip(box, value, label, current, onPick, rerender) {
   const b = el('button', value === current ? 'sel' : '', label);
   b.type = 'button'; b.dataset.value = value;
-  b.onclick = () => { onPick(value); renderStore(); };
+  b.onclick = () => { onPick(value); rerender(); };
   box.append(b);
 }
 
-function renderStore() {
-  const cats = $('storeCats'), lays = $('storeLayers'), grid = $('storeGrid');
-  cats.replaceChildren(); lays.replaceChildren(); grid.replaceChildren();
-  chip(cats, 'all', 'All', storeView.category, v => { storeView.category = v; });
-  for (const c of CATEGORIES) chip(cats, c, CATEGORY_LABELS[c], storeView.category, v => { storeView.category = v; });
-  chip(lays, 'all', 'Everything', storeView.layer, v => { storeView.layer = v; });
-  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], storeView.layer, v => { storeView.layer = v; });
-  const list = filterCatalog(catalog(), storeView);
-  if (!list.length) grid.append(el('p', 'fine', 'Nothing here yet.'));
-  for (const e of list) {
-    const owned = inv.owns(e.id), worn = inv.isEquipped(e.id);
-    const card = el('div', 'item-card' + (worn ? ' eq' : '') + (owned ? '' : ' locked'));
-    card.dataset.id = e.id;
-    const cv = document.createElement('canvas'); cv.width = 96; cv.height = 96;
-    drawCard(cv, inv.loadoutWith(e.id));                          // the item on the puppet, with what is already equipped
-    card.append(cv, el('b', '', e.name), el('div', 'tags', CATEGORY_LABELS[e.category] + ' · ' + LAYER_LABELS[e.layer] + (e.whole ? ' · whole hand' : '')),
-      el('span', 'badge ' + (owned ? 'own' : 'lock'), worn ? 'Equipped' : owned ? 'Owned' : 'Locked'));
-    const btn = el('button', 'btn small ghost', worn ? (e.layer === 'base' ? 'In use' : 'Take off') : owned ? 'Equip' : unlockLabel(e));
-    btn.type = 'button'; btn.dataset.act = worn ? 'off' : owned ? 'equip' : 'unlock';
-    btn.disabled = worn && e.layer === 'base';
-    btn.onclick = async () => {
-      if (btn.dataset.act === 'unlock') {
-        btn.disabled = true;
-        const r = await unlockItem(inv, e);                       // STUB today (js/unlock.js); a native build swaps the provider
-        $('storeMsg').textContent = r.granted ? e.name + ' unlocked. Tap Equip to wear it.' : 'Not unlocked' + (r.error ? ' (' + r.error + ')' : '') + '.';
-        if (r.granted) sfx.ui();
-      } else if (btn.dataset.act === 'equip') inv.equip(e.id);
-      else inv.unequip(e.layer);
+/** One tile: tap = wear / take off. A locked tile has an unlock button instead (a STUB today) and does nothing when tapped. */
+function itemCard(e) {
+  const owned = inv.owns(e.id), worn = inv.isEquipped(e.id);
+  const card = el('div', 'item-card' + (worn ? ' eq' : '') + (owned ? '' : ' locked'));
+  card.dataset.id = e.id;
+  card.setAttribute('role', 'button'); card.setAttribute('tabindex', '0');
+  card.setAttribute('aria-pressed', worn ? 'true' : 'false');
+  const cv = document.createElement('canvas'); cv.width = 96; cv.height = 96;
+  drawCard(cv, inv.loadoutWith(e.id));                            // the item on the puppet, with what is already worn
+  const where = worn && e.layer !== 'base' ? 'Worn · #' + inv.position(e.id) : worn ? 'In use' : owned ? 'Owned' : 'Locked';
+  card.append(cv, el('b', '', e.name), el('div', 'tags', CATEGORY_LABELS[e.category] + ' · ' + LAYER_LABELS[e.layer] + (e.whole ? ' · whole hand' : '') + (e.tint ? ' · colour' : '')),
+    el('span', 'badge ' + (owned ? 'own' : 'lock'), where));
+  if (owned) {
+    card.onclick = () => {
+      const r = inv.toggle(e.id);
+      if (r.full) storeMsg('You can wear up to ' + MAX_STACK + ' items. Take one off first.'); else storeMsg('');
+      sfx.ui(); syncStyle();
+    };
+    card.onkeydown = ev => { if (ev?.key === 'Enter' || ev?.key === ' ') { ev.preventDefault?.(); card.onclick(); } };
+  } else {
+    const btn = el('button', 'btn small ghost', unlockLabel(e));
+    btn.type = 'button'; btn.dataset.act = 'unlock';
+    btn.onclick = async ev => {
+      ev?.stopPropagation?.();
+      btn.disabled = true;
+      const r = await unlockItem(inv, e);                         // STUB today (js/unlock.js); a native build swaps the provider
+      storeMsg(r.granted ? e.name + ' unlocked. Tap it to wear it.' : 'Not unlocked' + (r.error ? ' (' + r.error + ')' : '') + '.');
+      if (r.granted) sfx.ui();
       syncStyle();
-      renderStore();
     };
     card.append(btn);
-    grid.append(card);
   }
-  const names = [inv.baseId, ...COS_LAYERS.map(l => inv.cos[l]).filter(Boolean)].map(id => entryOf(id)?.name || id);
-  $('storeLoadout').textContent = 'Wearing: ' + names.join(', ');
-  startStoreAnim();
+  return card;
 }
 
-/** The big preview: the puppet in the current loadout with its particle effects running (same capped particle system the camera uses). */
-function startStoreAnim() {
-  globalThis.cancelAnimationFrame?.(storeAnim.raf);
-  const c = $('storePreview'), ctx = c.getContext?.('2d');
-  if (!ctx || typeof globalThis.requestAnimationFrame !== 'function') return;
-  const rec = resolveLoadout(style.skin, style.cos);
-  const hands = previewHandPx(c.width, c.height);
-  storeAnim.ps = new ParticleSystem();
-  storeAnim.ps.setEmitters(rec.emitters);
-  storeAnim.last = 0;
-  const frame = now => {
-    if ($('store').hidden) return;                                   // left the Store: the loop ends by itself
-    const dt = storeAnim.last ? (now - storeAnim.last) / 1000 : 0;
-    if (!storeAnim.last || now - storeAnim.last >= 33) {              // about 30 fps is plenty for a preview
-      storeAnim.last = now;
-      try {
-        drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, live: true });
-        storeAnim.ps.update(dt, hands); storeAnim.ps.draw(ctx);
-      } catch { /* decoration */ }
+function fillGrid(grid, list) {
+  grid.replaceChildren();
+  if (!list.length) grid.append(el('p', 'fine', 'Nothing here yet.'));
+  for (const e of list) grid.append(itemCard(e));
+}
+
+function renderStore() {
+  const cats = $('storeCats'), lays = $('storeLayers');
+  cats.replaceChildren(); lays.replaceChildren();
+  chip(cats, 'all', 'All', storeView.category, v => { storeView.category = v; }, renderStore);
+  for (const c of CATEGORIES) chip(cats, c, CATEGORY_LABELS[c], storeView.category, v => { storeView.category = v; }, renderStore);
+  chip(lays, 'all', 'Everything', storeView.layer, v => { storeView.layer = v; }, renderStore);
+  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], storeView.layer, v => { storeView.layer = v; }, renderStore);
+  fillGrid($('storeGrid'), filterCatalog(catalog(), storeView));
+  renderWear();
+}
+
+/** The Profile's item list: only what you own (the Store has everything). */
+function renderProfileItems() {
+  const lays = $('profileLayers');
+  lays.replaceChildren();
+  chip(lays, 'all', 'Everything', profileView.layer, v => { profileView.layer = v; }, renderProfileItems);
+  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; }, renderProfileItems);
+  fillGrid($('profileGrid'), filterCatalog(catalog(), profileView).filter(e => inv.owns(e.id)));
+  renderWear();
+}
+
+const GENERIC_SWATCHES = ['#dc2626', '#f97316', '#facc15', '#22c55e', '#22d3ee', '#3b82f6', '#a855f7', '#ec4899', '#f8fafc', '#111827'];
+
+/** The "Wearing" card: the worn list (top first, then the base hand) with reorder, remove and colour, plus the preview. */
+function renderWear() {
+  const L = inv.loadout(), list = $('wearList');
+  list.replaceChildren();
+  const nameOf = id => entryOf(id)?.name || id;
+  $('storeLoadout').textContent = 'Wearing: ' + [nameOf(L.base), ...L.stack.map(s => nameOf(s.id))].join(', ');
+  const colorRow = (li, id) => {
+    const e = entryOf(id);
+    if (!e?.tint) return;
+    const cur = inv.colorOf(id);
+    const dot = el('button', 'dot'); dot.type = 'button'; dot.dataset.act = 'color'; dot.title = 'Colour'; dot.setAttribute('aria-label', 'Colour of ' + e.name);
+    dot.style.background = cur;
+    dot.onclick = () => { pickerOpen = pickerOpen === id ? null : id; renderWear(); };
+    li.append(dot);
+  };
+  const pickerFor = (li, id) => {
+    const e = entryOf(id), box = el('div', 'picker');
+    box.dataset.picker = id;
+    const cur = inv.colorOf(id);
+    for (const c of (e.tint.swatches.length ? e.tint.swatches : GENERIC_SWATCHES)) {
+      const sw = el('button', c === cur ? 'sel' : ''); sw.type = 'button'; sw.dataset.color = c; sw.style.background = c; sw.setAttribute('aria-label', c);
+      sw.onclick = () => { inv.setColor(id, c); syncStyle(); };
+      box.append(sw);
     }
+    const inp = document.createElement('input'); inp.type = 'color'; inp.value = cur; inp.setAttribute('aria-label', 'Pick any colour');
+    inp.oninput = () => { if (inv.setColor(id, inp.value)) liveColor(); };       // live while dragging; the list is not rebuilt under the picker
+    inp.onchange = () => syncStyle();
+    box.append(inp);
+    const reset = el('button', 'btn small ghost', 'Original'); reset.type = 'button'; reset.dataset.act = 'default';
+    reset.style.cssText = 'width:auto;height:auto;min-width:0;border-radius:8px;padding:6px 10px';
+    reset.onclick = () => { inv.setColor(id, null); syncStyle(); };
+    box.append(reset);
+    li.append(box);
+  };
+  for (let i = L.stack.length - 1; i >= 0; i--) {                       // top of the stack first
+    const s = L.stack[i], e = entryOf(s.id);
+    const li = el('li', ''); li.dataset.id = s.id;
+    const nm = el('span', 'nm', nameOf(s.id)); nm.append(el('small', '', LAYER_LABELS[e?.layer] + ' · ' + (L.stack.length - i) + ' from the top'));
+    li.append(nm);
+    colorRow(li, s.id);
+    const up = el('button', '', '▲'); up.type = 'button'; up.dataset.act = 'up'; up.disabled = i === L.stack.length - 1; up.setAttribute('aria-label', 'Move ' + nameOf(s.id) + ' up (drawn later, on top)');
+    up.onclick = () => { inv.move(s.id, +1); syncStyle(); };
+    const down = el('button', '', '▼'); down.type = 'button'; down.dataset.act = 'down'; down.disabled = i === 0; down.setAttribute('aria-label', 'Move ' + nameOf(s.id) + ' down (drawn earlier, under)');
+    down.onclick = () => { inv.move(s.id, -1); syncStyle(); };
+    const rm = el('button', '', '✕'); rm.type = 'button'; rm.dataset.act = 'remove'; rm.setAttribute('aria-label', 'Take off ' + nameOf(s.id));
+    rm.onclick = () => { inv.remove(s.id); if (pickerOpen === s.id) pickerOpen = null; syncStyle(); };
+    li.append(up, down, rm);
+    if (pickerOpen === s.id && e?.tint) pickerFor(li, s.id);
+    list.append(li);
+  }
+  const bl = el('li', 'base'); bl.dataset.id = L.base;
+  const bn = el('span', 'nm', nameOf(L.base)); bn.append(el('small', '', 'Hand · always the bottom'));
+  bl.append(bn);
+  colorRow(bl, L.base);
+  if (pickerOpen === L.base && entryOf(L.base)?.tint) pickerFor(bl, L.base);
+  list.append(bl);
+  refreshPreview();
+  updateTryOnButtons();
+}
+
+/** The big preview: the puppet with everything worn and its particle effects running (the same capped particle system the camera uses). */
+function refreshPreview() {
+  const rec = resolveLoadout(style.skin, style.stack, style.baseColor);
+  storeAnim.rec = rec;
+  if (!storeAnim.ps) storeAnim.ps = new ParticleSystem();
+  storeAnim.ps.setEmitters(rec.emitters);
+  startStoreAnim();
+}
+function startStoreAnim() {
+  const c = $('storePreview'), ctx = c.getContext?.('2d');
+  if (!ctx || typeof globalThis.requestAnimationFrame !== 'function' || storeAnim.raf || tryOn.on) return;
+  const hands = previewHandPx(c.width, c.height);
+  storeAnim.last = 0;
+  const paint = now => {
+    const dt = storeAnim.last ? (now - storeAnim.last) / 1000 : 0;
+    storeAnim.last = now;
+    try {
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, storeAnim.rec.skin, false, { ...storeAnim.rec, live: true });
+      storeAnim.ps.update(dt, hands); storeAnim.ps.draw(ctx);
+    } catch { /* decoration */ }
+  };
+  const frame = now => {
+    storeAnim.raf = 0;
+    if (!wearVisible() || tryOn.on) return;                          // left the screen (or the camera took over): the loop ends by itself
+    if (!storeAnim.last || now - storeAnim.last >= 33) paint(now);   // about 30 fps is plenty for a preview
     storeAnim.raf = globalThis.requestAnimationFrame(frame);
   };
-  if (fx.reducedMotion?.()) { frame(0); return; }                    // reduced motion: one still picture, no loop
+  if (fx.reducedMotion?.()) { paint(0); return; }                    // reduced motion: one still picture, no loop
   storeAnim.raf = globalThis.requestAnimationFrame(frame);
+}
+
+/** A colour is being dragged: update what shows the colour, but do not rebuild the lists (that would close the picker). */
+let liveTimer = 0;
+function liveColor() {
+  const L = inv.loadout(); style.skin = L.base; style.baseColor = L.baseColor; style.stack = L.stack;
+  refreshPreview(); applyOverlay();
+  clearTimeout(liveTimer);
+  liveTimer = setTimeout(() => { if (!$('store').hidden) fillGrid($('storeGrid'), filterCatalog(catalog(), storeView)); renderViewPreview(effectiveStyle().mode); }, 250);
+}
+
+// ---- live try-on: the camera on MY hand, wearing everything (Store and Profile). Local only: nothing is sent anywhere.
+async function startTryOn() {
+  if (tryOn.on || tryOn.busy) return false;
+  const msg = t => { $('wearMsg').textContent = t; };
+  if (SIM) { msg('The simulator has no camera: the preview above shows your puppet.'); return false; }
+  const my = ++tryOn.token;
+  const stale = () => my !== tryOn.token || !wearVisible();
+  tryOn.busy = true; updateTryOnButtons();
+  msg('Loading the hand model (about 17 MB, once)…');
+  try {
+    cam = cam || new HandCam($('video'), $('overlayCanvas'));
+    hookCamera();
+    try { await cam.load(); } catch (e) { msg('Could not load the hand model (' + (e.message || e) + '). Check your internet connection, then try again.'); return false; }
+    if (stale()) return false;
+    const err = await cam.startCamera();
+    if (err === 'cancelled' || stale()) { if (err !== 'cancelled') { cam.release(); } return false; }
+    if (err) { msg(err); return false; }
+    tryOn.on = true;
+    cam.onError = e => msg('Hand tracking error: ' + e);
+    cam.onLost = () => { stopTryOn(); msg('The camera stopped. Check the browser camera permission, then tap Test snap to try again.'); };
+    applyOverlay();                                                    // tryOn.on: the puppet with everything worn, over the live picture
+    const box = $('camBox');
+    $('wearBox').append(box); box.hidden = false;
+    $('storePreview').hidden = true;
+    camIndicator(true);
+    let frames = 0;
+    cam.onFrame = () => { frames++; };
+    cam.run();
+    msg('Camera on: hold up your hand. Tap Test snap for the snap effect. It switches off when you leave this screen.');
+    setTimeout(() => { if (!frames && tryOn.on && my === tryOn.token) msg('The camera is on but the hand model produced no frames. Tap Camera off and try again; if it repeats, reload the page.'); }, 6000);
+    return true;
+  } catch (e) {
+    msg('Could not start the camera (' + (e?.message || e) + ').');
+    return false;
+  } finally { tryOn.busy = false; if (!tryOn.on) { try { cam?.release?.(); } catch { /* ignore */ } camIndicator(false); } updateTryOnButtons(); }
+}
+/** Camera off, preview back. Safe to call any time (also from show() when the screen is left). */
+function stopTryOn() {
+  tryOn.token++;                                                       // cancels a start that is still pending
+  const was = tryOn.on || tryOn.busy;
+  tryOn.on = false;
+  if (was && cam && !SIM) { cam.release(); cam.onFrame = null; }
+  if (was) camIndicator(false);
+  const box = $('camBox');
+  box.hidden = true; if (box.parentElement !== document.body) document.body.append(box);
+  $('storePreview').hidden = false;
+  if (was) { applyOverlay(); $('wearMsg').textContent = ''; updateTryOnButtons(); if (wearVisible()) startStoreAnim(); }
+}
+function updateTryOnButtons() {
+  $('wearCamOff').hidden = !(tryOn.on || tryOn.busy);
+  $('storeSnap').disabled = tryOn.busy;
 }
 
 $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
 $('storeBack').onclick = () => show('menu');
-$('storeSnap').onclick = () => { try { storeAnim.ps?.trigger('snap', previewHandPx($('storePreview').width, $('storePreview').height)); } catch { /* ignore */ } };
-$('storeClear').onclick = () => { for (const l of COS_LAYERS) inv.unequip(l); syncStyle(); renderStore(); };
+$('storeSnap').onclick = async () => {
+  if (!tryOn.on) { await startTryOn(); }                                // the first tap turns the camera on (or says why it cannot)
+  try {
+    if (tryOn.on) cam.particles.trigger('snap', cam.lastPts);          // the snap effects of everything worn, on the real hand
+    else storeAnim.ps?.trigger('snap', previewHandPx($('storePreview').width, $('storePreview').height));
+  } catch { /* ignore */ }
+};
+$('wearCamOff').onclick = () => stopTryOn();
+$('storeClear').onclick = () => { inv.clear(); pickerOpen = null; syncStyle(); };
 
 // ---------------------------------------------------------------------------------------------
 // Game
@@ -1531,7 +1700,7 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 }
 
 // The camera must never stay on in the background: leave the page (home button, app switch, screen off) and it goes dark.
-const camOff = () => { if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; if (!$('calib').hidden) { $('calibMsg').textContent = 'Camera switched off (the page was hidden). Tap Camera test again.'; dbg?.show(false); } } };
+const camOff = () => { if (tryOn.on) stopTryOn(); if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; if (!$('calib').hidden) { $('calibMsg').textContent = 'Camera switched off (the page was hidden). Tap Camera test again.'; dbg?.show(false); } } };
 document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); else link?.nudge?.(); });
 globalThis.addEventListener?.('pagehide', camOff);
 globalThis.addEventListener?.('online', () => link?.nudge?.());       // wifi / 4G came back: re-open the match link now, not at the next timer

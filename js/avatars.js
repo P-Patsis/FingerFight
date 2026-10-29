@@ -145,7 +145,7 @@ export function drawFromMessage(ctx, w, h, msg) {
     return [];
   }
   if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar);
-  const rec = resolveLoadout(msg.skin, msg.cos);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
+  const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
   return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, rec);
 }
 

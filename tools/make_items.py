@@ -10,30 +10,27 @@ FINGERS = list(LEN)
 SEGS = ('base', 'mid', 'tip')
 items = []
 
-def item(id_, name, layer, category, parts=None, recolor=None, free=True, unlock=None, particles=None, z=None):
+def item(id_, name, layer, category, parts=None, tint=None, free=True, unlock=None, particles=None):
     d = {'format': 1, 'id': id_, 'name': name, 'author': 'Finger Fight', 'license': 'CC0 (made for Finger Fight)', 'layer': layer, 'category': category}
     if not free: d['free'] = False; d['unlock'] = unlock or {'method': 'ad'}
-    if z is not None: d['z'] = z
     if parts: d['parts'] = parts
-    if recolor: d['recolor'] = recolor
+    if tint: d['tint'] = tint
     if particles: d['particles'] = particles
     items.append(d)
 
 def w_of(f, i): return HALF[f][i]
 def len_of(f, i): return LEN[f][i]
 
-# ---- tones: remap the cartoon hand's four skin colours (fill, outline, crease, nail line); other hands keep their own colours
-CARTOON = ('#f6c9a0', '#9a5b2e', '#c98f5f', '#e9b38a')
-def tone(id_, name, cat, cols, **kw):
-    item(id_, name, 'tone', cat, recolor=dict(zip(CARTOON, cols)), **kw)
-tone('pale', 'Pale', 'human', ('#fbe3cf', '#b87a55', '#dcae8e', '#f2c9ad'))
-tone('tan', 'Tan', 'human', ('#e3ad7c', '#8a4f26', '#bb7a49', '#d49c69'))
-tone('brown', 'Brown', 'human', ('#b97a4b', '#6a3b1a', '#8e5a35', '#a66a3f'))
-tone('deep', 'Deep', 'human', ('#7a4a2b', '#3e2110', '#5c3720', '#6a3f23'))
-tone('orc', 'Orc green', 'fantasy', ('#86b35a', '#3f5f26', '#5f8a3c', '#719a48'), free=False, unlock={'method': 'ad'})
-tone('frost', 'Frost blue', 'fantasy', ('#bfe3f5', '#4a7f9a', '#8ec3dc', '#a6d3e8'), free=False, unlock={'method': 'ad'})
+# ---- skin tone: ONE item with a colour picker. It recolours the cartoon hand's four skin colours (fill, outline, crease, nail line) from the
+# picked colour (outline = darker, crease = a bit darker, nail line = lighter); other hands keep their own colours.
+SWATCH_COLORS = ['#dc2626', '#f97316', '#facc15', '#22c55e', '#22d3ee', '#3b82f6', '#a855f7', '#ec4899', '#f8fafc', '#111827']
+item('skintone', 'Skin tone', 'tone', 'human',
+     tint={'default': '#e3ad7c', 'map': {'#f6c9a0': 'main', '#9a5b2e': 'dark', '#c98f5f': 'mid', '#e9b38a': 'light'},
+           'swatches': ['#fbe3cf', '#f6c9a0', '#e3ad7c', '#b97a4b', '#7a4a2b', '#4a2c17', '#86b35a', '#bfe3f5', '#c4b5fd']})
 
-# ---- tattoos / scars
+# ---- tattoos / scars (each has a colour picker: the main ink colour is the picked one)
+def tint1(main, more=None):
+    return {'default': main, 'map': {main: 'main', **(more or {})}, 'swatches': SWATCH_COLORS}
 def band_zigzag(w, y, h=3.2):                               # a zig-zag band across a finger
     n = 4; step = 2 * w / n
     pts = ' '.join(f'L {-w + step * k:.2f} {y - (h if k % 2 else 0):.2f}' for k in range(n + 1))
@@ -41,30 +38,26 @@ def band_zigzag(w, y, h=3.2):                               # a zig-zag band acr
 tribal = {'palm': [{'d': 'M 24 60 C 34 50 46 52 50 62 C 54 52 66 50 76 60 M 36 84 C 44 76 56 76 64 84', 'stroke': '#1f2937', 'strokeWidth': 2.6, 'opacity': 0.85}]}
 for f in ('index', 'middle', 'ring', 'pinky'):
     tribal[f + '_base'] = [{'d': band_zigzag(w_of(f, 0) - 1, -len_of(f, 0) * 0.55), 'stroke': '#1f2937', 'strokeWidth': 2.2, 'opacity': 0.85}]
-item('tribal', 'Tribal ink', 'tattoo', 'human', parts=tribal)
+item('tribal', 'Tribal ink', 'tattoo', 'human', parts=tribal, tint=tint1('#1f2937'))
 scar = {'palm': [{'d': 'M 30 44 L 74 90', 'stroke': '#b91c1c', 'strokeWidth': 2.6, 'opacity': 0.8},
                  {'d': 'M 38 46 L 34 54 M 48 56 L 44 64 M 58 66 L 54 74 M 68 76 L 64 84', 'stroke': '#7f1d1d', 'strokeWidth': 1.6, 'opacity': 0.8}],
         'index_mid': [{'d': f'M {-w_of("index", 1)} {-len_of("index", 1) * 0.7} L {w_of("index", 1)} {-len_of("index", 1) * 0.3}', 'stroke': '#b91c1c', 'strokeWidth': 2.4, 'opacity': 0.8}]}
-item('scar', 'Battle scar', 'tattoo', 'human', parts=scar)
+item('scar', 'Battle scar', 'tattoo', 'human', parts=scar, tint=tint1('#b91c1c', {'#7f1d1d': 'dark'}))
 runes = {'palm': [{'d': 'M 36 50 L 36 68 M 36 58 L 44 52 M 52 50 L 60 50 L 52 68 L 62 68 M 68 54 L 72 62 L 66 70', 'stroke': '#c084fc', 'strokeWidth': 2.6},
                   {'d': 'M 36 50 L 36 68 M 52 50 L 60 50 L 52 68 L 62 68', 'stroke': '#a855f7', 'strokeWidth': 6, 'opacity': 0.25}]}
 for f in ('index', 'middle', 'ring', 'pinky'):
     runes[f + '_base'] = [{'d': f'M 0 {-len_of(f, 0) * 0.7} L 0 {-len_of(f, 0) * 0.25} M {-3} {-len_of(f, 0) * 0.5} L 3 {-len_of(f, 0) * 0.5}', 'stroke': '#c084fc', 'strokeWidth': 2}]
-item('runes', 'Glowing runes', 'tattoo', 'fantasy', parts=runes, free=False, unlock={'method': 'ad'},
+item('runes', 'Glowing runes', 'tattoo', 'fantasy', parts=runes, free=False, unlock={'method': 'ad'}, tint=tint1('#c084fc', {'#a855f7': 'dark'}),
      particles=[{'effect': 'glow', 'color': '#c084fc', 'where': 'palm', 'rate': 2}])
 
-# ---- nail polish: a rounded nail on each tip segment
-def nails(color, edge, id_, name, cat, **kw):
-    parts = {}
-    for f in FINGERS:
-        w, L = w_of(f, 2), len_of(f, 2)
-        r = w * 0.62
-        parts[f + '_tip'] = [{'d': f'M {-r} {-L - w * 0.2} L {-r} {-L + 0.5} Q 0 {-L + 4.5} {r} {-L + 0.5} L {r} {-L - w * 0.2} Q 0 {-L - w * 1.1} {-r} {-L - w * 0.2} Z',
-                              'fill': color, 'stroke': edge, 'strokeWidth': 1.1}]
-    item(id_, name, 'nails', cat, parts=parts, **kw)
-nails('#dc2626', '#7f1d1d', 'rednails', 'Red polish', 'human')
-nails('#111827', '#000000', 'blacknails', 'Black polish', 'human', free=False, unlock={'method': 'ad'})
-nails('#22d3ee', '#0e7490', 'neonnails', 'Neon polish', 'scifi', free=False, unlock={'method': 'ad'})
+# ---- nail polish: ONE item with a colour picker (was red / black / neon): a rounded nail on each tip segment
+parts = {}
+for f in FINGERS:
+    w, L = w_of(f, 2), len_of(f, 2)
+    r = w * 0.62
+    parts[f + '_tip'] = [{'d': f'M {-r} {-L - w * 0.2} L {-r} {-L + 0.5} Q 0 {-L + 4.5} {r} {-L + 0.5} L {r} {-L - w * 0.2} Q 0 {-L - w * 1.1} {-r} {-L - w * 0.2} Z',
+                          'fill': '#dc2626', 'stroke': '#7f1d1d', 'strokeWidth': 1.1}]
+item('nailpolish', 'Nail polish', 'nails', 'human', parts=parts, tint=tint1('#dc2626', {'#7f1d1d': 'dark'}))
 
 # ---- rings: a band across a finger segment, optionally with a stone
 def ring_on(f, seg, band, edge, stone=None):
@@ -93,6 +86,16 @@ glove('leather', 'Leather glove', 'human', '#8b5a2b', '#3f2a14', '#5a3a1a', free
 glove('fingerless', 'Fingerless glove', 'human', '#374151', '#111827', '#9ca3af', parts_only=('base',))
 glove('knight', 'Knight glove', 'fantasy', '#cbd5e1', '#475569', '#fbbf24', free=False, unlock={'method': 'purchase', 'price': '0.99'},
       particles=[{'effect': 'glint', 'color': '#ffffff', 'where': 'knuckles', 'rate': 2}])
+
+# ---- effects (particles only; each has a colour picker). The ids are the item ids; `effect` is the preset in js/particles.js
+def effect(id_, name, cat, em, **kw):
+    item(id_, name, 'effect', cat, particles=em, tint={'default': em[0]['color'], 'map': {em[0]['color']: 'main'}, 'swatches': SWATCH_COLORS}, **kw)
+effect('sparkles', 'Sparkles', 'fantasy', [{'effect': 'glint', 'color': '#fde047', 'where': 'hand', 'rate': 6}])
+effect('bubbles', 'Bubbles', 'human', [{'effect': 'bubbles', 'color': '#7dd3fc', 'where': 'hand', 'rate': 4}])
+effect('glow', 'Glow', 'scifi', [{'effect': 'glow', 'color': '#38bdf8', 'where': 'palm', 'rate': 2.5}])
+effect('embers', 'Embers', 'fantasy', [{'effect': 'embers', 'color': '#fb923c', 'where': 'tips', 'rate': 8}])
+effect('electric', 'Electric', 'scifi', [{'effect': 'sparks', 'color': '#67e8f9', 'where': 'knuckles', 'rate': 5},
+                                         {'effect': 'sparks', 'color': '#67e8f9', 'where': 'tips', 'trigger': 'snap', 'burst': 12}], free=False, unlock={'method': 'ad'})
 
 os.makedirs(OUT, exist_ok=True)
 for it in items:

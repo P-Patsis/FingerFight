@@ -52,6 +52,12 @@
     </div>
     <div id="styleSlotProfile"></div>
     <div id="appSlotProfile"></div>
+    <div id="wearSlotProfile"></div>
+    <div class="card">
+      <h3 class="card-h">Your items</h3>
+      <div id="profileLayers" class="chips" aria-label="Item type"></div>
+      <div id="profileGrid" class="store-grid"></div>
+    </div>
     <button id="profileStore" class="btn ghost">Open the Store</button>
     <p class="fine">Your IP address is always hidden from strangers (random matches go through a relay). Your name, hand style, puppet skin and sound are saved on this phone and used in every match.</p>
   </section>
@@ -60,16 +66,12 @@
   <section id="store" class="screen" hidden>
     <div class="topbar"><button id="storeBack" class="btn small">← Back</button></div>
     <h2 class="logo small">STORE</h2>
-    <div class="card store-live">
-      <canvas id="storePreview" width="240" height="180" aria-label="Your puppet with everything you have equipped"></canvas>
-      <div id="storeLoadout" class="fine"></div>
-      <div class="row center"><button id="storeSnap" class="btn small ghost">Test snap</button><button id="storeClear" class="btn small ghost">Take everything off</button></div>
-    </div>
+    <div id="wearSlotStore"></div>
     <div id="storeCats" class="chips" aria-label="Category"></div>
     <div id="storeLayers" class="chips" aria-label="Item type"></div>
     <div id="storeGrid" class="store-grid"></div>
     <p id="storeMsg" class="msg" role="status"></p>
-    <p class="fine">Demo store: locked items unlock for free for now. Real ads and purchases arrive with the app version.</p>
+    <p class="fine">Tap an item to wear it, tap it again to take it off. Demo store: locked items unlock for free for now. Real ads and purchases arrive with the app version.</p>
   </section>
 
   <!-- ===== Lobby ===== -->
@@ -163,6 +165,19 @@
     <p id="overMsg" class="msg"></p>
     <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-hidden="true"></div>   <!-- reserved for a native banner ad later: empty on purpose, no ad code -->
   </section>
+
+  <!-- the "Wearing" card is shared by the Store and the Profile (moved into whichever is open): preview or live try-on, the worn list (reorder, colour, remove) -->
+  <div id="wearCard" class="card store-live">
+    <h3 class="card-h">Wearing</h3>
+    <div id="wearBox" class="wear-box">
+      <canvas id="storePreview" width="240" height="180" aria-label="Your puppet with everything you have equipped"></canvas>
+    </div>
+    <p id="wearMsg" class="fine" role="status"></p>
+    <div class="row center"><button id="storeSnap" class="btn small">Test snap</button><button id="wearCamOff" class="btn small ghost" hidden>Camera off</button><button id="storeClear" class="btn small ghost">Take everything off</button></div>
+    <div id="storeLoadout" class="fine"></div>
+    <ol id="wearList" class="wear-list" aria-label="Worn items, top first"></ol>
+    <p class="fine">Top of the list is drawn over everything below it. Use ▲ ▼ to change the order.</p>
+  </div>
 
   <!-- the camera lives here and is moved into the bottom panel when it is your turn to point -->
   <div id="camBox" hidden>

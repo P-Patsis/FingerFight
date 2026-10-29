@@ -325,7 +325,11 @@ input:focus { outline: none; border-color: var(--cyan); }
 .chips button.sel { border-color: var(--gold); background: #3b2f08; }
 .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; width: min(100%, 560px); }
 .item-card { display: flex; flex-direction: column; align-items: center; gap: 4px; background: #0f172acc; border: 2px solid #334155; border-radius: 12px; padding: 8px; text-align: center; }
-.item-card.eq { border-color: var(--gold); }
+.item-card { position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+.item-card.eq { border-color: var(--gold); background: #2a2208cc; }
+.item-card.eq::after { content: '✓'; position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: #000; font: 700 15px/24px sans-serif; text-align: center; }
+.item-card .pos { font-size: 11px; font-weight: 700; color: var(--gold); }
+.item-card.locked { cursor: default; }
 .item-card.locked canvas { filter: grayscale(.8) brightness(.7); }
 .item-card canvas { width: 96px; height: 96px; border-radius: 8px; background: #0f172a; }
 .item-card b { font-size: 14px; }
@@ -336,3 +340,21 @@ input:focus { outline: none; border-color: var(--cyan); }
 
 /* ---------- end-screen ad slot: reserved space for a native banner (320x50) so adding one later moves nothing ---------- */
 .screen > .ad-slot { width: min(100%, 320px); min-height: 50px; margin-top: auto; margin-bottom: 0; flex: none; }
+
+/* wearing card: live preview / camera try-on and the worn list */
+.wear-box { position: relative; width: min(100%, 240px); aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; border: 2px solid #334155; background: #0f172a; }
+.wear-box > canvas { width: 100%; height: 100%; border: 0; border-radius: 0; display: block; }
+.wear-box #camBox { border-radius: 0; }
+.wear-box #camBox #camCaption, .wear-box #camBox #liveCount, .wear-box #camBox #liveGesture, .wear-box #camBox #flipBtn, .wear-box #camBox #dbgBtn { display: none; }
+.wear-list { list-style: none; margin: 0; padding: 0; width: min(100%, 440px); display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.wear-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: #0f172acc; border: 2px solid #334155; border-radius: 10px; padding: 6px 8px; }
+.wear-list li.base { border-style: dashed; }
+.wear-list .nm { flex: 1 1 90px; font-size: 14px; font-weight: 700; min-width: 0; }
+.wear-list .nm small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+.wear-list button { min-width: 40px; min-height: 40px; border: 2px solid #475569; background: #1e293b; color: var(--ink); border-radius: 8px; font-size: 16px; padding: 0; }
+.wear-list button:disabled { opacity: .3; }
+.wear-list button.dot { border-width: 3px; }
+.wear-list .picker { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-top: 4px; }
+.wear-list .picker button { min-width: 32px; min-height: 32px; width: 32px; height: 32px; border-radius: 50%; }
+.wear-list .picker button.sel { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+.wear-list .picker input[type=color] { width: 44px; height: 36px; padding: 0; border: 2px solid #475569; border-radius: 8px; background: #1e293b; }

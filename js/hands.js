@@ -5,7 +5,8 @@ import { statesFromCount, annotate, FINGERS, TIP_ID } from './avatars.js';
 import { viewOf } from './logic.js';
 import { drawPuppet } from './puppet.js';
 import { skinIdOf } from './skins.js';
-import { resolveLoadout, cleanCos } from './cosmetics.js';
+import { resolveLoadout, stackToWire } from './cosmetics.js';
+import { cleanColor } from './layers.js';
 import { ParticleSystem } from './particles.js';
 
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
@@ -44,7 +45,7 @@ export class HandCam {
   constructor(video, canvas) {
     this.video = video; this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.facing = 'user';
-    this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', {}) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
+    this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', []) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
     this.particles = new ParticleSystem();               // item effects; driven by the tracking loop below, no timers of their own
     this.lastPts = null; this.lastDraw = 0;
     this.deviceId = null; this.exact = false; this.flipping = false;
@@ -213,9 +214,9 @@ export class HandCam {
   }
 
   /** The picture drawn over MY camera view follows what my opponent sees: puppet views get the puppet, the others the skeleton. */
-  setOverlay(view, skin, cos) {
+  setOverlay(view, skin, stack, baseColor = null) {
     const v = viewOf(view);
-    const rec = resolveLoadout(skin, cos);
+    const rec = resolveLoadout(skin, stack, baseColor);
     this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec };
     this.particles.setEmitters(v.endsWith('puppet') ? rec.emitters : []);
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
@@ -290,13 +291,13 @@ export class HandCam {
     const q = x => Math.max(0, Math.min(1000, Math.round(x * 1000)));
     const lm = hands.length ? hands.map(h => h.map(p => [q(mirror ? 1 - p.x : p.x), q(p.y)])) : null;
     const photoMode = mode.startsWith('photo-');
-    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.cos) : '';
+    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
     if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), cos: cleanCos(style.cos), hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), hands: states, lm, ar };
   }
 
-  #photo(hands, states, mode, ar, skinId, cos) {
+  #photo(hands, states, mode, ar, skinId, stack, baseColor) {
     const v = this.video;
     if (!v.videoWidth) return '';
     const w = PHOTO_WIDTH, h = Math.round((w * v.videoHeight) / v.videoWidth);
@@ -310,7 +311,7 @@ export class HandCam {
     if (mode === 'photo-skeleton') drawSkeleton(ctx, hands, w, h, 2);
     ctx.restore();
     if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
-      const rec = resolveLoadout(skinId, cos);
+      const rec = resolveLoadout(skinId, stack, baseColor);
       drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec.skin, rec.layers);
     }
     const tips = [];
@@ -349,6 +350,6 @@ export class SimCam {
       ctx.fillText(String(count), 120, 110);
       photo = c.toDataURL('image/jpeg', 0.6);
     }
-    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, cos: cleanCos(style.cos) };
+    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, lay: stackToWire(style.stack), bc: cleanColor(style.baseColor) };
   }
 }

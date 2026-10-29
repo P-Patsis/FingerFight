@@ -1,14 +1,15 @@
 // Layered cosmetics (see COSMETICS.md): a catalogue of items (base hands from assets/skins, everything else from assets/items),
-// and the one function that turns an equipped loadout into what the rig draws.
+// and the one function that turns what the player wears into what the rig draws.
 //   base hand  - a whole hand in the 16-part skin format (js/skins.js); a premade `whole` hand is one finished piece
-//   tone       - a colour map applied to the base hand's colours (only where the base uses those colours)
-//   tattoo / nails / ring / glove - shapes on the named parts, drawn over the base in z-order, freely stackable
+//   tone       - a skin colour: recolours the base hand where it uses the cartoon skin colours (one at a time)
+//   tattoo / nails / ring / glove - shapes on the named parts, drawn over the base in the ORDER THEY WERE EQUIPPED (the stack)
+//   effect     - a particle effect (no shapes)
+// Colour pickers: an item with a `tint` is drawn in the colour the player picked (see layers.js). Only plain #rrggbb is ever kept.
 import { parseShapes, PART_NAMES } from './puppet.js';
-import { LAYERS, LAYER_Z, ITEM_ID, parseMeta } from './layers.js';
+import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor } from './layers.js';
 import { loadSkins, skinIds, getSkin, skinIdOf, hasSkin } from './skins.js';
 
 const BASE = 'assets/items/';
-const COLOR = /^#[0-9a-fA-F]{3,8}$/;
 
 /** Checks a layer item's JSON (not a base hand: those are skins) and returns the clean item; throws an Error that says what is wrong. */
 export function parseItem(json) {
@@ -18,15 +19,13 @@ export function parseItem(json) {
   if (!LAYERS.includes(json.layer) || json.layer === 'base') throw new Error(json.id + ': layer must be one of ' + LAYERS.filter(l => l !== 'base').join(', '));
   const name = typeof json.name === 'string' && json.name.trim() ? json.name.trim().slice(0, 24) : json.id;
   const meta = parseMeta(json, json.layer);
-  const item = { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', kind: 'layer', ...meta, parts: {}, recolor: null };
-  if (json.layer === 'tone') {
-    const r = json.recolor;
-    if (!r || typeof r !== 'object' || !Object.keys(r).length || Object.keys(r).length > 24) throw new Error(json.id + ': a tone needs a "recolor" map of 1-24 colours');
-    item.recolor = {};
-    for (const [from, to] of Object.entries(r)) {
-      if (!COLOR.test(from) || typeof to !== 'string' || !COLOR.test(to)) throw new Error(json.id + ': recolor entries must be #hex to #hex');
-      item.recolor[from.toLowerCase()] = to;
-    }
+  const item = { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', kind: 'layer', ...meta, parts: {} };
+  if (json.layer === 'tone') {                       // a tone is only a colour for the base hand: its "tint" says which of the hand's colours change
+    if (!item.tint) throw new Error(json.id + ': a tone needs a "tint" (default colour + the base colours it recolours)');
+    return item;
+  }
+  if (json.layer === 'effect') {                     // an effect is only particles
+    if (!item.particles.length) throw new Error(json.id + ': an effect needs "particles"');
     return item;
   }
   const parts = json.parts;
@@ -79,8 +78,8 @@ export async function loadCatalog(fetchFn = globalThis.fetch) {
 /** Test helper: forget the layer items (skins have their own resetSkins). */
 export function resetItems() { items.clear(); itemOrder = []; loadedItems = null; }
 
-const entryOfSkin = s => ({ id: s.id, name: s.name, kind: 'base', layer: 'base', category: s.category, free: s.free, unlock: s.unlock, whole: s.whole, z: s.z, particles: s.particles });
-const entryOfItem = it => ({ id: it.id, name: it.name, kind: 'layer', layer: it.layer, category: it.category, free: it.free, unlock: it.unlock, whole: false, z: it.z, particles: it.particles });
+const entryOfSkin = s => ({ id: s.id, name: s.name, kind: 'base', layer: 'base', category: s.category, free: s.free, unlock: s.unlock, whole: s.whole, particles: s.particles, tint: s.tint });
+const entryOfItem = it => ({ id: it.id, name: it.name, kind: 'layer', layer: it.layer, category: it.category, free: it.free, unlock: it.unlock, whole: false, particles: it.particles, tint: it.tint });
 
 /** Every item in the store, as plain entries: base hands first (manifest order), then layer items in the layer order. */
 export function catalog() {
@@ -97,51 +96,117 @@ export function filterCatalog(list, { category = 'all', layer = 'all' } = {}) {
   return list.filter(e => (category === 'all' || e.category === category) && (layer === 'all' || e.layer === layer));
 }
 
-// ---- loadouts ----------------------------------------------------------------------------------------------------------
+// ---- what is worn: an ordered stack -----------------------------------------------------------------------------------------
+// The stack is a list of {id, color} (color = a picked #rrggbb, or null for the item's own colours). Index 0 is drawn first (just over
+// the base hand), the LAST entry is drawn on top: the order the player equipped things in, changeable by the reorder list.
 
-/** The layers a loadout may carry besides the base hand (the wire format `cos` and the saved equipment use these keys). */
-export const COS_LAYERS = LAYERS.filter(l => l !== 'base');
-
-/** Keeps only well-formed {layer: id} entries (no base): used for received messages and saved values. */
-export function cleanCos(c) {
-  const out = {};
-  if (c && typeof c === 'object') for (const l of COS_LAYERS) if (typeof c[l] === 'string' && ITEM_ID.test(c[l])) out[l] = c[l];
+/** Keeps only well-formed entries: known-shaped ids, plain colours, no repeats, at most MAX_STACK. Accepts {id, color} or {id, c}. */
+export function cleanStack(list) {
+  const out = [], seen = new Set();
+  if (!Array.isArray(list)) return out;
+  for (const e of list) {
+    const id = typeof e === 'string' ? e : e && typeof e === 'object' ? e.id : null;
+    if (typeof id !== 'string' || !ITEM_ID.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, color: cleanColor(e && typeof e === 'object' ? (e.color ?? e.c) : null) });
+    if (out.length >= MAX_STACK) break;
+  }
   return out;
 }
+/** The wire form of a stack: [{id, c?}]: ids and plain colours only. */
+export const stackToWire = stack => cleanStack(stack).map(e => (e.color ? { id: e.id, c: e.color } : { id: e.id }));
+export const stackFromWire = lay => cleanStack(lay);
 
-const toneCache = new Map();
-function tinted(skin, tone) {
-  const key = skin.id + '/' + tone.id;
-  if (toneCache.has(key)) return toneCache.get(key);
-  const map = c => (typeof c === 'string' ? tone.recolor[c.toLowerCase()] || c : c);
-  const out = { ...skin, parts: {} };
-  for (const [name, def] of Object.entries(skin.parts)) out.parts[name] = { ...def, shapes: def.shapes.map(s => ({ ...s, fill: map(s.fill), stroke: map(s.stroke) })) };
-  toneCache.set(key, out);
+/** The items that used to be one file per colour are now one item + a colour: old id -> [new id, colour]. Used to migrate saved
+ *  equipment and to read pictures from a phone that still sends the old ids. */
+export const LEGACY_ITEMS = Object.freeze({
+  pale: ['skintone', '#fbe3cf'], tan: ['skintone', '#e3ad7c'], brown: ['skintone', '#b97a4b'], deep: ['skintone', '#7a4a2b'],
+  orc: ['skintone', '#86b35a'], frost: ['skintone', '#bfe3f5'],
+  rednails: ['nailpolish', '#dc2626'], blacknails: ['nailpolish', '#111827'], neonnails: ['nailpolish', '#22d3ee'],
+});
+/** The first versions kept one item per layer: {tone, tattoo, nails, ring, glove} -> a stack in that order (the old default z-order). */
+export function legacyStack(cos) {
+  const out = [];
+  if (cos && typeof cos === 'object' && !Array.isArray(cos)) {
+    for (const l of ['tone', 'tattoo', 'nails', 'ring', 'glove']) {
+      const id = cos[l];
+      if (typeof id !== 'string') continue;
+      const m = LEGACY_ITEMS[id];
+      out.push(m ? { id: m[0], color: m[1] } : { id, color: null });
+    }
+  }
+  return cleanStack(out);
+}
+/** Any of: a stack array, an old {layer: id} object, nothing -> a clean stack. */
+export const stackOf = x => (Array.isArray(x) ? cleanStack(x.map(e => (e && LEGACY_ITEMS[e.id || e] ? { id: LEGACY_ITEMS[e.id || e][0], color: LEGACY_ITEMS[e.id || e][1] } : e))) : legacyStack(x));
+
+// ---- colours applied ---------------------------------------------------------------------------------------------------------
+
+const recolorCache = new Map();
+function recolor(kind, owner, picked, build) {
+  const key = kind + '/' + owner.id + '/' + picked;
+  if (recolorCache.has(key)) return recolorCache.get(key);
+  const out = build();
+  if (recolorCache.size > 300) recolorCache.clear();
+  recolorCache.set(key, out);
   return out;
 }
+const mapper = (tint, picked) => c => {
+  const role = typeof c === 'string' ? tint.map[c.toLowerCase()] : null;
+  return role ? roleColor(picked, role) : c;
+};
+const mapShapes = (shapes, f) => shapes.map(s => ({ ...s, fill: f(s.fill), stroke: f(s.stroke) }));
+const mapParticles = (list, f) => list.map(p => ({ ...p, color: f(p.color) }));
+
+/** A base hand (or a skin) with its tint applied for [picked]: the colours named in the tint map change, nothing else. */
+function tintedSkin(skin, tint, picked, salt = '') {
+  return recolor('s', skin, salt + '/' + picked + tint.default + Object.keys(tint.map).join(), () => {
+    const f = mapper(tint, picked), out = { ...skin, parts: {} };
+    for (const [name, def] of Object.entries(skin.parts)) out.parts[name] = { ...def, shapes: mapShapes(def.shapes, f) };
+    out.overlays = skin.overlays.map(o => ({ ...o, shapes: mapShapes(o.shapes, f) }));
+    out.particles = mapParticles(skin.particles, f);
+    return out;
+  });
+}
+function tintedItem(item, picked) {
+  return recolor('i', item, picked, () => {
+    const f = mapper(item.tint, picked), out = { ...item, parts: {} };
+    for (const [name, shapes] of Object.entries(item.parts)) out.parts[name] = mapShapes(shapes, f);
+    out.particles = mapParticles(item.particles, f);
+    return out;
+  });
+}
+
+/** The colour an entry is drawn in: the picked one if the item has a colour picker, else null. */
+export const colorOf = (id, picked) => { const e = entryOf(id); return e && e.tint ? cleanColor(picked) || e.tint.default : null; };
 
 /**
- * The picture recipe for a loadout: {skin, layers, emitters}.
- *  - skin: the base hand (an unknown id gives the default hand), recoloured by the tone unless it is a premade whole hand
- *  - layers: the equipped tattoo / nails / ring / glove items, sorted by z (ties: layer order), so ANY combination is drawn,
- *    for example a ring under a glove or on top of one, depending only on z
- *  - emitters: the particle effects of the base hand and every equipped item
- * Unknown ids are ignored (another phone may have items this one lacks); nothing here can throw on bad input.
+ * The picture recipe for what is worn: {skin, layers, emitters}.
+ *  - skin: the base hand ([baseId]; an unknown id gives the default hand), in [baseColor] if the hand has a colour picker, and
+ *    recoloured by the tone unless it is a premade whole hand
+ *  - layers: the shape items of the [stack] in stack order (first = just over the hand, last = on top). ANY combination and any number
+ *    of the same type is drawn; nothing is blocked
+ *  - emitters: the particle effects of the hand, the shape items and the effect items
+ * [stack] may also be an old {layer: id} object (a phone that still sends that). Unknown ids are ignored (another phone may have items
+ * this one lacks); nothing here can throw on bad input.
  */
-export function resolveLoadout(baseId, cos) {
-  const baseSkin = getSkin(skinIdOf(baseId));
-  const c = cleanCos(cos);
-  const layers = [];
+export function resolveLoadout(baseId, stack, baseColor = null) {
+  let baseSkin = getSkin(skinIdOf(baseId));
+  const bc = cleanColor(baseColor);
+  if (baseSkin.tint && bc && bc !== baseSkin.tint.default) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc);
+  const layers = [], emitters = [...baseSkin.particles];
   let tone = null;
-  for (const l of COS_LAYERS) {
-    const it = c[l] ? items.get(c[l]) : null;
-    if (!it || it.layer !== l) continue;
-    if (l === 'tone') tone = it; else layers.push(it);
+  for (const e of stackOf(stack)) {
+    const it = items.get(e.id);
+    if (!it) continue;
+    const picked = it.tint ? e.color || it.tint.default : null;
+    if (it.layer === 'tone') { tone = { it, picked }; continue; }              // one skin tone: the last one wins
+    const drawn = it.tint && picked !== it.tint.default ? tintedItem(it, picked) : it;
+    emitters.push(...drawn.particles);
+    if (it.layer !== 'effect') layers.push(drawn);
   }
-  layers.sort((a, b) => a.z - b.z || LAYERS.indexOf(a.layer) - LAYERS.indexOf(b.layer));
-  const skin = tone && !baseSkin.whole ? tinted(baseSkin, tone) : baseSkin;
-  const emitters = [...baseSkin.particles, ...[tone, ...layers].filter(Boolean).flatMap(it => it.particles)];
+  const skin = tone && !baseSkin.whole ? tintedSkin(baseSkin, tone.it.tint, tone.picked, bc || '') : baseSkin;
   return { skin, layers, emitters };
 }
 
-export { LAYERS, LAYER_Z };
+export { LAYERS, MAX_STACK };

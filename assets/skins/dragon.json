@@ -318,5 +318,24 @@
    "where": "tips",
    "rate": 5
   }
- ]
+ ],
+ "tint": {
+  "default": "#4d9a4a",
+  "map": {
+   "#4d9a4a": "main",
+   "#43873f": "mid",
+   "#2f6b36": "dark",
+   "#1f4d2b": "dark"
+  },
+  "swatches": [
+   "#4d9a4a",
+   "#dc2626",
+   "#3b82f6",
+   "#a855f7",
+   "#facc15",
+   "#f97316",
+   "#64748b",
+   "#ec4899"
+  ]
+ }
 }

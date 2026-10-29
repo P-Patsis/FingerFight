@@ -12,6 +12,7 @@ export const EFFECTS = Object.freeze({
   glow: { kind: 'glow', life: [0.7, 1.3], speed: [0, 0.2], size: 16, gravity: 0 },         // a soft pulsing halo
   embers: { kind: 'ember', life: [0.7, 1.4], speed: [0.4, 1], size: 2.2, gravity: -1.2 },  // little dots that float up
   glint: { kind: 'glint', life: [0.3, 0.6], speed: [0, 0], size: 5, gravity: 0 },          // a twinkling star
+  bubbles: { kind: 'bubble', life: [1, 1.8], speed: [0.1, 0.3], size: 4.5, gravity: -0.5 }, // rings that drift up
 });
 export const WHERE = ['tips', 'knuckles', 'palm', 'hand'];
 export const TRIGGERS = ['snap'];
@@ -125,6 +126,9 @@ export function drawParticles(ctx, list) {
       const r = p.size * (1 - Math.abs(0.5 - t) * 1.2);
       ctx.strokeStyle = p.color; ctx.lineWidth = Math.max(1, p.size * 0.22);
       ctx.beginPath(); ctx.moveTo(p.x - r, p.y); ctx.lineTo(p.x + r, p.y); ctx.moveTo(p.x, p.y - r); ctx.lineTo(p.x, p.y + r); ctx.stroke();
+    } else if (p.kind === 'bubble') {
+      ctx.strokeStyle = p.color; ctx.lineWidth = Math.max(1, p.size * 0.22);
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2, p.size * (0.8 + 0.5 * t)), 0, 7); ctx.stroke();
     } else {                                                                              // ember
       ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, p.size), 0, 7); ctx.fill();
     }
