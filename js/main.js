@@ -81,7 +81,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
-const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
+const tryOn = { on: false, busy: false, token: 0, photo: false };      // the live camera try-on in the Store / Profile (see startTryOn)
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
 const store = {
   get: store_get,
@@ -704,7 +704,7 @@ function buildBgPicker() {
 const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
 const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
 /** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
-const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? 'photo-puppet' : effectiveStyle().mode, style.skin, style.stack, style.baseColor);   // a try-on shows the puppet over my own live picture
+const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (tryOn.photo ? 'photo-puppet' : 'puppet') : effectiveStyle().mode, style.skin, style.stack, style.baseColor);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
 
 function skinPreview(id) {
   const c = document.createElement('canvas');
@@ -1129,7 +1129,7 @@ async function startTryOn() {
     let frames = 0;
     cam.onFrame = () => { frames++; };
     cam.run();
-    msg('Camera on: hold up your hand. Tap Test snap for the snap effect. It switches off when you leave this screen.');
+    msg('Camera on: hold up your hand.');
     setTimeout(() => { if (!frames && tryOn.on && my === tryOn.token) msg('The camera is on but the hand model produced no frames. Tap Camera off and try again; if it repeats, reload the page.'); }, 6000);
     return true;
   } catch (e) {
@@ -1165,6 +1165,11 @@ $('storeSnap').onclick = async () => {
   } catch { /* ignore */ }
 };
 $('wearCamOff').onclick = () => stopTryOn();
+$('wearPhoto').onclick = () => {                                       // try-on preview only: puppet alone (default) or over my camera picture
+  tryOn.photo = !tryOn.photo;
+  $('wearPhoto').textContent = 'Photo: ' + (tryOn.photo ? 'on' : 'off'); $('wearPhoto').setAttribute('aria-pressed', String(tryOn.photo));
+  if (tryOn.on) applyOverlay();
+};
 $('storeClear').onclick = () => { inv.clear(); pickerOpen = null; syncStyle(); };
 
 // ---------------------------------------------------------------------------------------------

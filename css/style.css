@@ -358,3 +358,27 @@ input:focus { outline: none; border-color: var(--cyan); }
 .wear-list .picker button { min-width: 32px; min-height: 32px; width: 32px; height: 32px; border-radius: 50%; }
 .wear-list .picker button.sel { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
 .wear-list .picker input[type=color] { width: 44px; height: 36px; padding: 0; border: 2px solid #475569; border-radius: 8px; background: #1e293b; }
+
+/* ---------- visual tidy (Profile, Store, Wearing card) ---------- */
+/* the Wearing card lives in <body> until a screen docks it: never show it there (it floated over the menu title) */
+body > #wearCard { display: none; }
+/* ONE content width for everything on these two screens, centred, same gap between blocks */
+#profile, #store { --w: 360px; gap: 10px; }
+@media (min-width: 700px) { #profile, #store { --w: 440px; } }
+#profile > :not(.topbar), #store > :not(.topbar) { width: min(100%, var(--w)); }
+#profile .card, #store .card, #profile .chips, #store .chips, #profile .store-grid, #store .store-grid, .wear-list, .wear-box { width: 100%; max-width: none; }
+#profile .fine, #store .fine, #profile .msg, #store .msg { max-width: none; width: 100%; }
+#profile > .btn, #store > .btn { width: auto; align-self: center; }
+.row.wrap { flex-wrap: wrap; justify-content: center; gap: 6px; }
+.btn.tiny { font-size: 13px; padding: 5px 10px; border-radius: 9px; box-shadow: 0 2px 0 #92400e; letter-spacing: .5px; }
+.btn.tiny.ghost { box-shadow: 0 2px 0 #0f172a; }
+.store-live { gap: 6px; padding: 8px 10px; }
+.wear-box { width: min(100%, 180px); }
+#storeLoadout { display: none; }                                      /* the list below says the same */
+.fine.hint { margin: 0; font-size: 11px; }
+#wearMsg:empty { display: none; }
+.wear-list { gap: 4px; }
+.wear-list li { padding: 3px 6px; gap: 4px; border-width: 1px; }
+.wear-list .nm { font-size: 13px; }
+.wear-list button { min-width: 32px; min-height: 32px; font-size: 14px; border-width: 1px; }
+.wear-list .picker { padding-top: 2px; }

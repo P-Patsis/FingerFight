@@ -71,7 +71,7 @@
     <div id="storeLayers" class="chips" aria-label="Item type"></div>
     <div id="storeGrid" class="store-grid"></div>
     <p id="storeMsg" class="msg" role="status"></p>
-    <p class="fine">Tap an item to wear it, tap it again to take it off. Demo store: locked items unlock for free for now. Real ads and purchases arrive with the app version.</p>
+    <p class="fine">Tap to wear, tap again to remove. Demo store: locked items are free for now.</p>
   </section>
 
   <!-- ===== Lobby ===== -->
@@ -173,10 +173,10 @@
       <canvas id="storePreview" width="240" height="180" aria-label="Your puppet with everything you have equipped"></canvas>
     </div>
     <p id="wearMsg" class="fine" role="status"></p>
-    <div class="row center"><button id="storeSnap" class="btn small">Test snap</button><button id="wearCamOff" class="btn small ghost" hidden>Camera off</button><button id="storeClear" class="btn small ghost">Take everything off</button></div>
+    <div class="row center wrap"><button id="storeSnap" class="btn tiny">Test snap</button><button id="wearPhoto" class="btn tiny ghost" aria-pressed="false" title="Show your camera photo behind the puppet (this preview only)">Photo: off</button><button id="wearCamOff" class="btn tiny ghost" hidden>Camera off</button><button id="storeClear" class="btn tiny ghost">Clear all</button></div>
     <div id="storeLoadout" class="fine"></div>
     <ol id="wearList" class="wear-list" aria-label="Worn items, top first"></ol>
-    <p class="fine">Top of the list is drawn over everything below it. Use ▲ ▼ to change the order.</p>
+    <p class="fine hint" title="The top of the list is drawn over everything below it. Use ▲ ▼ to change the order.">▲▼ top = drawn on top</p>
   </div>
 
   <!-- the camera lives here and is moved into the bottom panel when it is your turn to point -->

@@ -15,6 +15,16 @@
 
 Newest first.
 
+## 2026-10-30 — Visual tidy: stray menu box, aligned cards, tighter Wearing card, puppet-only try-on (NEEDS SCREENSHOT REVIEW)
+- Changed (layout/text/one toggle only; cosmetics logic, rig, connection, match flow untouched):
+  1. STRAY MENU BOX = the `#wearCard` ("Wearing" card). It sits in `<body>` and is only moved into the Store/Profile slot when those open, so on the menu it floated top-left over the title. CSS `body > #wearCard { display:none }`.
+  2. ALIGNMENT: Profile and Store share one content width (`--w`: 360px, 440px on wide screens), every block (cards, chips, item grid, worn list, hints) is 100% of it, centred, 10px gap.
+  3. TEXT/BOXES: long hints cut to one short line (Store hint; the stack hint is now "▲▼ top = drawn on top" with the full sentence as tooltip); camera message shortened; Test snap / Photo / Camera off / Clear all are small `.btn.tiny` in one wrapping row; preview 240 -> 180px; worn-list rows ~32px buttons and tighter padding; the duplicate "Wearing: ..." text line hidden.
+  4. TRY-ON TOGGLE: new "Photo: off/on" button in the Wearing card. Default PUPPET ONLY (dark background); on = puppet over the camera photo. Try-on preview only (Store + Profile), not saved, nothing sent to opponents.
+- Verified: 223/223 tests pass (SW restamped ff-ba917ff8). NOT verified on a phone: layout needs the user's screenshots.
+- Open: further tweaks from screenshots.
+
+
 ## 2026-10-29 (5) — Cosmetics UX overhaul: tap-to-toggle, ordered stack, reorder, live try-on, colour pickers, effects (NOT YET TRIED ON PHONE OR LAPTOP)
 - Spec updated in COSMETICS.md (stack, colour pickers, wire, try-on). Rig, connection, match flow and monetisation stub untouched.
 - 1. TAP TO TOGGLE: Equip / Take off buttons are gone. Tap a card = wear, tap again = take off; worn cards show a gold tick + "Worn · #n". Locked cards keep only their (stub) unlock button. Store AND Profile (Profile has a new "Your items" grid of owned items).
