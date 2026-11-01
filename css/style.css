@@ -452,3 +452,24 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cprow button.sw.sel { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
 .cprow .btn { padding: 4px 10px; font-size: 12px; }
 .cat-color .ctl { display: flex; align-items: center; gap: 8px; width: 100%; }
+
+/* ---------- quick fixes: name + country on one aligned row, scrollable hand row, roomier colour picker ---------- */
+.idrow { display: flex; align-items: flex-start; gap: 12px; }
+.namerow { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.flagrow { flex: 0 0 auto; width: 132px; display: flex; flex-direction: column; gap: 3px; }
+.lab { font-size: 12px; color: var(--muted); }
+.flaghead { display: flex; align-items: center; gap: 6px; min-height: 22px; }
+.flaghead .lab { flex: 1 1 auto; white-space: nowrap; }
+.flaghead .toggle { flex: none; padding: 2px 8px; font-size: 12px; }
+.namerow input, .flagrow input { width: 100%; max-width: none; min-width: 0; box-sizing: border-box; padding: 8px; font-size: 14px; border-radius: 8px; border: 2px solid #475569; background: #0f172a; color: var(--ink); }
+.namerow input::placeholder, .flagrow input::placeholder { color: #64748b; }
+.flag-in { display: flex; }
+.flag-in[hidden] { display: none; }
+.set.col.hand-row, .hand-row > .hrow { min-width: 0; max-width: 100%; }
+.hand-row > .hrow { display: flex; flex-wrap: nowrap; overflow-x: auto; }
+.skin-picker.hrow button { flex: 0 0 72px; width: 72px; }
+.cc-label { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+.cprow { gap: 10px; padding: 6px 2px 8px; min-height: 48px; }
+.cprow input[type=color] { width: 48px; height: 36px; }
+.cprow button.sw { width: 34px; height: 34px; min-width: 34px; }
+.cprow .btn { padding: 8px 12px; font-size: 13px; }

@@ -5,11 +5,12 @@ import fs from 'node:fs';
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const at = id => { const i = html.indexOf('id="' + id + '"'); assert.ok(i > 0, id); return i; };
 
-test('country flag: label, inline input + flag icon and the toggle are ONE row (one .set element, no separate field row)', () => {
-  const row = html.slice(html.lastIndexOf('<div', at('flagBtn')), html.indexOf('</div>', at('flagBtn')) + 6);
-  for (const id of ['countryInput', 'countryHint', 'flagBtn', 'countryRow']) assert.ok(row.includes('id="' + id + '"'), id + ' is in the same row');
-  assert.match(row, /Show country flag/); assert.match(row, /class="set flagrow"/);
-  assert.ok(!/<label[^>]*id="countryRow"/.test(html), 'no full-width label row any more');
+test('name + country flag share ONE row, label over input: Name on the left, a compact flag block (label, flag, toggle, input) on the right', () => {
+  const row = html.slice(html.lastIndexOf('<div', at('countryHint') - 200) , html.indexOf('<p id="nameNote"'));
+  assert.match(row, /class="idrow"/);
+  for (const id of ['nameInput', 'countryInput', 'countryHint', 'flagBtn', 'countryRow']) assert.ok(row.includes('id="' + id + '"'), id + ' is in the one row');
+  assert.match(row, /<span class="lab">Name<\/span>/); assert.match(row, /<span class="lab">Country flag<\/span>/); assert.match(row, /placeholder="type a name"/);
+  assert.ok(at('nameInput') < at('flagBtn') && at('flagBtn') < at('countryInput'), 'name, then the flag label + toggle, then its input underneath');
 });
 
 test('Profile top block is ONE sticky stack in order: camera preview, Choose your Hand, colour picker, category chips; only the item cards come after', () => {
@@ -28,13 +29,6 @@ test('Done (camera off) is a small button INSIDE the preview zone (top-right cor
   assert.match(css, /\.done-x[^}]*position:\s*absolute/s); assert.match(css, /\.done-x[^}]*top:/s); assert.match(css, /\.done-x[^}]*right:/s);
 });
 
-test('the player name is a label and its input on ONE row', () => {
-  const i = html.indexOf('namerow'); assert.ok(i > 0, 'a namerow');
-  const row = html.slice(html.lastIndexOf('<', i), html.indexOf('</label>', i) + 8);
-  assert.ok(row.includes('id="nameInput"') && /Player name|Name/i.test(row), 'label and input share the row element');
-  assert.ok(!/>\s*PLAYER\s*</.test(html), 'no PLAYER header');
-});
-
 test('every item group and Choose your Hand is a horizontally scrolling row (no vertical wall of cards)', () => {
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
   for (const id of ['skinPicker', 'profileLayers', 'profileGrid']) {
@@ -42,4 +36,13 @@ test('every item group and Choose your Hand is a horizontally scrolling row (no 
     assert.match(tag, /\bhrow\b|items-row/, id + ' is a scrolling row');
   }
   assert.match(css, /\.hrow[^}]*overflow-x:\s*auto/s); assert.match(css, /\.hrow[^}]*flex-wrap:\s*nowrap/s);
+});
+
+test('Choose your Hand can shrink and scroll sideways (no stretch); the colour picker has a "Choose colour" label and roomy targets', () => {
+  const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  assert.match(css, /\.hand-row[^{]*\{[^}]*min-width:\s*0/s); assert.match(css, /\.skin-picker\.hrow button\s*\{[^}]*flex:\s*0 0 72px/s);
+  assert.match(css, /\.cprow button\.sw\s*\{[^}]*width:\s*34px/s);
+  const js = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  assert.match(js, /'Choose colour'/); assert.ok(!js.includes('Only drawn data is sent'), 'the redundant drawn-data line is gone');
+  assert.match(js, /\$\('profileGrid'\)\.scrollLeft = 0/, 'a category change resets the item row scroll');
 });

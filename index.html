@@ -45,9 +45,14 @@
     <div class="topbar"><button id="profileBack" class="btn small">← Back</button></div>
     <h2 class="logo small">PROFILE</h2>
     <div class="card">
-      <div class="set namerow"><span>Your name</span><input id="nameInput" class="inline-in" maxlength="40" autocomplete="off" placeholder="Fighter" aria-label="Your name"></div>
+      <div class="idrow">
+        <label class="namerow"><span class="lab">Name</span><input id="nameInput" maxlength="40" autocomplete="off" placeholder="type a name" aria-label="Your name"></label>
+        <div class="flagrow">
+          <div class="flaghead"><span class="lab">Country flag</span><span id="countryHint" class="flag-icon"></span><button id="flagBtn" class="toggle">Off</button></div>
+          <span id="countryRow" class="flag-in"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR / Greece" aria-label="Country code or name"></span>
+        </div>
+      </div>
       <p id="nameNote" class="fine"></p>
-      <div class="set flagrow"><span>Show country flag</span><span id="countryRow" class="flag-in"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR / Greece" aria-label="Country code or name"><span id="countryHint" class="flag-icon"></span></span><button id="flagBtn" class="toggle">Off</button></div>
     </div>
     <div id="styleSlotProfile"></div>
     <div id="appSlotProfile"></div>
@@ -131,7 +136,7 @@
           <div id="cMsg"></div>
         </div>
         <div id="custOnly"><button id="custBtn" class="btn ghost" type="button" aria-pressed="false">Customise &amp; try on</button></div>
-        <div class="set col" id="skinRow"><span>Choose your Hand</span><div id="skinPicker" class="skin-picker hrow"></div></div>
+        <div class="set col hand-row" id="skinRow"><span>Choose your Hand</span><div id="skinPicker" class="skin-picker hrow"></div></div>
         <div id="cCat" hidden></div>
         <div id="profileLayers" class="chips hrow" aria-label="Item type" hidden></div>
       </div>

@@ -821,7 +821,7 @@ function renderStyle() {
   const warn = random ? '' : cameraWarning(mode);                // only a photo view carries the warning
   $('styleNote').textContent = random
     ? 'Random opponent: only a drawn puppet or skeleton is shared. Your camera image never leaves this phone.'
-    : warn || 'Only drawn data is sent. Your camera image never leaves this phone.';
+    : warn;
   $('styleNote').classList.toggle('err', !!warn);
   renderViewPreview(mode);
   applyOverlay();
@@ -1045,7 +1045,7 @@ function renderStore() {
 function renderProfileItems() {
   const lays = $('profileLayers');
   lays.replaceChildren();
-  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; }, renderProfileItems);
+  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; $('profileGrid').scrollLeft = 0; }, renderProfileItems);   // a new category starts at its first items
   if (profileView.layer === 'base') { const g = $('profileGrid'); g.replaceChildren(el('p', 'fine', 'Pick your hand in "Choose your Hand" above; the colour above recolours it.')); }
   else fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
   renderWear();
@@ -1112,6 +1112,7 @@ function renderCatColor() {
   }
   const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
   const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
+  box.append(el('p', 'cc-label', 'Choose colour'));
   const row = el('div', 'cprow'); row.dataset.picker = 'any'; row.dataset.layer = layer;
   const inp = document.createElement('input'); inp.type = 'color'; inp.value = cur || '#ffffff'; inp.dataset.act = 'any'; inp.setAttribute('aria-label', LAYER_LABELS[layer] + ': pick any colour');
   inp.oninput = () => { inv.setCategoryColor(layer, inp.value); liveColor(); };       // live while dragging; the row is not rebuilt under the picker

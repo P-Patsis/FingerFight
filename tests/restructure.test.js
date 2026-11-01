@@ -327,7 +327,9 @@ test('ONE colour picker above the grid that switches with the category chip: pre
   assert.equal(stackOf('nailpolish').c, '#ff0000');
   input.value = 'javascript:alert(1)'; input.oninput();
   assert.equal(stackOf('nailpolish').c, '#ff0000', 'junk is refused');
-  chip('tattoo').onclick();
+  $('profileGrid').scrollLeft = 240; chip('tattoo').onclick();
+  assert.equal($('profileGrid').scrollLeft, 0, 'a new category starts at its first items');
+  assert.equal($('catColor').children[0].textContent, 'Choose colour');
   assert.equal($('catColor').children.find(c => c.classList.contains('cprow')).dataset.layer, 'tattoo', 'the picker switched with the chip');
   chip('nails').onclick();
   all().find(x => x.dataset?.act === 'default').onclick();

@@ -1,5 +1,15 @@
 # Finger Fight: progress
 
+## 2026-11-01 (7) — Quick layout fixes: name + country row, scrollable hand row, roomier colour picker (NEEDS SCREENSHOT REVIEW)
+- Changed (layout/UX only; cosmetics logic, rig, connection, match flow, validation untouched):
+  1. NAME + COUNTRY on ONE row, label over input: "Name" (placeholder "type a name") takes the free width; a compact 132px country block on the right: "Country flag" label + flag + On/Off toggle, and the code/name input underneath only while On (2-letter code or name; no IP lookup, unchanged).
+  2. CHOOSE YOUR HAND: the row could not shrink (flex column without min-width 0), so it stretched; now `min-width:0`, fixed 72px hand buttons, real sideways scroll.
+  3. COLOUR PICKER: "Choose colour" label above; bigger targets (presets 34px, colour button 48x36, Original larger, more gap/height). Still presets + full button + Original; it still swipes if the screen is narrower than the row.
+  4. CATEGORY CHANGE resets the item row's horizontal scroll to the start.
+  5. Removed the "Only drawn data is sent. Your camera image never leaves this phone." line (the random-opponent note and the photo warning stay).
+- Verified: 253/253 tests (flag/name row test rewritten, scroll-reset + label assertions added). SW restamped (ff-1a89f375). NOT seen on a phone.
+- Needs screenshot review: the name/country row on a narrow phone (flag block 132px), hand row swipe, colour row comfort (does it fit without scrolling).
+
 ## 2026-11-01 (6) — Customise UI overhaul: one-line colour picker, no gradient / skin tone, sticky top block, double-preview fix (NEEDS SCREENSHOT REVIEW)
 - Changed (rig, connection, match flow, network validation unchanged apart from old-field compatibility):
   1. Name label + input on one row.
