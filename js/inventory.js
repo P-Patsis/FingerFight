@@ -221,6 +221,26 @@ export class Inventory {
     return this.stack.find(x => x.id === id)?.color || e.tint.default;
   }
 
+  /** The whole getup as plain data for a saved look: the hand, its colour, the worn items in order (wire form: id, c, k) and the category colours. */
+  getup() { return { base: this.baseId, bc: this.baseColor, lay: stackToWire(this.stack), cat: cleanCat(this.cat || {}) }; }
+  /**
+   * Wears a saved getup: the hand (when it exists and is owned), that hand's colour, the items (only those that exist and are owned, in the saved order, up to
+   * the limit) with their colours, and the category colours. Everything is validated again here: a saved look is hand-editable storage.
+   */
+  applyGetup(g) {
+    if (!g || typeof g !== 'object') return false;
+    const hand = entryOf(g.base);
+    if (hand && hand.layer === 'base' && this.owns(g.base)) { this.base = g.base; this.#write(BASE_KEY, g.base); }
+    const bc = this.baseId && entryOf(this.baseId)?.tint ? cleanColor(g.bc) : null;
+    if (bc) this.handColors[this.baseId] = bc; else delete this.handColors[this.baseId];
+    this.baseColor = bc;
+    this.stack = cleanStack(Array.isArray(g.lay) ? g.lay : []).filter(e => { const x = entryOf(e.id); return !!x && x.layer !== 'base' && this.owns(e.id); }).slice(0, MAX_STACK);
+    this.stack = this.stack.map(e => (entryOf(e.id).tint ? e : { id: e.id, color: null }));
+    this.cat = g.cat && typeof g.cat === 'object' && !Array.isArray(g.cat) ? cleanCat(g.cat) : {};
+    this.#saveHands(); this.#saveStack(); this.#saveCat();
+    return true;
+  }
+
   /** What the picture recipe needs: {base, baseColor, stack}. */
   loadout() { return { base: this.baseId, baseColor: this.baseColor, stack: this.stack.map(s => ({ ...s })) }; }
   /** The loadout with one item tapped on top (for the Store cards), without changing anything; already worn: unchanged. */

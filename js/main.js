@@ -15,6 +15,7 @@ import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout } from './
 import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
 import { Stats } from './stats.js';
+import { Looks, sameGetup, MAX_LOOKS } from './looks.js';
 import { unlockItem, unlockLabel } from './unlock.js';
 import { ParticleSystem } from './particles.js';
 import {
@@ -92,6 +93,7 @@ const store = {
 /** Copies what the inventory says is worn into the style that is drawn and sent. */
 function takeLoadout() { const L = inv.loadout(); style.skin = L.base; style.baseColor = L.baseColor; style.stack = L.stack; }
 const stats = new Stats({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // local play statistics (this phone only)
+const looks = new Looks({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // saved looks (this phone only)
 const inv = new Inventory({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // owned items and equipment (this phone only)
 takeLoadout();
 
@@ -796,7 +798,7 @@ loadCatalog().then(() => { loadUserSkins({ getItem: store_get }, id => !!entryOf
 function syncStyle() {
   takeLoadout();
   if ($('modePicker').children.length) renderStyle(); else applyOverlay();
-  if (cust.on) renderProfileItems();                              // the Profile's Hand cards / Skeleton styles follow the choice
+  if (cust.on) { renderProfileItems(); renderLooks(); }           // the Profile's Hand cards / Skeleton styles follow the choice; the saved-look marker follows the getup
   if (!$('store').hidden) renderStore();
   if (!$('profile').hidden) renderProfileItems();
 }
@@ -986,6 +988,45 @@ function itemCard(e) {
   return card;
 }
 
+// ---- saved looks: the whole getup under a name, in a sideways row under the preview (inside the pinned block)
+/** My getup right now as plain data: hand, its colour, worn items in order, category colours, skeleton style and colour. */
+const currentGetup = () => ({ ...inv.getup(), sk: style.skel || undefined, ss: style.skelStyle || undefined });
+function applyLook(look) {
+  if (!look || !inv.applyGetup(look)) return;
+  style.skel = cleanColor(look.sk); store.set('ff-skel', style.skel || '');
+  style.skelStyle = cleanSkelStyle(look.ss); store.set('ff-skelstyle', style.skelStyle || '');
+  looks.markApplied(look.id);
+  sfx.ui(); syncStyle();
+}
+function saveLook() {
+  if (looks.full) { $('cMsg').textContent = 'You can keep ' + MAX_LOOKS + ' looks. Delete one first.'; return; }
+  let name = 'Look ' + (looks.list.length + 1);
+  if (typeof globalThis.prompt === 'function') { const a = globalThis.prompt('Name this look', name); if (a === null) return; name = a; }
+  const look = looks.add(name, currentGetup());
+  $('cMsg').textContent = look ? 'Saved "' + look.name + '".' : 'Could not save this look.';
+  renderLooks();
+}
+function renderLooks() {
+  const row = $('looksRow');
+  row.replaceChildren();
+  const add = el('button', 'btn small look-add', '+ Save look'); add.type = 'button'; add.dataset.act = 'save'; add.onclick = saveLook;
+  row.append(add);
+  const now = currentGetup();
+  for (const l of looks.list) {
+    const on = looks.appliedId === l.id && sameGetup(l, now);
+    const box = el('div', 'look' + (on ? ' sel' : '')); box.dataset.id = l.id;
+    const use = el('button', 'look-use', l.name); use.type = 'button'; use.dataset.act = 'apply'; use.setAttribute('aria-pressed', on ? 'true' : 'false');
+    use.onclick = () => applyLook(l);
+    const del = el('button', 'look-x', '✕'); del.type = 'button'; del.dataset.act = 'delete'; del.setAttribute('aria-label', 'Delete look ' + l.name);
+    del.onclick = () => {
+      if (typeof globalThis.confirm === 'function' && !globalThis.confirm('Delete the look "' + l.name + '"?')) return;
+      looks.remove(l.id); renderLooks();
+    };
+    box.append(use, del);
+    row.append(box);
+  }
+}
+
 /** Puts a sideways-scrolling row back at its first item. Done AFTER the cards were replaced, and with scroll-snap off for a moment: otherwise the browser
  *  re-snaps the new content to the old position (or keeps a smooth scroll in flight), which is why setting scrollLeft before the rebuild did nothing on the phone. */
 function scrollRowToStart(row) {
@@ -1058,7 +1099,8 @@ function layoutPreview() {
   $('wearBox').hidden = false;
   $('stickyTop').classList.toggle('stuck', c);
   $('custBtn').hidden = c; $('custDone').hidden = !c;
-  $('profileLayers').hidden = !c; $('cCat').hidden = !c;
+  $('profileLayers').hidden = !c; $('cCat').hidden = !c; $('looksRow').hidden = !c;
+  if (c) renderLooks();
   if (which === 'fit') startStoreAnim();
 }
 function leaveCust() {

@@ -487,3 +487,12 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .namerow > .lab, .flaghead { height: 26px; min-height: 26px; box-sizing: border-box; display: flex; align-items: center; margin: 0; }
 .flaghead .toggle { height: 24px; padding: 0 8px; line-height: 1; }
 .namerow input, .flagrow input { height: 38px; }
+
+/* ---------- saved looks row (inside the pinned block, under the preview) ---------- */
+.looks { align-items: center; gap: 6px; min-height: 40px; padding: 2px 0 4px; }
+.looks[hidden] { display: none; }
+.look-add { flex: 0 0 auto; white-space: nowrap; border: 2px dashed #94a3b8; background: none; color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+.look { display: inline-flex; align-items: stretch; border: 2px solid #475569; border-radius: 999px; background: #1e293b; overflow: hidden; }
+.look.sel { border-color: var(--gold); background: #3b2f08; }
+.look-use { border: 0; background: none; color: var(--ink); padding: 6px 4px 6px 12px; font-size: 13px; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.look-x { border: 0; background: none; color: var(--muted); padding: 6px 10px 6px 6px; font-size: 13px; }
