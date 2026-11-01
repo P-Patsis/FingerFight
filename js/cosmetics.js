@@ -19,7 +19,8 @@ export function parseItem(json) {
   if (!LAYERS.includes(json.layer) || json.layer === 'base') throw new Error(json.id + ': layer must be one of ' + LAYERS.filter(l => l !== 'base').join(', '));
   const name = typeof json.name === 'string' && json.name.trim() ? json.name.trim().slice(0, 24) : json.id;
   const meta = parseMeta(json, json.layer);
-  const item = { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', kind: 'layer', ...meta, parts: {} };
+  if (json.side !== undefined && !['back', 'palm', 'both'].includes(json.side)) throw new Error(json.id + ': side must be back, palm or both');
+  const item = { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', kind: 'layer', ...meta, side: json.layer === 'nails' ? 'back' : json.side || 'both', parts: {} };
   if (json.layer === 'tone') {                       // a tone is only a colour for the base hand: its "tint" says which of the hand's colours change
     if (!item.tint) throw new Error(json.id + ': a tone needs a "tint" (default colour + the base colours it recolours)');
     return item;

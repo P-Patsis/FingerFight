@@ -411,7 +411,7 @@ $('randomBtn').onclick = async () => {
 // Network
 // ---------------------------------------------------------------------------------------------
 const allowPhotos = () => matchKind === 'private';          // random opponents never send, and are never shown, photos
-const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, bd: m.bd, sk: m.sk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
+const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, bd: m.bd, sk: m.sk, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
   if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
@@ -772,7 +772,7 @@ function buildStyleCard() {
 /** The Profile/lobby preview of the current choice, drawn with the selected skin (a stand-in picture, never the real camera). */
 function renderViewPreview(mode) {
   const c = $('viewPreview');
-  try { const rec = resolveLoadout(style.skin, style.stack, style.baseColor, style.baseColor2); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, rec, style.skel || SKELETON_COLOR); } catch { /* the preview is decoration */ }
+  try { const rec = resolveLoadout(style.skin, style.stack, style.baseColor, style.baseColor2); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, { ...rec, backs: [true] }, style.skel || SKELETON_COLOR); } catch { /* the preview is decoration */ }   // previews show the back of the hand: that is where the nail polish is
   $('viewPreviewLabel').textContent = 'Preview: ' + ({ skeleton: 'skeleton of your hand', puppet: 'your puppet', 'photo-skeleton': 'camera picture + skeleton', 'photo-puppet': 'camera picture + puppet' }[mode] || '');
 }
 
@@ -952,7 +952,7 @@ function sampleLandmarks() { return [statesToLandmarks({ thumb: true, index: tru
 function drawCard(canvas, load) {
   try {
     const rec = resolveLoadout(load.base, load.stack, load.baseColor, load.baseColor2);
-    drawPuppetPicture(canvas.getContext('2d'), canvas.width, canvas.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, seed: load.base + JSON.stringify(load.stack) });
+    drawPuppetPicture(canvas.getContext('2d'), canvas.width, canvas.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], seed: load.base + JSON.stringify(load.stack) });
   } catch { /* previews are decoration */ }
 }
 
@@ -1154,7 +1154,7 @@ function startStoreAnim() {
       ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, c.width, c.height);
       ctx.save();
       ctx.translate(c.width / 2, 0); ctx.scale(sw.scale, 1); ctx.translate(-c.width / 2, 0);        // turn about the hand's vertical axis
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, layers: sw.back ? rec.layers.filter(l => l.layer !== 'nails') : rec.layers, live: true, noBg: true });
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [sw.back], live: true, noBg: true });
       ctx.restore();
       storeAnim.ps.update(dt, hands); storeAnim.ps.draw(ctx);
     } catch { /* decoration */ }

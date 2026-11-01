@@ -206,12 +206,14 @@ export const validLay = l => l === undefined || l === null
     && (e.c === undefined || HEX6.test(e.c))
     && (e.d === undefined || (e.c !== undefined && HEX6.test(e.d)))
     && (e.k === undefined || (Number.isInteger(e.k) && e.k >= 1 && e.k <= 10))));
+/** Which way each sent hand faced: `bk`, at most 2 entries, true = the back of the hand toward the camera, false = the palm, null = unknown. */
+export const validBk = b => b === undefined || b === null || (Array.isArray(b) && b.length <= 2 && b.every(x => x === true || x === false || x === null));
 export const validBc = c => c === undefined || c === null || (typeof c === 'string' && HEX6.test(c));
 
 export function validPicture(m, allowPhoto) {
   return !!m && normalizeView(m.view) !== null
     && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
-    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc) && validBc(m.bd) && validBc(m.sk)
+    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc) && validBc(m.bd) && validBc(m.sk) && validBk(m.bk)
     && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
     && validPhoto(m.photo) && (allowPhoto || m.photo === '')
     && (allowPhoto || isSafeView(m.view));

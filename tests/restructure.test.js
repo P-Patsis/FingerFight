@@ -11,7 +11,7 @@ await import('../js/main.js');
 const C = await import('../js/cosmetics.js');
 const { loadCatalog, resolveLoadout, stackToWire, cleanStack, scaleEmitters } = C;
 const { Inventory } = await import('../js/inventory.js');
-const { validLay, validBc, validPicture } = await import('../js/logic.js');
+const { validLay, validBc, validBk, validPicture } = await import('../js/logic.js');
 const L = await import('../js/layers.js');
 const P = await import('../js/particles.js');
 const A = await import('../js/avatars.js');
@@ -217,18 +217,68 @@ test('Choose your Hand: built-in hands and the player\'s own hands share one lis
 });
 
 // ---- idle sway -----------------------------------------------------------------------------------------------------------------
-test('static preview sway: gentle, and it turns far enough to show both faces of the hand', () => {
-  let front = 0, back = 0, maxStep = 0, prev = null;
+test('static preview sway: gentle, starts on the back of the hand (nails), and turns far enough to show the palm side too', () => {
+  let back = 0, palm = 0, maxStep = 0, prev = null;
   for (let t = 0; t <= 16000; t += 40) {
     const s = A.swayOf(t);
-    if (s.back) back++; else front++;
+    if (s.back) back++; else palm++;
     assert.ok(Math.abs(s.scale) <= 1 && Math.abs(s.scale) >= 0.05, 'never a degenerate scale');
-    assert.equal(s.back, s.scale < 0);
+    assert.equal(s.back, s.scale > 0, 'past edge-on the hand is seen from the palm side (mirrored, as a real turn)');
     if (prev !== null) maxStep = Math.max(maxStep, Math.abs(s.angle - prev));
     prev = s.angle;
   }
-  assert.ok(front > 0 && back > 0, 'both faces appear');
-  assert.ok(back / (front + back) > 0.15 && back / (front + back) < 0.5, 'the back is seen for a good part, but the front is the main view');
+  assert.ok(back > 0 && palm > 0, 'both sides appear');
+  assert.ok(back / (back + palm) > 0.5 && palm / (back + palm) > 0.15, 'the nail side is the main view, the palm is seen for a good part');
   assert.ok(maxStep < 0.12, 'a gentle turn, not a spin (max ' + maxStep.toFixed(3) + ' rad per 40 ms)');
-  assert.equal(A.swayOf(0).back, false, 'starts on the front (also the still picture under reduced motion)');
+  assert.equal(A.swayOf(0).back, true, 'starts on the back of the hand (also the still picture under reduced motion)');
+});
+
+// ---- nails only on the nail side ------------------------------------------------------------------------------------------------
+const PU = await import('../js/puppet.js');
+const handPx = () => PU.statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true }).map(([x, y]) => ({ x: x / 4, y: y / 4 }));
+const ids = (back, stack) => { const r = resolveLoadout('cartoon', stack); return PU.rigPlan(handPx(), r.skin, r.layers, back).map(p => p.part); };
+test('nail polish is drawn on the nail side only: back of the hand shows it, palm side hides it, unknown keeps the old behaviour', () => {
+  const nails = [{ id: 'nailpolish', color: null }];
+  const has = (back, id = 'index_tip@nailpolish') => ids(back, nails).includes(id);
+  assert.equal(has(true), true, 'back toward the camera: polish shows');
+  assert.equal(has(false), false, 'palm toward the camera: nails are hidden, as in real life');
+  assert.equal(has(undefined), true, 'unknown facing (simulator, older pictures): drawn as before');
+  for (const f of ['thumb', 'index', 'middle', 'ring', 'pinky']) assert.equal(has(false, f + '_tip@nailpolish'), false);
+  assert.equal(resolveLoadout('cartoon', [{ id: 'nailpolish', color: null }]).layers[0].side, 'back');
+  // the base hand and other cosmetics are untouched by the side
+  assert.deepEqual(ids(true, []), ids(false, []), 'the bare hand looks the same from both sides');
+  const ring = [{ id: 'goldring', color: null }];
+  assert.deepEqual(ids(true, ring), ids(false, ring), 'a ring is on both sides');
+  // tattoos can say which side they are on
+  const tat = id => [{ id, color: null }];
+  assert.equal(ids(true, tat('tribal')).some(p => p.endsWith('@tribal')), true); assert.equal(ids(false, tat('tribal')).some(p => p.endsWith('@tribal')), false, 'tribal is a back tattoo');
+  assert.equal(ids(false, tat('runes')).some(p => p.endsWith('@runes')), true); assert.equal(ids(true, tat('runes')).some(p => p.endsWith('@runes')), false, 'runes are a palm tattoo');
+  assert.equal(ids(true, tat('scar')).some(p => p.endsWith('@scar')) && ids(false, tat('scar')).some(p => p.endsWith('@scar')), true, 'a scar is on both');
+  assert.throws(() => C.parseItem({ format: 1, id: 'bad', layer: 'tattoo', side: 'left', parts: { palm: [{ d: 'M 0 0 L 1 1', fill: '#000000' }] } }), /side/);
+});
+test('which way a hand faces comes from the landmarks and the hand label; mirrored or unlabelled hands are handled', () => {
+  const lm = handPx();
+  const mirrored = lm.map(p => ({ x: 1000 - p.x, y: p.y }));
+  assert.equal(typeof PU.handBack(lm, 'Left'), 'boolean');
+  assert.equal(PU.handBack(lm, 'Left'), !PU.handBack(lm, 'Right'), 'the label decides left vs right hand');
+  assert.equal(PU.handBack(lm, 'Left'), !PU.handBack(mirrored, 'Left'), 'turning the hand over (mirror image) flips it');
+  assert.equal(PU.handBack(lm, '?'), undefined); assert.equal(PU.handBack(lm, undefined), undefined); assert.equal(PU.handBack([], 'Left'), undefined);
+  const flat = lm.map(p => ({ x: 5, y: 5 })); assert.equal(PU.handBack(flat, 'Left'), undefined, 'a degenerate hand gives no answer');
+  // a real right hand, palm to the camera (unmirrored frame): thumb side on the image right; the model labels it 'Left' (its label assumes a mirrored image)
+  const rightPalm = lm.map(p => ({ x: 1000 - p.x, y: p.y }));
+  const sample = PU.handBack(rightPalm, 'Left');
+  assert.equal(PU.handBack(lm, 'Right'), sample, 'consistent between the two ways of describing the same physical hand');
+});
+
+test('the sender\'s facing travels as bk (booleans / null only) and the receiver draws nails only on a back-facing hand', () => {
+  for (const ok of [undefined, null, [], [true], [false, null], [true, false]]) assert.equal(validBk(ok), true, JSON.stringify(ok));
+  for (const bad of ['yes', [1], [true, true, true], [{}], ['true'], 1]) assert.equal(validBk(bad), false, JSON.stringify(bad));
+  const pic = { photo: '', view: 'puppet', skin: 'cartoon', hands: [], lm: null, ar: 1 };
+  assert.equal(validPicture({ ...pic, bk: [true] }, false), true); assert.equal(validPicture({ ...pic, bk: 'x' }, false), false);
+  globalThis.Path2D ??= class { constructor(d) { this.d = d; } };
+  const fills = bk => { const c = recCtx(); c.fills = []; const rec = new Proxy(c, { set: (t, k, v) => { if (k === 'fillStyle') t.fills.push(v); t[k] = v; return true; }, get: (t, k) => (k in t ? t[k] : () => ({})) });
+    A.drawFromMessage(rec, 240, 180, { view: 'puppet', skin: 'cartoon', hands: [{ thumb: true, index: true, middle: true, ring: true, pinky: true }], lm: [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })], ar: 1, lay: [{ id: 'nailpolish', c: '#12ab34' }], bk }); return c.fills; };
+  assert.ok(fills([true]).includes('#12ab34'), 'back of the hand: polish');
+  assert.ok(!fills([false]).includes('#12ab34'), 'palm side: no polish');
+  assert.ok(fills(undefined).includes('#12ab34'), 'no facing sent: as before');
 });

@@ -92,7 +92,7 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
   if (!rec?.noBg) { ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h); }       // noBg: the caller already painted the background (it draws under a transform)
   const px = fitter(lms, w, h, ar, 0.16);
   const pts = lms.map(hand => hand.map(px));
-  drawPuppet(ctx, pts, skin, rec?.layers || []);
+  drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs);
   if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead
   const tips = raisedTips(lms, hands, px);
   if (withNumbers) annotate(ctx, tips, Math.max(8, h * 0.07));
@@ -118,7 +118,7 @@ export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELET
   ctx.beginPath(); ctx.ellipse(w * 0.2, h * 0.95, w * 0.17, h * 0.34, 0, 0, 7); ctx.fill();
   const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1);        // the hand sits in the right 60% of the picture
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
-  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || []); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
+  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
   else {
     ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = cleanColor(skel) || SKELETON_COLOR;
     for (const hand of lms) for (const [a, b] of BONES) { const A = at(hand[a]), B = at(hand[b]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
@@ -149,7 +149,8 @@ export function drawFromMessage(ctx, w, h, msg) {
   }
   if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar, true, msg.sk);
   const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc, msg.bd);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
-  return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, rec);
+  const backs = Array.isArray(msg.bk) ? msg.bk.slice(0, 2).map(x => (x === true || x === false ? x : undefined)) : [];     // which way the sender's hand faced (nails show on the back)
+  return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, { ...rec, backs });
 }
 
 /** The sample open hand used by the Profile preview and the Store, as pixel points in a w x h picture: for animating particles on it. */
@@ -159,10 +160,11 @@ export function previewHandPx(w, h) {
   return lms.map(hand => hand.map(px));
 }
 
-/** The idle sway of the static preview (camera off): the hand turns about its vertical axis, gently, past edge-on so BOTH faces show:
- *  the front (nails and tattoos) and the back (mirrored, no nails: they sit on the other side). Period 8 s, +-110 degrees. */
+/** The idle sway of the static preview (camera off): the hand turns about its vertical axis, gently, past edge-on so BOTH sides show. It starts on the
+ *  BACK of the hand (nail polish and back tattoos), turns to the PALM side (palm tattoos, no nails) and back. The palm side is the same hand seen
+ *  mirrored, as a real turn looks. Period 8 s, +-110 degrees. `back` = the back of the hand faces the viewer (the rig then shows `nails` / `back` items). */
 export const SWAY_PERIOD_S = 8, SWAY_MAX_RAD = 1.92;
 export function swayOf(nowMs) {
   const a = SWAY_MAX_RAD * Math.sin((nowMs / 1000) * 2 * Math.PI / SWAY_PERIOD_S), c = Math.cos(a);
-  return { angle: a, back: c < 0, scale: Math.abs(c) < 0.06 ? (c < 0 ? -0.06 : 0.06) : c };
+  return { angle: a, back: c >= 0, scale: Math.abs(c) < 0.06 ? (c < 0 ? -0.06 : 0.06) : c };
 }

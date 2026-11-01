@@ -3,7 +3,7 @@
 import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './gestures.js';
 import { statesFromCount, annotate, FINGERS, TIP_ID } from './avatars.js';
 import { viewOf } from './logic.js';
-import { drawPuppet } from './puppet.js';
+import { drawPuppet, handBack } from './puppet.js';
 import { skinIdOf } from './skins.js';
 import { resolveLoadout, stackToWire } from './cosmetics.js';
 import { cleanColor } from './layers.js';
@@ -185,7 +185,7 @@ export class HandCam {
         this.samples.push(s);
         if (this.samples.length > SAMPLES) this.samples.shift();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.#drawOverlay(hands);
+        this.#drawOverlay(hands, scores);
         const t2 = performance.now();
         this.timing = { detect: this.timing.detect * 0.8 + (t1 - t0) * 0.2, draw: this.timing.draw * 0.8 + (t2 - t1) * 0.2 };
         s.timing = this.timing;
@@ -223,13 +223,13 @@ export class HandCam {
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
   }
 
-  #drawOverlay(hands) {
+  #drawOverlay(hands, scores = []) {
     const w = this.canvas.width, h = this.canvas.height;
     if (this.overlay.puppet && hands.length) {
       try {
         const pts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
         const rec = this.overlay.rec;
-        drawPuppet(this.ctx, pts, rec.skin, rec.layers);
+        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hands.map((lm, i) => handBack(lm, scores[i]?.side)));   // nails only when the back of that hand faces the camera
         if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
           const now = performance.now(), dt = this.lastDraw ? (now - this.lastDraw) / 1000 : 0;
           this.lastDraw = now; this.lastPts = pts;
@@ -288,17 +288,18 @@ export class HandCam {
     const best = noHand ? null : ([...seen].reverse().find(s => s.count === count) || seen[seen.length - 1]);
     const hands = best ? best.hands.slice(0, 2) : [];
     const states = hands.map(lm => fingerStates(lm, ar));
+    const backs = hands.map((lm, i) => handBack(lm, best?.scores?.[i]?.side));       // from the raw landmarks, before any mirroring
     const mirror = this.facing === 'user';
     const q = x => Math.max(0, Math.min(1000, Math.round(x * 1000)));
     const lm = hands.length ? hands.map(h => h.map(p => [q(mirror ? 1 - p.x : p.x), q(p.y)])) : null;
     const photoMode = mode.startsWith('photo-');
-    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.baseColor2, style.skel) : '';
+    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.baseColor2, style.skel, backs) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
     if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), bd: cleanColor(style.baseColor) ? cleanColor(style.baseColor2) || undefined : undefined, sk: cleanColor(style.skel) || undefined, hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), bd: cleanColor(style.baseColor) ? cleanColor(style.baseColor2) || undefined : undefined, sk: cleanColor(style.skel) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
   }
 
-  #photo(hands, states, mode, ar, skinId, stack, baseColor, baseColor2 = null, skel = null) {
+  #photo(hands, states, mode, ar, skinId, stack, baseColor, baseColor2 = null, skel = null, backs = []) {
     const v = this.video;
     if (!v.videoWidth) return '';
     const w = PHOTO_WIDTH, h = Math.round((w * v.videoHeight) / v.videoWidth);
@@ -313,7 +314,7 @@ export class HandCam {
     ctx.restore();
     if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
       const rec = resolveLoadout(skinId, stack, baseColor, baseColor2);
-      drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec.skin, rec.layers);
+      drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec.skin, rec.layers, backs);
     }
     const tips = [];
     hands.forEach((lm, i) => {

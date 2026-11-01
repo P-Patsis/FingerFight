@@ -95,11 +95,41 @@ export function segmentMatrix(A, B, length, sx) {
 }
 
 /**
+ * Which side of the hand an item is on: 'back' (nail polish always; a tattoo may say so), 'palm', or 'both' (rings, gloves, most tattoos).
+ * [back]: true = the back of this hand faces the camera (nails show), false = the palm faces it (nails hidden), undefined = not known
+ * (simulator poses, old pictures): everything is drawn, as before.
+ */
+export function sideOf(L) { return L.layer === 'nails' ? 'back' : L.side || 'both'; }
+export function sideShown(L, back) {
+  const side = sideOf(L);
+  if (side === 'both' || back === undefined || back === null) return true;
+  return side === 'back' ? back === true : back === false;
+}
+/** HandLandmarker's "Left" / "Right" label assumes a MIRRORED image, but the camera frame is not mirrored (the page mirrors only the display), so the real hand is the other one.
+ *  If a phone test shows nails on the palm side, flip this constant. */
+export const LABEL_MIRRORED = true;
+/**
+ * Which way a hand faces: true = the BACK of the hand is toward the camera, false = the palm is, undefined = cannot tell.
+ * [lm]: 21 points of the raw (unmirrored) camera image, y down. [side]: the model's 'Left' / 'Right' label. The two knuckle edges and the wrist
+ * give a turn direction (cross product) that flips when the hand is turned over; it also differs between a left and a right hand, hence the label.
+ * Derived: a RIGHT hand with its palm to the camera has the thumb side on the image right, giving a negative cross; a LEFT hand the opposite.
+ */
+export function handBack(lm, side) {
+  if (side !== 'Left' && side !== 'Right') return undefined;
+  if (!Array.isArray(lm) || lm.length < 21 || !lm[0] || !lm[5] || !lm[17]) return undefined;
+  const cross = (lm[5].x - lm[0].x) * (lm[17].y - lm[0].y) - (lm[5].y - lm[0].y) * (lm[17].x - lm[0].x);
+  if (!Number.isFinite(cross) || Math.abs(cross) < 1e-6) return undefined;
+  const real = LABEL_MIRRORED ? (side === 'Right' ? 'Left' : 'Right') : side;
+  const palm = real === 'Right' ? cross < 0 : cross > 0;
+  return !palm;
+}
+
+/**
  * Where every part of [skin] goes for one hand. [lm]: 21 {x, y} points in PIXELS. Returns [{part, m, shapes}] in draw
  * order, ready for the renderer (overlays follow the part they belong to, in that part's transform). Hands that cannot
  * be posed (collapsed or missing points) give an empty plan.
  */
-export function rigPlan(lm, skin, layers = []) {
+export function rigPlan(lm, skin, layers = [], back) {
   if (!Array.isArray(lm) || lm.length < 21 || lm.slice(0, 21).some(p => !p || !num(p.x) || !num(p.y))) return [];
   const palm = skin.parts.palm;
   const ref = palm.ref;
@@ -119,6 +149,7 @@ export function rigPlan(lm, skin, layers = []) {
   // cosmetic layers (tattoo, nails, ring, glove...): one whole pass each, in z-order, so a glove covers a ring on ANY finger.
   // Each layer item gives shapes per named part; they ride the same matrices as the base hand's parts.
   for (const L of layers) {
+    if (!sideShown(L, back)) continue;
     for (const name of PART_NAMES) {
       const shapes = L.parts?.[name];
       if (shapes && matrices[name]) plan.push({ part: name + '@' + L.id, m: matrices[name], shapes });
@@ -154,8 +185,8 @@ export function drawPlan(ctx, plan) {
 }
 
 /** One call: pose [skin] on each hand ([hands]: lists of 21 {x, y} pixel points) and draw it. */
-export function drawPuppet(ctx, hands, skin, layers = []) {
-  for (const lm of hands) drawPlan(ctx, rigPlan(lm, skin, layers));
+export function drawPuppet(ctx, hands, skin, layers = [], backs = []) {
+  hands.forEach((lm, i) => drawPlan(ctx, rigPlan(lm, skin, layers, backs?.[i])));
 }
 
 // ---- a pose for finger states (when there are no landmarks: simulator, filtered pictures, old clients) -----------------
