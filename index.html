@@ -35,6 +35,7 @@
     <p id="menuMsg" class="msg" role="status"></p>
     <button id="storeBtn" class="btn ghost">Store</button>
     <button id="profileBtn" class="btn ghost">Profile &amp; settings</button>
+    <button id="statsBtn" class="btn ghost">Stats</button>
     <button id="calibBtn" class="link">Camera test &amp; finger calibration</button>
     <p class="fine">Uses your camera to count your fingers. Against random opponents only a puppet or skeleton of your hand is ever shared, never a camera image.</p>
   </section>
@@ -64,6 +65,22 @@
     <div id="storeGrid" class="store-grid"></div>
     <p id="storeMsg" class="msg" role="status"></p>
     <p class="fine">Tap to wear, tap again to remove. Demo store: locked items are free for now.</p>
+  </section>
+
+  <!-- ===== Stats (local only) ===== -->
+  <section id="stats" class="screen" hidden>
+    <div class="topbar"><button id="statsBack" class="btn small">← Back</button></div>
+    <h2 class="logo small">STATS</h2>
+    <div class="card" id="statsCard">
+      <div class="set"><span>Matches</span><b id="stMatches">0</b></div>
+      <div class="set"><span>Wins</span><b id="stWins">0</b></div>
+      <div class="set"><span>Losses</span><b id="stLosses">0</b></div>
+      <div class="set"><span>Win rate</span><b id="stRate">-</b></div>
+      <div class="set"><span>Favourite number <em class="fine-inline">(shown most)</em></span><b id="stFavShown">-</b></div>
+      <div class="set"><span>Favourite guess <em class="fine-inline">(guessed most)</em></span><b id="stFavGuess">-</b></div>
+    </div>
+    <p class="fine">Saved on this phone only. Nothing is sent to anyone.</p>
+    <button id="statsReset" class="btn small ghost">Reset stats</button>
   </section>
 
   <!-- ===== Lobby ===== -->

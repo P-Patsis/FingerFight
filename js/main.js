@@ -14,6 +14,7 @@ import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.j
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout } from './cosmetics.js';
 import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BIG_PALETTE, GRADIENT_LAYERS, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
+import { Stats } from './stats.js';
 import { unlockItem, unlockLabel } from './unlock.js';
 import { ParticleSystem } from './particles.js';
 import {
@@ -90,6 +91,7 @@ const store = {
 };
 /** Copies what the inventory says is worn into the style that is drawn and sent. */
 function takeLoadout() { const L = inv.loadout(); style.skin = L.base; style.baseColor = L.baseColor; style.baseColor2 = L.baseColor2; style.stack = L.stack; }
+const stats = new Stats({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // local play statistics (this phone only)
 const inv = new Inventory({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // owned items and equipment (this phone only)
 takeLoadout();
 
@@ -448,6 +450,7 @@ function onLinkClosed(reason) {
 
 /** Random match: the other player is gone mid-fight. I win; the connection is finished, nothing more is accepted. */
 function forfeitWin() {
+  endOfMatch(true);
   token++;
   releaseCamera();
   round = null;
@@ -1256,6 +1259,15 @@ function updateTryOnButtons() {
   $('storeSnap').disabled = tryOn.busy;
 }
 
+function renderStats() {
+  const m = stats.matches, fav = f => (f ? f.n + '  (' + f.times + '×)' : '-');
+  $('stMatches').textContent = String(m); $('stWins').textContent = String(stats.wins); $('stLosses').textContent = String(stats.losses);
+  $('stRate').textContent = m ? Math.round(100 * stats.wins / m) + '%' : '-';
+  $('stFavShown').textContent = fav(stats.favouriteShown); $('stFavGuess').textContent = fav(stats.favouriteGuess);
+}
+$('statsBtn').onclick = () => { renderStats(); show('stats'); };
+$('statsBack').onclick = () => show('menu');
+$('statsReset').onclick = () => { if (typeof globalThis.confirm !== 'function' || globalThis.confirm('Reset all your stats?')) { stats.reset(); renderStats(); } };
 $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
 $('storeBack').onclick = () => show('menu');
@@ -1518,6 +1530,13 @@ function endGuessPhase() {
   tryResolve();
 }
 
+/** A finished match, counted once: a win or a loss for me. */
+function endOfMatch(won) {
+  if (!game || game.statsDone) return;
+  game.statsDone = true;
+  stats.recordMatch(won);
+}
+
 /** The finger limit for the round on screen (the host's setting, lower later in the match when "fewer fingers" is on). */
 const curMax = () => effectiveMax(settings, round?.n || 1);
 
@@ -1532,6 +1551,8 @@ function tryResolve() {
   const reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
   const guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
   const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, noHand: reveal.noHand });
+  if (pointer === me) { if (!reveal.noHand) stats.recordShown(reveal.count); }          // what I held up
+  else if (guessMsg.guess !== null) stats.recordGuess(guessMsg.guess);                  // what I guessed
   fightLog.push({ n: round.n, pointer, reveal, guessMsg, reason: result.reason });
   const before = { ...game.health };
   game = applyResult(game, result);
@@ -1684,6 +1705,7 @@ function renderCollage() {
 
 function knockout() {
   const loser = other(game.winner), winner = game.winner;
+  endOfMatch(winner === me);
   fighterEl(loser).classList.remove('idle'); fighterEl(loser).classList.add('ko');
   fighterEl(winner).classList.remove('idle'); fighterEl(winner).classList.add('win');
   sfx.ko();

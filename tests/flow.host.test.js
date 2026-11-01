@@ -121,6 +121,8 @@ test('game 1: the host points, the guesser is right, the host loses', async () =
   assert.equal($('collage').hidden, false, 'the final screen shows the collage');
   assert.equal($('collage').children[0].children.length, 2, 'a label column plus one column for the one round played');
   assert.equal($('againBtn').disabled, false);
+  const st = () => JSON.parse(globalThis.localStorage.getItem('ff-stats'));
+  assert.deepEqual([st().w, st().l], [0, 1], 'the loss is counted once'); assert.equal(st().shown[4], 1, 'I showed a 4 as the pointer'); assert.equal(st().guessed.reduce((a, b) => a + b), 0);
 });
 
 test('game 2 (rematch): wrong guess + middle finger is only a miss (and the filter hides it); the host then wins', async () => {
@@ -143,6 +145,8 @@ test('game 2 (rematch): wrong guess + middle finger is only a miss (and the filt
   await until(() => b.visible()[0] === 'over', 'game over', 20000);
   assert.equal($('overTitle').textContent, 'YOU WIN!');
   assert.ok($('topHp').children[0].classList.contains('lost'));
+  const st = JSON.parse(globalThis.localStorage.getItem('ff-stats'));
+  assert.deepEqual([st.w, st.l], [1, 1], 'the win is counted'); assert.equal(st.shown[4], 2); assert.equal(st.guessed[2], 1, 'my guess of 2 as the guesser');
 });
 
 test('the opponent leaving after the fight keeps the result screen; the room stays open and can be reopened', () => {

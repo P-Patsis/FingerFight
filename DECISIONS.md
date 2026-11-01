@@ -170,3 +170,9 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - The try-on is no longer separately switchable: a photo view (Photo + puppet / + skeleton) shows my live camera picture behind the puppet, any other view shows the puppet alone on the dark background. The puppet is always drawn because the items are what is being tried.
 - Sound pauses with `AudioContext.suspend()` when the page is hidden, blurred or put away, and resumes when visible and focused. One switch pauses music, loops and effects together and keeps the music position; mute/volume state is never touched.
 
+## 2026-11-01 (4) — nail side, arena music, stats
+- **Facing is measured, not guessed.** Palm vs back comes from the landmarks' turn direction plus MediaPipe's hand label (swapped, because the frame is not mirrored). It is computed where the camera is (the sender) and sent as `bk`; a receiver cannot re-derive it from landmarks alone (a left palm and a right back look the same in 2D). Unknown = draw everything (no regression for the simulator and older pictures).
+- **Sides are item data.** Nail polish is always the back; other items say `side` (default both). A tattoo on the palm only shows when the palm faces the camera.
+- **Music is its own setting.** `settings.music` (0-4) beside `settings.background`; presets set both. Old clients (no `music`) fall back to the background's own track, so mixed versions still work.
+- **Favourite number = most SHOWN** (the finger count held up as the pointer); the most-guessed total is shown too, as "Favourite guess". Stats never leave the phone.
+

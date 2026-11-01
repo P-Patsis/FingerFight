@@ -178,12 +178,21 @@ start-up with an AdMob rewarded-ad or Google Play Billing implementation (a real
 answers granted). Nothing else changes: the Store, the inventory and the tests are already written against that interface.
 Ownership is a flag on the phone: fine for a friendly game, not a security boundary.
 
+## Which side an item is on (nails, tattoos)
+
+Items carry `side`: `back` | `palm` | `both` (default both). **Nail polish is always `back`** (nails are only on the back of a fingertip); tribal is a back tattoo,
+runes a palm tattoo, scar and every ring/glove are on both. `rigPlan(lm, skin, layers, back)` draws an item only when its side faces the camera:
+`back === true` (the back of the hand faces the camera) shows `back` items, `false` (palm) shows `palm` items, `undefined` (not known: the simulator
+poses, pictures from older phones) draws everything. The facing comes from `handBack(lm, label)` (js/puppet.js): the turn direction of wrist -> index knuckle -> pinky
+knuckle flips when the hand is turned over, and MediaPipe's Left/Right label (swapped, `LABEL_MIRRORED`) separates a left from a right hand. It runs every frame on the live
+camera view and at the snap; the result travels as `bk` (up to two true / false / null) so the opponent's picture shows polish only when your back really faced the camera.
+
 ## Profile: one merged panel
 
 "How my opponent sees my hand" holds the view choice, the preview, the skeleton colour (skeleton views), "Choose your Hand" (built-in hands
 and the player's own hands from `ff-userhands`, see `registerUserSkin`, in one grid) and **Customise & try on**. Customise turns the camera
 on, shows the type chips (Hand ... Effect), the owned items of that type, the category colour panel and the worn list; there are no camera controls: the try-on follows the chosen view (photo views show my live picture behind the puppet, others the puppet alone), and the window sits above the hand grid at full panel width. Done, leaving the Profile or hiding the page turns the camera off. With the camera off the preview sways
-(about +-110 degrees over 8 s, `swayOf`) so both faces show; the mirrored back shows no nail polish. There is no separate "Your items" section.
+(about +-110 degrees over 8 s, `swayOf`) so both faces show; the sway starts on the BACK of the hand (nail polish and back tattoos), turns to the PALM side (palm tattoos, no polish) and back. There is no separate "Your items" section.
 
 ## Store and end-screen ad slot
 
