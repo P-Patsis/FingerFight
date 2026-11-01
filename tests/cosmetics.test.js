@@ -485,11 +485,12 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   chip('storeLayers', 'nails').onclick();
   card('nailpolish').onclick();
   assert.equal(btn('nailpolish', 'color'), undefined, 'no per-item colour dot any more');
-  const panel = () => $('catColor').children.filter(c => c.classList.contains('sw'));
-  assert.ok(panel()[0].children.filter(x => x.dataset.color).length >= 20, 'many swatches');
-  panel()[0].children.find(x => x.dataset.color === '#22d3ee').onclick();
-  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#22d3ee');
-  const input = panel()[0].children.find(x => x.type === 'color');
+  const pick = () => $('catColor').children.find(c => c.classList.contains('cpick'));
+  const swatches = () => pick().children.find(c => c.classList.contains('sw'));
+  assert.ok(swatches().children.filter(x => x.dataset.color).length >= 12, 'a tidy row of preset swatches');
+  swatches().children.find(x => x.dataset.color === '#25e4e4').onclick();
+  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#25e4e4');
+  const input = pick().children.find(c => c.classList.contains('cp-head')).children.find(x => x.type === 'color');
   input.value = '#12ab34'; input.oninput();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'any colour, live');
   input.value = 'javascript:alert(1)'; input.oninput();

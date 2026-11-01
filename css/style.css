@@ -410,3 +410,23 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cat-color .lbl { font-size: 12px; color: var(--muted); align-self: flex-start; }
 .cat-color .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
 .cat-color input[type=range] { flex: 1 1 140px; min-width: 0; }
+
+/* ---------- colour pickers (per category) ---------- */
+.cat-color .cpick { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.cat-color .cp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cat-color .cp-head input[type=color] { width: 56px; height: 36px; }
+.cat-color .set { width: 100%; }
+.swatches button, .cat-color .sw button { width: 28px; height: 28px; min-width: 28px; }
+
+/* ---------- the preview zone: sticks to the top while the customise controls scroll underneath ---------- */
+.preview-zone { width: 100%; gap: 6px; }
+.pz-row { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: center; align-items: flex-start; width: 100%; }
+.pz-row > * { min-width: 0; }
+.pz-row > #cWearTop { width: auto; }
+.preview-zone .wear-box { width: min(100%, calc(30vh * 1.3333)); max-height: 30vh; }
+.preview-zone .view-preview canvas { max-height: 30vh; width: auto; max-width: 100%; }
+.pz-row.two > * { flex: 1 1 0; max-width: calc(50% - 4px); }
+.pz-row.two .wear-box { width: 100%; max-height: none; }
+.pz-row.two .view-preview canvas { width: 100%; max-height: none; }
+#cWearTop .wear-top { gap: 4px; }
+.preview-zone.stuck { position: sticky; top: 0; z-index: 6; background: #0b1220; margin: 0 -14px; width: calc(100% + 28px); padding: 6px 14px 8px; box-sizing: border-box; border-bottom: 1px solid #334155; }

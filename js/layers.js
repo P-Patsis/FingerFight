@@ -69,8 +69,8 @@ export function roleColor(hex, role) {
   return hex.toLowerCase();
 }
 /** The quick colours of the category colour picker (a plain list of #rrggbb; the player can also pick any colour). */
-export const BIG_PALETTE = Object.freeze(['#dc2626', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#10b981', '#14b8a6', '#22d3ee', '#0ea5e9', '#3b82f6', '#6366f1',
-  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#7f1d1d', '#78350f', '#14532d', '#1e3a8a', '#f8fafc', '#94a3b8', '#111827']);
+export const BIG_PALETTE = Object.freeze(['#e42525', '#e48525', '#e4e425', '#85e425', '#25e425', '#25e485', '#25e4e4', '#2585e4', '#2525e4', '#8525e4', '#e425e4', '#e42585',
+  '#ffffff', '#8a8a8a', '#111111']);   // 12 hues 30 degrees apart (red -> pink) + white, grey, black: an even spread, no clusters; any other colour comes from the colour picker
 /** The categories that have a colour picker, and the ones where a two-stop gradient makes sense (nails, effects, tattoos, tinted hands). */
 export const COLOR_LAYERS = Object.freeze(['base', 'tone', 'tattoo', 'nails', 'effect']);
 export const GRADIENT_LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'effect']);

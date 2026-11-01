@@ -43,8 +43,8 @@ test('Profile: the skeleton colour picker shows for skeleton views, saves a clea
   assert.equal($('skelRow').hidden, true, 'not for the puppet view');
   modes.find(x => x.dataset.mode === 'skeleton').onclick();
   assert.equal($('skelRow').hidden, false);
-  $('skelPicker').children.find(x => x.dataset.color === '#22c55e').onclick();
-  assert.equal(globalThis.localStorage.getItem('ff-skel'), '#22c55e');
+  $('skelPicker').children.find(x => x.dataset.color === '#25e425').onclick();
+  assert.equal(globalThis.localStorage.getItem('ff-skel'), '#25e425');
   const any = $('skelPicker').children.find(x => x.type === 'color');
   any.value = 'javascript:1'; any.oninput();
   assert.equal(globalThis.localStorage.getItem('ff-skel'), '', 'junk clears to the default, never stored as is');
@@ -281,4 +281,77 @@ test('the sender\'s facing travels as bk (booleans / null only) and the receiver
   assert.ok(fills([true]).includes('#12ab34'), 'back of the hand: polish');
   assert.ok(!fills([false]).includes('#12ab34'), 'palm side: no polish');
   assert.ok(fills(undefined).includes('#12ab34'), 'no facing sent: as before');
+});
+
+// ---- the top preview follows the selected view -----------------------------------------------------------------------------------
+test('opponent-view preview shows what the opponent would see: skeleton for Skeleton / Photo + skeleton (in the chosen colour), puppet for the puppet views', () => {
+  globalThis.Path2D ??= class { constructor(d) { this.d = d; } };
+  const skin = S.getSkin('cartoon'), draw = mode => { const c = recCtx(); const r = A.drawViewPreview(c, 240, 150, mode, skin, resolveLoadout('cartoon', []), '#ff00aa'); return { c, r }; };
+  for (const [mode, hand, camera, colour] of [['skeleton', 'skeleton', false, true], ['photo-skeleton', 'skeleton', true, true], ['puppet', 'puppet', false, false], ['photo-puppet', 'puppet', true, false]]) {
+    const { c, r } = draw(mode);
+    assert.deepEqual([r.hand, r.camera], [hand, camera], mode);
+    assert.equal(c.strokes.includes('#ff00aa'), colour, mode + (colour ? ': the skeleton in my colour' : ': no skeleton lines'));
+  }
+});
+
+test('the Profile preview picture changes with the selected view (skeleton vs puppet)', () => {
+  $('profileBtn').onclick();
+  const seen = [];
+  const cv = $('viewPreview'), ctx = cv.getContext('2d');
+  const orig = ctx.stroke; let strokes = 0;
+  ctx.stroke = (...a) => { strokes++; return orig?.apply(ctx, a); };
+  const label = () => $('viewPreviewLabel').textContent;
+  for (const m of ['skeleton', 'puppet', 'photo-skeleton', 'photo-puppet']) { $('modePicker').children.find(x => x.dataset.mode === m).onclick(); seen.push(label()); }
+  assert.deepEqual(seen, ['Preview: skeleton of your hand', 'Preview: your puppet', 'Preview: camera picture + skeleton', 'Preview: camera picture + puppet']);
+  $('modePicker').children.find(x => x.dataset.mode === 'puppet').onclick();
+  $('profileBack').onclick();
+});
+
+// ---- colour picker overhaul ----------------------------------------------------------------------------------------------------
+test('preset swatches are an even spread over the spectrum (no clusters of near-identical blues) plus white / grey / black', () => {
+  const hue = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (!d) return null;
+    const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return ((h * 60) + 360) % 360; };
+  const hues = L.BIG_PALETTE.map(hue).filter(h => h !== null).sort((a, b) => a - b);
+  assert.ok(hues.length >= 12 && L.BIG_PALETTE.length <= 16, 'a small tidy row');
+  let maxGap = 0, minGap = 360; for (let i = 0; i < hues.length; i++) { const gap = (hues[(i + 1) % hues.length] - hues[i] + 360) % 360; maxGap = Math.max(maxGap, gap); minGap = Math.min(minGap, gap); }
+  assert.ok(maxGap <= 40, 'no hole in the spectrum (largest gap ' + maxGap.toFixed(0) + ' degrees)'); assert.ok(minGap >= 20, 'no near-duplicates (smallest gap ' + minGap.toFixed(0) + ' degrees)');
+  assert.ok(L.BIG_PALETTE.every(c => /^#[0-9a-f]{6}$/.test(c)) && new Set(L.BIG_PALETTE).size === L.BIG_PALETTE.length);
+});
+
+test('the Gradient switch is obvious: Off = one picker; On = two pickers (Stop A, Stop B) that both apply; skin tone has no gradient', async () => {
+  $('profileBtn').onclick();
+  $('custBtn').onclick();
+  await until(() => !$('custArea').hidden, 'customise open');
+  const chip = v => $('profileLayers').children.find(x => x.dataset.value === v);
+  const all = () => $('catColor').children.flatMap(function f(c) { return [c, ...c.children.flatMap(f)]; });
+  const wornNails = () => JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish');
+  chip('nails').onclick();
+  $('profileGrid').children.find(c => c.dataset.id === 'nailpolish').onclick();
+  let toggle = all().find(x => x.dataset?.act === 'gradient');
+  assert.ok(toggle && toggle.classList.contains('toggle') && toggle.textContent === 'Off', 'a clear Gradient switch, off to start with');
+  assert.deepEqual($('catColor').children.filter(c => c.classList.contains('cpick')).map(c => c.dataset.picker), ['any'], 'one picker');
+  assert.ok(all().some(x => x.type === 'color'), 'a full colour picker, not only swatches');
+  toggle.onclick();
+  toggle = all().find(x => x.dataset?.act === 'gradient');
+  assert.equal(toggle.textContent, 'On');
+  assert.deepEqual($('catColor').children.filter(c => c.classList.contains('cpick')).map(c => c.dataset.picker), ['stopA', 'stopB'], 'two pickers');
+  const input = n => all().find(x => x.type === 'color' && x.dataset.act === n);
+  input('stopA').value = '#ff0000'; input('stopA').oninput();
+  input('stopB').value = '#0000ff'; input('stopB').oninput();
+  assert.deepEqual([wornNails().c, wornNails().d], ['#ff0000', '#0000ff'], 'both stops apply');
+  input('stopB').value = 'javascript:alert(1)'; input('stopB').oninput();
+  assert.equal(wornNails().d, '#0000ff', 'junk is refused');
+  const rec = resolveLoadout('cartoon', C.cleanStack([wornNails()]));
+  assert.notEqual(rec.layers[0].parts.thumb_tip[0].fill, rec.layers[0].parts.pinky_tip[0].fill, 'the gradient is drawn');
+  all().find(x => x.dataset?.act === 'gradient').onclick();
+  assert.deepEqual($('catColor').children.filter(c => c.classList.contains('cpick')).map(c => c.dataset.picker), ['any'], 'back to one picker');
+  assert.equal(wornNails().d, undefined, 'single colour again'); assert.equal(wornNails().c, '#ff0000');
+  all().find(x => x.dataset?.act === 'default').onclick();
+  assert.equal(wornNails().c, undefined, 'Original puts the item colours back');
+  chip('tone').onclick();
+  assert.ok(!all().some(x => x.dataset?.act === 'gradient'), 'skin tone is a single colour'); assert.ok(all().some(x => x.type === 'color'));
+  chip('effect').onclick();
+  assert.ok(all().some(x => x.dataset?.act === 'gradient'), 'effects can use a gradient');
+  $('custBtn').onclick();
+  $('profileBack').onclick();
 });

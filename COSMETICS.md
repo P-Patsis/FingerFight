@@ -35,7 +35,7 @@ The type is only metadata for browsing/filtering (and for what the Store shows).
 ## Colour per category (current)
 
 The colour is chosen **per category**, not per item: Hand, Skin tone, Tattoo / scar, Nail polish and Effect each have one picker
-(24+ quick colours, any colour, "Original colours"). It applies to everything worn of that type and to anything worn later
+(a full colour picker for any colour, one row of 15 evenly spread presets, "Original"; the Gradient switch comes first and reveals Stop A / Stop B). It applies to everything worn of that type and to anything worn later
 (`Inventory.setCategoryColor`, stored in `ff-catstyle` and copied onto each worn entry). Rings and gloves have no picker.
 * **Gradient** (`GRADIENT_LAYERS`: hand, tattoo, nails, effect; not skin tone): a second `#rrggbb` stop. Each rig part gets one solid mix by
   its place across the hand (thumb side = stop 1, pinky side = stop 2); particles pick from a 5-colour palette between the stops. No canvas

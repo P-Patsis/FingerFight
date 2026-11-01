@@ -176,3 +176,8 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - **Music is its own setting.** `settings.music` (0-4) beside `settings.background`; presets set both. Old clients (no `music`) fall back to the background's own track, so mixed versions still work.
 - **Favourite number = most SHOWN** (the finger count held up as the pointer); the most-guessed total is shown too, as "Favourite guess". Stats never leave the phone.
 
+## 2026-11-01 (5) — preview, colour picker, sticky zone
+- The top window answers "what will my opponent see?" (the selected view); the puppet fitting answers "what am I wearing?" and is a separate pane that appears only when the top window cannot show the items.
+- Colour: kept presets AND a full picker (not picker-only): presets are one evenly spread row (hue steps of 30 degrees), everything else is the native picker. The gradient switch sits first in the panel and is the only way to a second stop.
+- The preview zone is sticky only while customising, inside the card, and capped at 30vh so the items stay reachable on a short screen.
+

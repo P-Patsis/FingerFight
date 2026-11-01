@@ -45,8 +45,8 @@ test('Test snap in the Store turns the camera on and draws what is worn, in the 
   assert.deepEqual(stack(), ['whiteglove', 'silverring', 'goldring']);
   card('nailpolish').onclick();
   $('storeLayers').children.find(x => x.dataset.value === 'nails').onclick();
-  $('catColor').children.find(c => c.classList.contains('sw')).children.find(x => x.dataset.color === '#22d3ee').onclick();
-  assert.equal(cam().overlay.rec.layers.find(l => l.id === 'nailpolish').parts.index_tip[0].fill, '#22d3ee');
+  $('catColor').children.find(c => c.classList.contains('cpick')).children.find(c => c.classList.contains('sw')).children.find(x => x.dataset.color === '#25e4e4').onclick();
+  assert.equal(cam().overlay.rec.layers.find(l => l.id === 'nailpolish').parts.index_tip[0].fill, '#25e4e4');
   // the snap button now fires the snap effect on the live hand
   let bursts = 0; const orig = cam().particles.trigger.bind(cam().particles);
   cam().particles.trigger = (n, h) => { bursts += n === 'snap' ? 1 : 0; return orig(n, h); };
@@ -75,20 +75,27 @@ test('Camera off in the Store; and the Profile\'s merged panel: Customise turns 
   $('custBtn').onclick();
   await until(() => events.includes('run'), 'camera on');
   assert.deepEqual(events, ['start', 'run']);
-  assert.equal($('custArea').hidden, false); assert.equal($('viewPreviewBox').hidden, true, 'one preview at a time');
-  assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('cWearTop').hidden, false); assert.equal($('camBox').parentElement, $('wearBox'));
+  assert.equal($('custArea').hidden, false);
+  assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('cWearTop').hidden, false); assert.equal($('camBox').parentElement, $('liveBox'));
   assert.equal($('wearTop').classList.contains('pmode'), true, 'Profile mode hides Test snap and Camera off: no camera buttons at all in Profile mode');
   assert.equal(b.byId.get('wearPhoto'), undefined, 'the standalone Photo button is gone');
-  // the try-on mirrors the view chosen above
+  // the TOP window shows the selected view itself; the puppet fitting is a separate pane in the customise controls
   const feedHidden = () => $('video').classList.contains('feed-hidden');
   const pick = m => $('modePicker').children.find(x => x.dataset.mode === m).onclick();
+  const shown = () => ({ top: !$('viewPreviewBox').hidden, live: !$('liveBox').hidden, fit: !$('wearBox').hidden, two: $('pzRow').classList.contains('two') });
+  assert.equal($('camBox').parentElement, $('liveBox'), 'the camera is the top window in the Profile');
   pick('puppet'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), true, 'Puppet: the puppet alone on the dark background');
-  pick('skeleton'); assert.equal(cam().overlay.puppet, true, 'Skeleton: still the puppet alone (the items are what is tried on)'); assert.equal(feedHidden(), true);
+  assert.deepEqual(shown(), { top: false, live: true, fit: false, two: false }, 'a puppet view on the live camera needs no second pane');
+  pick('skeleton'); assert.equal(cam().overlay.puppet, false, 'Skeleton: the SKELETON (not the puppet)'); assert.equal(feedHidden(), true);
+  assert.deepEqual(shown(), { top: false, live: true, fit: true, two: true }, 'the puppet fitting appears beside it');
   pick('photo-puppet'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), false, 'Photo + puppet: my live picture with the puppet over it');
-  pick('photo-skeleton'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), false, 'Photo + skeleton: the live picture too');
+  pick('photo-skeleton'); assert.equal(cam().overlay.puppet, false, 'Photo + skeleton: my live picture with the skeleton over it'); assert.equal(feedHidden(), false);
+  assert.equal(shown().fit, true);
+  assert.equal($('previewZone').classList.contains('stuck'), true, 'the preview zone is pinned while customising');
   pick('puppet'); assert.equal(feedHidden(), true);
   $('custBtn').onclick();                                            // Done
   assert.ok(events.includes('stop'), 'tracks stopped'); assert.equal(cam().cameraOn, false);
+  assert.equal($('previewZone').classList.contains('stuck'), false, 'not pinned when not customising');
   assert.equal($('custArea').hidden, true); assert.equal($('viewPreviewBox').hidden, false); assert.equal($('camBox').hidden, true);
   // on again, then leave the screen: the camera goes off and the mode ends
   reset();

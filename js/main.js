@@ -732,10 +732,11 @@ function buildBgPicker() {
 const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
 const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
 /** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
-/** The try-on mirrors the view chosen above: a photo view shows my live camera picture behind the puppet, any other view the puppet alone on the dark background.
- *  The puppet is always what is drawn, because the items are what is being tried on. Preview only, never sent. */
+/** The STORE's try-on has no view choice: a photo view shows my live camera picture behind the puppet, any other view the puppet alone (the items are what is tried on).
+ *  The Profile's top window shows the selected view itself (skeleton, puppet, with or without the live photo); its puppet fitting lives in the customise controls. Preview only, never sent. */
 const tryOnView = () => (effectiveStyle().mode.startsWith('photo-') ? 'photo-puppet' : 'puppet');
-const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? tryOnView() : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.baseColor2, style.skel);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
+const inProfileCust = () => cust.on && !$('profile').hidden;
+const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (inProfileCust() ? effectiveStyle().mode : tryOnView()) : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.baseColor2, style.skel);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
 
 function skinPreview(id) {
   const c = document.createElement('canvas');
@@ -763,7 +764,7 @@ function buildSkelPicker() {
   const box = $('skelPicker');
   box.replaceChildren();
   const set = c => { style.skel = cleanColor(c); store.set('ff-skel', style.skel || ''); };
-  for (const c of [SKELETON_COLOR, ...BIG_PALETTE.slice(0, 11)]) {
+  for (const c of [SKELETON_COLOR, ...BIG_PALETTE]) {
     const b = el('button', ''); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', 'Skeleton colour ' + c);
     b.onclick = () => { set(c); renderStyle(); };
     box.append(b);
@@ -824,6 +825,7 @@ function renderStyle() {
   $('styleNote').classList.toggle('err', !!warn);
   renderViewPreview(mode);
   applyOverlay();
+  layoutPreview();
 }
 
 // the skin files load in the background; the picker and the saved choice are checked against what actually loaded
@@ -1050,23 +1052,36 @@ function renderProfileItems() {
 
 /** Where the shared pieces (preview / camera, category colour panel, worn list) sit: inside the Store's Wearing card, or in the Profile's customise area. */
 function layoutWear(where) {
-  const a = where === 'profile' ? ['cWearTop', 'cCat', 'cWearList'] : ['sWearTop', 'sCat', 'sWearList'];
-  ['wearTop', 'catColor', 'wearListBox'].forEach((id, i) => $(a[i]).append($(id)));
+  const a = where === 'profile' ? ['cWearTop', 'cCat', 'cWearList', 'cMsg'] : ['sWearTop', 'sCat', 'sWearList', 'sMsg'];
+  ['wearTop', 'catColor', 'wearListBox', 'wearMsg'].forEach((id, i) => $(a[i]).append($(id)));
   $('wearTop').classList.toggle('pmode', where === 'profile');       // Profile: the only camera control is Photo on / off
 }
 
 // ---- customise mode (Profile): the camera goes on with it and off when it ends (state: `cust`, declared at the top)
+/** What the Profile's preview zone shows. Normal: the opponent-view picture. Customise: the TOP window follows the selected view (the live camera
+ *  with the skeleton / puppet drawn as chosen, over the photo for photo views; the static picture while the camera is not on), and the puppet FITTING
+ *  (the swaying puppet wearing everything) sits beside it, or alone when the selected view is already a puppet on the live camera. The zone sticks to the top while scrolling. */
+function layoutPreview() {
+  const c = inProfileCust(), live = c && tryOn.on, puppetView = effectiveStyle().mode.endsWith('puppet');
+  const top = !c || (!live && !puppetView), fit = c && !(live && puppetView), liveShown = live;
+  $('viewPreviewBox').hidden = !top; $('liveBox').hidden = !liveShown;
+  $('cWearTop').hidden = !c; $('wearBox').hidden = c && !fit;
+  $('previewZone').classList.toggle('stuck', c);
+  $('pzRow').classList.toggle('two', [top, liveShown, c && fit].filter(Boolean).length > 1);
+  if (c && fit) startStoreAnim();
+}
 function leaveCust() {
   cust.on = false;
-  $('custArea').hidden = true; $('viewPreviewBox').hidden = false; $('cWearTop').hidden = true;
+  $('custArea').hidden = true;
   $('custBtn').textContent = 'Customise & try on'; $('custBtn').setAttribute('aria-pressed', 'false');
+  layoutPreview();
 }
 $('custBtn').onclick = () => {
   if (cust.on) { leaveCust(); stopTryOn(); return; }                 // "Done": the camera goes off and the plain preview is back
   cust.on = true;
-  $('custArea').hidden = false; $('viewPreviewBox').hidden = true; $('cWearTop').hidden = false;   // one preview at a time: the customise one (live camera, or the swaying puppet)
+  $('custArea').hidden = false;
   $('custBtn').textContent = 'Done (camera off)'; $('custBtn').setAttribute('aria-pressed', 'true');
-  layoutWear('profile'); renderProfileItems();
+  layoutWear('profile'); renderProfileItems(); layoutPreview();
   startTryOn();                                                      // camera ON (says why when it cannot)
 };
 
@@ -1076,14 +1091,18 @@ function categoryDefault(layer) {
   if (layer === 'base') return entryOf(inv.baseId)?.tint?.default || null;
   return catalog().find(e => e.layer === layer && e.tint)?.tint.default || null;
 }
+/** The quick colours: an even spread over the spectrum (+ white, grey, black); skin tone starts with its own skin colours. */
 function categorySwatches(layer) {
-  const own = catalog().filter(e => e.layer === layer && e.tint).flatMap(e => e.tint.swatches);
-  return [...new Set([...(layer === 'tone' ? own : []), ...BIG_PALETTE])].slice(0, 30);
+  const own = layer === 'tone' ? catalog().filter(e => e.layer === 'tone' && e.tint).flatMap(e => e.tint.swatches) : [];
+  return [...new Set([...own, ...BIG_PALETTE])];
 }
 
-/** The colour panel of the CURRENT category (Profile chips / Store type chip): one colour (or two, for a gradient) for everything of that type, and the effect intensity. */
+/**
+ * The colour panel of the CURRENT category (Profile chip / Store type chip): ONE colour, or a two-stop gradient where the category allows it, for everything
+ * of that type, plus the effect intensity. Each colour has a full colour picker (any colour) and a tidy row of spread-out presets; "Original" puts the item colours back.
+ */
 function renderCatColor() {
-  const box = $('catColor'), layer = cust.on && !$('profile').hidden ? profileView.layer : storeView.layer;
+  const box = $('catColor'), layer = inProfileCust() ? profileView.layer : storeView.layer;
   box.replaceChildren();
   box.hidden = layer === 'all';
   if (layer === 'all') return;
@@ -1095,27 +1114,35 @@ function renderCatColor() {
   const cur = st.c || start, grad = GRADIENT_LAYERS.includes(layer);
   box.append(el('h4', '', LAYER_LABELS[layer] + ' colour'));
   const apply = (c, d) => { inv.setCategoryColor(layer, c, d); syncStyle(); };
-  const row = (label, now, onPick, onLive) => {
-    box.append(el('span', 'lbl', label));
+  /** One colour picker: its label, the native picker (any colour) and the preset row. */
+  const picker = (label, now, onPick, onLive, act) => {
+    const wrap = el('div', 'cpick'); wrap.dataset.picker = act;
+    const head = el('div', 'cp-head'); head.append(el('span', 'lbl', label));
+    const inp = document.createElement('input'); inp.type = 'color'; inp.value = now || '#ffffff'; inp.dataset.act = act; inp.setAttribute('aria-label', label + ': pick any colour');
+    inp.oninput = () => { onLive(inp.value); liveColor(); };          // live while dragging; the panel is not rebuilt under the picker
+    inp.onchange = () => syncStyle();
+    head.append(inp);
+    wrap.append(head);
     const sw = el('div', 'sw');
     for (const c of categorySwatches(layer)) {
       const b = el('button', c === now ? 'sel' : ''); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', c);
       b.onclick = () => onPick(c);
       sw.append(b);
     }
-    const inp = document.createElement('input'); inp.type = 'color'; inp.value = now || '#ffffff'; inp.dataset.act = 'any'; inp.setAttribute('aria-label', 'Pick any colour');
-    inp.oninput = () => { onLive(inp.value); liveColor(); };          // live while dragging; the panel is not rebuilt under the picker
-    inp.onchange = () => syncStyle();
-    sw.append(inp);
-    box.append(sw);
+    wrap.append(sw);
+    box.append(wrap);
   };
-  row(grad && st.d ? 'Colour 1' : 'Colour', cur, c => apply(c, st.d), v => inv.setCategoryColor(layer, v, st.d));
-  if (grad) {
-    const gb = el('button', 'btn tiny ghost', 'Gradient: ' + (st.d ? 'on' : 'off')); gb.type = 'button'; gb.dataset.act = 'gradient'; gb.setAttribute('aria-pressed', String(!!st.d));
-    gb.onclick = () => (st.d ? apply(cur, null) : apply(cur, cur.toLowerCase() === GRADIENT_SECOND ? '#22d3ee' : GRADIENT_SECOND));
-    const ctl = el('div', 'ctl'); ctl.append(gb); box.append(ctl);
-    if (st.d) row('Colour 2', st.d, c => apply(cur, c), v => inv.setCategoryColor(layer, cur, v));
+  if (grad) {                                                          // the gradient switch comes first, so it is easy to find
+    const row = el('div', 'set'); row.append(el('span', '', 'Gradient (two colours)'));
+    const gb = el('button', 'toggle' + (st.d ? ' on' : ''), st.d ? 'On' : 'Off'); gb.type = 'button'; gb.dataset.act = 'gradient'; gb.setAttribute('aria-pressed', String(!!st.d));
+    gb.onclick = () => { const n = inv.categoryStyle(layer), c = n.c || cur; apply(c, n.d ? null : c.toLowerCase() === GRADIENT_SECOND ? '#22d3ee' : GRADIENT_SECOND); };
+    row.append(gb); box.append(row);
   }
+  if (grad && st.d) {
+    const now = () => inv.categoryStyle(layer);                       // read when used: a live drag of one stop must not undo the other
+    picker('Stop A', cur, c => apply(c, now().d), v => inv.setCategoryColor(layer, v, now().d), 'stopA');
+    picker('Stop B', st.d, c => apply(now().c || cur, c), v => inv.setCategoryColor(layer, now().c || cur, v), 'stopB');
+  } else picker('Colour', cur, c => apply(c, null), v => inv.setCategoryColor(layer, v, null), 'any');
   if (layer === 'effect') {
     const k = st.k || INTENSITY_DEFAULT, ctl = el('div', 'ctl'), val = el('b', '', String(k));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(INTENSITY_MIN); sl.max = String(INTENSITY_MAX); sl.step = '1'; sl.value = String(k); sl.dataset.act = 'intensity'; sl.setAttribute('aria-label', 'Effect intensity');
@@ -1123,7 +1150,7 @@ function renderCatColor() {
     sl.onchange = () => syncStyle();
     ctl.append(el('span', 'lbl', 'Intensity'), sl, val); box.append(ctl);
   }
-  const reset = el('button', 'btn tiny ghost', 'Original colours'); reset.type = 'button'; reset.dataset.act = 'default';
+  const reset = el('button', 'btn tiny ghost', 'Original'); reset.type = 'button'; reset.dataset.act = 'default';
   reset.onclick = () => apply(null, null);
   const ctl2 = el('div', 'ctl'); ctl2.append(reset); box.append(ctl2);
 }
@@ -1228,8 +1255,9 @@ async function startTryOn() {
     cam.onLost = () => { stopTryOn(); msg('The camera stopped. Check the browser camera permission, then tap Test snap to try again.'); };
     applyOverlay();                                                    // tryOn.on: the puppet with everything worn, over the live picture
     const box = $('camBox');
-    $('wearBox').append(box); box.hidden = false;
-    $('storePreview').hidden = true;
+    if (inProfileCust()) $('liveBox').append(box); else { $('wearBox').append(box); $('storePreview').hidden = true; }     // Profile: the top window; Store: the Wearing card
+    box.hidden = false;
+    layoutPreview();
     camIndicator(true);
     let frames = 0;
     cam.onFrame = () => { frames++; };
@@ -1252,7 +1280,7 @@ function stopTryOn() {
   const box = $('camBox');
   box.hidden = true; if (box.parentElement !== document.body) document.body.append(box);
   $('storePreview').hidden = false;
-  if (was) { applyOverlay(); $('wearMsg').textContent = ''; updateTryOnButtons(); if (wearVisible()) startStoreAnim(); }
+  if (was) { layoutPreview(); applyOverlay(); $('wearMsg').textContent = ''; updateTryOnButtons(); if (wearVisible()) startStoreAnim(); }
 }
 function updateTryOnButtons() {
   $('wearCamOff').hidden = !(tryOn.on || tryOn.busy);
