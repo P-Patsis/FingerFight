@@ -182,8 +182,7 @@ Ownership is a flag on the phone: fine for a friendly game, not a security bound
 
 "How my opponent sees my hand" holds the view choice, the preview, the skeleton colour (skeleton views), "Choose your Hand" (built-in hands
 and the player's own hands from `ff-userhands`, see `registerUserSkin`, in one grid) and **Customise & try on**. Customise turns the camera
-on, shows the type chips (Hand ... Effect), the owned items of that type, the category colour panel and the worn list; the only camera
-control is **Photo: on/off**. Done, leaving the Profile or hiding the page turns the camera off. With the camera off the preview sways
+on, shows the type chips (Hand ... Effect), the owned items of that type, the category colour panel and the worn list; there are no camera controls: the try-on follows the chosen view (photo views show my live picture behind the puppet, others the puppet alone), and the window sits above the hand grid at full panel width. Done, leaving the Profile or hiding the page turns the camera off. With the camera off the preview sways
 (about +-110 degrees over 8 s, `swayOf`) so both faces show; the mirrored back shows no nail polish. There is no separate "Your items" section.
 
 ## Store and end-screen ad slot

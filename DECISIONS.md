@@ -165,3 +165,8 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - **Customise = camera on, leaving = camera off.** The camera is tied to the Customise button and the Profile screen, not to opening the Profile. The lobby never gets this mode (its camera belongs to the match).
 - **Static preview turns, it does not spin.** A 2D rig has no real back side: the "back" is the mirrored front without nail polish. Honest approximation until there is back-of-hand art.
 - **User-made hands reuse the skin format and parser** and are stored locally; they never travel as data (only the id does, and a receiver without that hand draws the default). Creating them is a later build.
+
+## 2026-11-01 (3) — try-on follows the chosen view; sound follows page focus
+- The try-on is no longer separately switchable: a photo view (Photo + puppet / + skeleton) shows my live camera picture behind the puppet, any other view shows the puppet alone on the dark background. The puppet is always drawn because the items are what is being tried.
+- Sound pauses with `AudioContext.suspend()` when the page is hidden, blurred or put away, and resumes when visible and focused. One switch pauses music, loops and effects together and keeps the music position; mute/volume state is never touched.
+

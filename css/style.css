@@ -314,6 +314,17 @@ input:focus { outline: none; border-color: var(--cyan); }
 .mode-picker button { min-width: 0; overflow-wrap: anywhere; }
 
 /* ---------- Profile preview ---------- */
+.fine:empty { display: none; }
+.flagrow { flex-wrap: nowrap; }
+.flagrow > span:first-child { font-size: 14px; }
+.flag-in { flex: 1 1 auto; display: inline-flex; align-items: center; gap: 4px; min-width: 0; justify-content: flex-end; }
+.flag-in[hidden] { display: none; }
+.flag-in input { width: 100%; max-width: 130px; min-width: 70px; box-sizing: border-box; padding: 6px 8px; font-size: 14px; border-radius: 8px; border: 2px solid #475569; background: #0f172a; color: var(--ink); }
+.flag-icon { font-size: 20px; line-height: 1; min-width: 1em; }
+.preview-zone { width: 100%; display: flex; flex-direction: column; align-items: center; }
+#cWearTop { width: 100%; }
+#cWearTop .wear-top { width: 100%; }
+.wear-top.pmode .wear-box { width: 100%; }   /* Profile: the try-on window is the full panel width */
 .view-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0 2px; }
 .view-preview canvas { width: min(100%, 240px); height: auto; border-radius: 10px; border: 2px solid #334155; background: #0f172a; }
 

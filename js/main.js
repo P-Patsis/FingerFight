@@ -3,7 +3,7 @@
 // A round: the POINTER holds up fingers while the GUESSER guesses the total. When the timer ends the pointer's phone
 // snaps a photo + the count + any gesture and sends it; the guesser's phone sends the guess. Each side then runs
 // resolveRound() on the same inputs, so both screens show the same result. The host starts every round.
-import { sfx, music } from './audio.js';
+import { sfx, music, bindPageFocus } from './audio.js';
 import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
@@ -82,7 +82,7 @@ const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, baseColor2: null, skel: cleanColor(store_get('ff-skel')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
-const tryOn = { on: false, busy: false, token: 0, photo: false };      // the live camera try-on in the Store / Profile (see startTryOn)
+const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
 const store = {
   get: store_get,
@@ -219,7 +219,7 @@ function renderProfile() {
   $('nameNote').textContent = isObscene(n) ? 'This name is not allowed. In matches you will appear as "Naughty Player #…".' : '';
   $('flagBtn').textContent = profile.flag ? 'On' : 'Off';
   $('flagBtn').classList.toggle('on', profile.flag);
-  $('countryRow').hidden = !profile.flag;
+  $('countryRow').hidden = !profile.flag;               // the input sits inline on the same row, only while the flag is on
   $('countryInput').value = profile.country || '';
   $('countryHint').textContent = flagEmoji(profile.country);
   renderWho();
@@ -710,7 +710,10 @@ function buildBgPicker() {
 const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
 const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
 /** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
-const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (tryOn.photo ? 'photo-puppet' : 'puppet') : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.baseColor2, style.skel);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
+/** The try-on mirrors the view chosen above: a photo view shows my live camera picture behind the puppet, any other view the puppet alone on the dark background.
+ *  The puppet is always what is drawn, because the items are what is being tried on. Preview only, never sent. */
+const tryOnView = () => (effectiveStyle().mode.startsWith('photo-') ? 'photo-puppet' : 'puppet');
+const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? tryOnView() : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.baseColor2, style.skel);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
 
 function skinPreview(id) {
   const c = document.createElement('canvas');
@@ -1031,13 +1034,13 @@ function layoutWear(where) {
 // ---- customise mode (Profile): the camera goes on with it and off when it ends (state: `cust`, declared at the top)
 function leaveCust() {
   cust.on = false;
-  $('custArea').hidden = true; $('viewPreviewBox').hidden = false;
+  $('custArea').hidden = true; $('viewPreviewBox').hidden = false; $('cWearTop').hidden = true;
   $('custBtn').textContent = 'Customise & try on'; $('custBtn').setAttribute('aria-pressed', 'false');
 }
 $('custBtn').onclick = () => {
   if (cust.on) { leaveCust(); stopTryOn(); return; }                 // "Done": the camera goes off and the plain preview is back
   cust.on = true;
-  $('custArea').hidden = false; $('viewPreviewBox').hidden = true;   // one preview at a time: the customise one (live camera, or the swaying puppet)
+  $('custArea').hidden = false; $('viewPreviewBox').hidden = true; $('cWearTop').hidden = false;   // one preview at a time: the customise one (live camera, or the swaying puppet)
   $('custBtn').textContent = 'Done (camera off)'; $('custBtn').setAttribute('aria-pressed', 'true');
   layoutWear('profile'); renderProfileItems();
   startTryOn();                                                      // camera ON (says why when it cannot)
@@ -1243,11 +1246,6 @@ $('storeSnap').onclick = async () => {
   } catch { /* ignore */ }
 };
 $('wearCamOff').onclick = () => stopTryOn();
-$('wearPhoto').onclick = () => {                                       // try-on preview only: puppet alone (default) or over my camera picture
-  tryOn.photo = !tryOn.photo;
-  $('wearPhoto').textContent = 'Photo: ' + (tryOn.photo ? 'on' : 'off'); $('wearPhoto').setAttribute('aria-pressed', String(tryOn.photo));
-  if (tryOn.on) applyOverlay();
-};
 $('storeClear').onclick = () => { inv.clear(); syncStyle(); };
 
 // ---------------------------------------------------------------------------------------------
@@ -1786,6 +1784,7 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 const camOff = () => { if (tryOn.on) stopTryOn(); if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; if (!$('calib').hidden) { $('calibMsg').textContent = 'Camera switched off (the page was hidden). Tap Camera test again.'; dbg?.show(false); } } };
 document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); else link?.nudge?.(); });
 globalThis.addEventListener?.('pagehide', camOff);
+bindPageFocus(document, globalThis);                          // sound stops with the page (hidden tab, another app in front, window blurred) and resumes when it is visible AND focused
 globalThis.addEventListener?.('online', () => link?.nudge?.());       // wifi / 4G came back: re-open the match link now, not at the next timer
 
 if (missingIds.length) setTimeout(() => showFatal('This page is out of date (missing: ' + [...new Set(missingIds)].join(', ') + '). Reload it, or clear this site\'s data in the browser settings.'), 0);

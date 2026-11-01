@@ -1,5 +1,15 @@
 # Finger Fight: progress
 
+## 2026-11-01 (3) — Profile layout tuning + music-focus fix (NEEDS SCREENSHOT REVIEW)
+- Changed (layout/text and the audio pause only; cosmetics, rig, connection, match flow untouched):
+  1. COUNTRY FLAG: one `.set` row: "Show country flag", the input (inline, only while On, with the flag emoji beside it) and the toggle. Empty `.fine` lines no longer take space.
+  2. ORDER in the opponent-view panel: view choice -> preview / camera window -> (skeleton colour, skeleton views only) -> Customise & try on -> Choose your Hand -> customise controls (chips, items, colour, worn list).
+  3. TRY-ON WINDOW: now sits above the hand grid, full panel width (Profile only; the Store keeps its small box). Canvas 480x360 so it stays sharp when stretched.
+  4. TRY-ON FOLLOWS THE VIEW (standalone "Photo: off/on" removed): Puppet and Skeleton -> puppet alone on the dark background; Photo + puppet / Photo + skeleton -> my live camera picture with the puppet over it. The puppet is always what is drawn (items are what is being tried on), even for the skeleton views. Changing the view while the camera is on updates it at once. Preview only, never sent. The Store try-on follows the same rule.
+  5. MUSIC: `bindPageFocus` (js/audio.js): hidden / blurred / pagehide suspends the whole audio context (music, loops, effects; music keeps its place); visible AND focused resumes. Mute and volume are untouched; a tap while away cannot restart sound.
+- Verified: 238/238 tests (235 + audio pause/resume x2, layout order, flag row). SW restamped. NOT seen on a phone.
+- Needs review: (a) flag row on a narrow phone (does the label wrap, is the input wide enough); (b) the full-width try-on window (height, camera aspect); (c) the view -> try-on mapping feels right; (d) music really stops on home / app switch / lock screen and resumes. Note: a blur (e.g. a browser dialog) also pauses sound until focus returns.
+
 ## 2026-11-01 (2) — Profile restructure: one merged opponent-view + customise panel (NEEDS PHONE / SCREENSHOT REVIEW)
 - Changed (rig, connection, match flow untouched; all new wire fields validated):
   1. MERGED PANEL (Profile): "How my opponent sees my hand" now holds the view choice at the top, the preview, a SKELETON COLOUR picker (only for skeleton views), "Choose your Hand", and a "Customise & try on" button. Customise turns the CAMERA ON, shows the customise area and the single camera control "Photo: on/off"; "Done", leaving the Profile or hiding the page turns the camera OFF and ends the mode. The lobby shares the opponent-view part but has no Customise button.

@@ -12,6 +12,7 @@ let ctx = null, master = null, sfxBus = null, musicBus = null;
 let muted = load('ff-muted') === '1';
 let volume = clamp01(load('ff-vol') === null ? 0.7 : Number(load('ff-vol')));
 let noiseBuf = null;
+let background = false;        // the page is hidden or not focused: all audio (music, loops, effects) is paused
 
 function load(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function save(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } }
@@ -36,9 +37,21 @@ export const sfx = {
         applyVolume();
         music.onUnlocked();
       }
-      if (ctx.state === 'suspended') ctx.resume();
+      if (ctx.state === 'suspended' && !background) ctx.resume();
+      if (background && ctx.state === 'running') ctx.suspend();
     } catch { /* no audio */ }
   },
+  /** The page went to the background (hidden tab, app switched away, window blurred) or came back. Suspending the audio context pauses EVERYTHING
+   *  at once, music position included; mute and volume are untouched, so coming back restores exactly what was playing. */
+  setBackground(on) {
+    background = !!on;
+    try {
+      if (!ctx) return;
+      if (background) { if (ctx.state === 'running') ctx.suspend(); }
+      else if (ctx.state === 'suspended') ctx.resume();
+    } catch { /* no audio */ }
+  },
+  get background() { return background; },
   get ready() { return !!ctx && !muted; },
 
   /** One oscillator blip. Each note disconnects itself when it ends, so nothing piles up. */
@@ -169,3 +182,16 @@ export const music = {
   pauseSoon() { if (ctx && current) { stopTrack(current, 0.3); current = null; loading++; } },
   resume() { if (wantIndex !== null) this.setArena(wantIndex); },
 };
+
+/**
+ * Pauses all sound while the page is not the foreground one: hidden (tab switch, home button, screen off), blurred (another window or app in front)
+ * or being put away (pagehide); resumes on visible + focused. [doc] and [win] are the document and window (injectable for tests).
+ */
+export function bindPageFocus(doc, win) {
+  const away = () => sfx.setBackground(!!doc?.hidden || doc?.hasFocus?.() === false);
+  doc?.addEventListener?.('visibilitychange', away);
+  win?.addEventListener?.('blur', () => sfx.setBackground(true));
+  win?.addEventListener?.('focus', away);
+  win?.addEventListener?.('pagehide', () => sfx.setBackground(true));
+  win?.addEventListener?.('pageshow', away);
+}

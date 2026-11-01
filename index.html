@@ -46,8 +46,7 @@
     <div class="card">
       <label class="field">Your name<input id="nameInput" maxlength="40" autocomplete="off" placeholder="Fighter"></label>
       <p id="nameNote" class="fine"></p>
-      <div class="set"><span>Show country flag</span><button id="flagBtn" class="toggle">Off</button></div>
-      <label class="field" id="countryRow"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR or Greece" aria-label="Country code or name"><span id="countryHint" class="fine"></span></label>
+      <div class="set flagrow"><span>Show country flag</span><span id="countryRow" class="flag-in"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR / Greece" aria-label="Country code or name"><span id="countryHint" class="flag-icon"></span></span><button id="flagBtn" class="toggle">Off</button></div>
     </div>
     <div id="styleSlotProfile"></div>
     <div id="appSlotProfile"></div>
@@ -101,19 +100,19 @@
     <div id="styleSlot"><div class="card" id="styleCard">
       <h3 class="card-h">How my opponent sees my hand</h3>
       <div id="modePicker" class="mode-picker"></div>
-      <div class="view-preview" id="viewPreviewBox"><canvas id="viewPreview" width="240" height="150" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
+      <div id="previewZone" class="preview-zone">
+        <div class="view-preview" id="viewPreviewBox"><canvas id="viewPreview" width="240" height="150" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
+        <div id="cWearTop" hidden></div>
+      </div>
       <div class="set col" id="skelRow"><span>Skeleton colour</span><div id="skelPicker" class="swatches" aria-label="Skeleton line colour"></div></div>
+      <div id="custOnly"><button id="custBtn" class="btn ghost" type="button" aria-pressed="false">Customise &amp; try on</button></div>
       <div class="set col" id="skinRow"><span>Choose your Hand</span><div id="skinPicker" class="skin-picker"></div></div>
       <p id="styleNote" class="fine"></p>
-      <div id="custOnly">
-        <button id="custBtn" class="btn ghost" type="button" aria-pressed="false">Customise &amp; try on</button>
-        <div id="custArea" class="cust-area" hidden>
-          <div id="cWearTop"></div>
-          <div id="profileLayers" class="chips" aria-label="Item type"></div>
-          <div id="profileGrid" class="store-grid"></div>
-          <div id="cCat"></div>
-          <div id="cWearList"></div>
-        </div>
+      <div id="custArea" class="cust-area" hidden>
+        <div id="profileLayers" class="chips" aria-label="Item type"></div>
+        <div id="profileGrid" class="store-grid"></div>
+        <div id="cCat"></div>
+        <div id="cWearList"></div>
       </div>
     </div></div>
     <div id="appSlot"><div class="card" id="appCard">
@@ -180,10 +179,10 @@
   </div>
   <div id="wearTop" class="wear-top">
     <div id="wearBox" class="wear-box">
-      <canvas id="storePreview" width="240" height="180" aria-label="Your puppet with everything you have equipped"></canvas>
+      <canvas id="storePreview" width="480" height="360" aria-label="Your puppet with everything you have equipped"></canvas>
     </div>
     <p id="wearMsg" class="fine" role="status"></p>
-    <div class="row center wrap"><button id="storeSnap" class="btn tiny">Test snap</button><button id="wearPhoto" class="btn tiny ghost" aria-pressed="false" title="Show your camera photo behind the puppet (this preview only)">Photo: off</button><button id="wearCamOff" class="btn tiny ghost" hidden>Camera off</button></div>
+    <div class="row center wrap"><button id="storeSnap" class="btn tiny">Test snap</button><button id="wearCamOff" class="btn tiny ghost" hidden>Camera off</button></div>
   </div>
   <div id="catColor" class="cat-color" aria-label="Colour of this category"></div>
   <div id="wearListBox" class="wear-list-box">

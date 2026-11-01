@@ -76,12 +76,17 @@ test('Camera off in the Store; and the Profile\'s merged panel: Customise turns 
   await until(() => events.includes('run'), 'camera on');
   assert.deepEqual(events, ['start', 'run']);
   assert.equal($('custArea').hidden, false); assert.equal($('viewPreviewBox').hidden, true, 'one preview at a time');
-  assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('camBox').parentElement, $('wearBox'));
-  assert.equal($('wearTop').classList.contains('pmode'), true, 'Profile mode hides Test snap and Camera off: Photo is the only camera control');
-  assert.equal($('wearPhoto').hidden, false);
-  assert.equal(cam().overlay.puppet, true);
-  $('wearPhoto').onclick();
-  assert.equal($('wearPhoto').textContent, 'Photo: on');
+  assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('cWearTop').hidden, false); assert.equal($('camBox').parentElement, $('wearBox'));
+  assert.equal($('wearTop').classList.contains('pmode'), true, 'Profile mode hides Test snap and Camera off: no camera buttons at all in Profile mode');
+  assert.equal(b.byId.get('wearPhoto'), undefined, 'the standalone Photo button is gone');
+  // the try-on mirrors the view chosen above
+  const feedHidden = () => $('video').classList.contains('feed-hidden');
+  const pick = m => $('modePicker').children.find(x => x.dataset.mode === m).onclick();
+  pick('puppet'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), true, 'Puppet: the puppet alone on the dark background');
+  pick('skeleton'); assert.equal(cam().overlay.puppet, true, 'Skeleton: still the puppet alone (the items are what is tried on)'); assert.equal(feedHidden(), true);
+  pick('photo-puppet'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), false, 'Photo + puppet: my live picture with the puppet over it');
+  pick('photo-skeleton'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), false, 'Photo + skeleton: the live picture too');
+  pick('puppet'); assert.equal(feedHidden(), true);
   $('custBtn').onclick();                                            // Done
   assert.ok(events.includes('stop'), 'tracks stopped'); assert.equal(cam().cameraOn, false);
   assert.equal($('custArea').hidden, true); assert.equal($('viewPreviewBox').hidden, false); assert.equal($('camBox').hidden, true);
