@@ -3,7 +3,7 @@
 // A round: the POINTER holds up fingers while the GUESSER guesses the total. When the timer ends the pointer's phone
 // snaps a photo + the count + any gesture and sends it; the guesser's phone sends the guess. Each side then runs
 // resolveRound() on the same inputs, so both screens show the same result. The host starts every round.
-import { sfx, music, bindPageFocus } from './audio.js';
+import { sfx, music, bindPageFocus, TRACK_NAMES } from './audio.js';
 import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
@@ -133,18 +133,24 @@ function show(id) {
   if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('appSlotProfile').append($('appCard')); layoutWear('profile'); renderProfileItems(); }
   else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('appSlot').append($('appCard')); }
   if (id === 'menu') { updateRejoin(); music.stop(); }
-  else if (currentBg >= 0) music.setArena(currentBg);      // lobby / game / result: the arena's loop (lazy, silent if the file is missing)
+  else if (currentMusic >= 0) music.setArena(currentMusic);      // lobby / game / result: the arena's loop (lazy, silent if the file is missing)
   navSync(id);
 }
 
-let currentBg = -1;
+let currentBg = -1, currentMusic = -1;
+/** The scenery only; the music is its own choice (setMusic). */
 function setBackground(i) {
   if (i === currentBg) return;
   currentBg = i;
   $('stage').className = 'bg-' + i;
   $('scenery').innerHTML = backgroundHTML(i);      // fixed artwork, no user text
+}
+function setMusic(i) {
+  currentMusic = i;
   if ($('menu').hidden) music.setArena(i);
 }
+/** Shows the match's background and plays its music: two separate settings. */
+function setScene() { setBackground(settings.background); setMusic(settings.music); }
 
 function later(ms, fn) {
   const t = token;
@@ -189,7 +195,7 @@ function detectCountry() {
   return '';                                                                            // unknown: no flag is shown
 }
 const myFlag = () => (profile.flag ? countryCode(profile.country) || undefined : undefined);
-const freshSettings = () => ({ ...DEFAULTS });             // the arena is a per-match choice of the host (lobby), not a profile setting
+const freshSettings = () => normalizeSettings({ ...DEFAULTS, background: Number(store.get('ff-bg')) || 0, music: Number(store.get('ff-music')) || 0 });   // the host's last background and music (each remembered on this phone)
 {
   // a shared link carries the code after the "#": browsers never send that part to any server
   const m = /(?:^|[#&])room=([A-Za-z0-9-]+)/.exec(location.hash || '');
@@ -507,7 +513,7 @@ function backToLobby(msg, keepGuest = false, keepReady = false) {
   if (!keepGuest) { names.guest = ''; pendingGuest = null; guestToken = null; }
   if (!keepReady) ready = { host: false, guest: false };      // keepReady: both cameras are already enabled, so nobody could ready up again
   fx.clearFx(); $('banner').replaceChildren(); netBadge('');
-  setBackground(settings.background);
+  setScene();
   show('lobby');
   renderLobby();
   $('lobbyMsg').textContent = msg || '';
@@ -685,7 +691,7 @@ function onMessage(m) {
 function enterLobby() {
   menuMsg('');
   if (me) flags[me] = myFlag() || '';
-  setBackground(settings.background);
+  setScene();
   buildBgPicker();
   buildStyleCard();
   show('lobby');
@@ -693,14 +699,27 @@ function enterLobby() {
   if (autoCameraWanted({ ready: camReady, busy: camBusy, failed: camAutoFailed })) enableCamera();   // no separate tap; never blocks the lobby
 }
 
+/** Host-only changes to the arena: [change] is {background?, music?}; remembered on this phone and sent to the guest with the other settings (validated on arrival). */
+function setArena(change) {
+  if (me !== 'host') return;
+  settings = normalizeSettings({ ...settings, ...change });
+  store.set('ff-bg', String(settings.background)); store.set('ff-music', String(settings.music));
+  setScene(); send({ t: 'settings', settings }); renderLobby();
+}
 function buildBgPicker() {
-  const box = $('bgPicker');
-  box.replaceChildren();
+  const box = $('bgPicker'), music = $('musicPicker'), presets = $('presetPicker');
+  box.replaceChildren(); music.replaceChildren(); presets.replaceChildren();
   BACKGROUNDS.forEach((name, i) => {
     const b = el('button', 'thumb-' + i, name);
-    b.type = 'button';
-    b.onclick = () => { if (me === 'host') { settings.background = i; setBackground(i); send({ t: 'settings', settings }); renderLobby(); } };
+    b.type = 'button'; b.dataset.value = String(i);
+    b.onclick = () => setArena({ background: i });                 // the background alone: the music is not touched
     box.append(b);
+    const m = el('button', '', TRACK_NAMES[i]); m.type = 'button'; m.dataset.value = String(i);
+    m.onclick = () => setArena({ music: i });                      // the music alone
+    music.append(m);
+    const p = el('button', '', name); p.type = 'button'; p.dataset.value = String(i);
+    p.onclick = () => setArena({ background: i, music: i });       // a preset: this arena's background together with its own music
+    presets.append(p);
   });
 }
 
@@ -834,7 +853,9 @@ function renderLobby() {
   $('approveBtn').classList.toggle('on', requireApproval);
   $('approveRow').hidden = !(matchKind === 'private' && me === 'host');
   [...$('bgPicker').children].forEach((b, i) => b.classList.toggle('sel', i === settings.background));
-  setBackground(settings.background);
+  [...$('musicPicker').children].forEach((b, i) => b.classList.toggle('sel', i === settings.music));
+  [...$('presetPicker').children].forEach((b, i) => b.classList.toggle('sel', i === settings.background && i === settings.music));
+  setScene();
   $('settingsCard').hidden = random;
   $('settingsCard').classList.toggle('locked', me !== 'host');
   $('joinPrompt').hidden = !pendingGuest;
@@ -1258,7 +1279,7 @@ function startGame() {
   game = newGame(settings);
   round = null;
   fightLog = []; streak = { side: null, n: 0 };
-  setBackground(settings.background);
+  setScene();
   for (const side of ['host', 'guest']) {
     const f = fighterEl(side);
     f.innerHTML = fighterSVG(side);

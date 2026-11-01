@@ -61,7 +61,7 @@ input:focus { outline: none; border-color: var(--cyan); }
 .stepper { display: flex; align-items: center; gap: 10px; } .stepper b { min-width: 28px; text-align: center; font: 400 24px var(--display); color: var(--gold); }
 .step { width: 38px; height: 38px; border-radius: 10px; border: 0; background: #334155; color: var(--ink); font-size: 22px; }
 .toggle { border: 0; border-radius: 999px; padding: 8px 18px; font-weight: 700; background: #334155; color: var(--ink); } .toggle.on { background: #16a34a; }
-.card.locked .step, .card.locked .toggle, .card.locked .bg-picker button { pointer-events: none; opacity: .65; }
+.card.locked .step, .card.locked .toggle, .card.locked .bg-picker button, .card.locked .chips button { pointer-events: none; opacity: .65; }
 .bg-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .bg-picker button { aspect-ratio: 3/4; border-radius: 8px; border: 3px solid transparent; padding: 0; position: relative; overflow: hidden; font-size: 9px; color: #fff; text-shadow: 0 1px 2px #000; display: flex; align-items: flex-end; justify-content: center; }
 .bg-picker button.sel { border-color: var(--gold); }

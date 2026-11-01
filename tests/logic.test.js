@@ -62,7 +62,7 @@ test('health never goes below zero', () => {
 test('settings are cleaned', () => {
   assert.deepEqual(normalizeSettings({}), DEFAULTS);
   const s = normalizeSettings({ seconds: '99', hits: 0, background: 9 });
-  assert.deepEqual(s, { seconds: 20, hits: 1, maxFingers: 5, background: 4, shrink: false });
+  assert.deepEqual(s, { seconds: 20, hits: 1, maxFingers: 5, background: 4, music: 4, shrink: false }, 'an older client that sends only a background gets that arena\'s own music');
   assert.equal(normalizeSettings({ seconds: 'abc' }).seconds, 5);
 });
 
@@ -155,4 +155,16 @@ test('max fingers is a clamped setting (default 5 = one hand, up to 10)', () => 
   assert.equal(normalizeSettings({ maxFingers: 0 }).maxFingers, 1);
   assert.equal(normalizeSettings({ maxFingers: 99 }).maxFingers, 10);
   assert.equal(normalizeSettings({ maxFingers: 'x' }).maxFingers, 5);
+});
+
+test('arena background and music are independent settings, each clamped to a real arena (hostile values from the network cannot pick anything else)', () => {
+  assert.deepEqual([normalizeSettings({ background: 4, music: 0 }).background, normalizeSettings({ background: 4, music: 0 }).music], [4, 0], 'any combination');
+  assert.equal(normalizeSettings({ background: 1 }).music, 1, 'no music sent: the background\'s own track');
+  for (const bad of [99, -3, 'x', NaN, null, {}, [], '<script>', 1e9, Infinity]) {
+    const s = normalizeSettings({ background: 2, music: bad });
+    assert.ok(Number.isInteger(s.music) && s.music >= 0 && s.music <= 4, 'music ' + String(bad) + ' -> ' + s.music);
+  }
+  assert.equal(normalizeSettings({ music: 99 }).music, 4); assert.equal(normalizeSettings({ music: -5 }).music, 0); assert.equal(normalizeSettings({ music: 2.6 }).music, 3);
+  assert.equal(normalizeSettings({ background: 'x', music: 3 }).background, 0);
+  assert.equal(DEFAULTS.music, 0);
 });

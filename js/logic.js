@@ -3,7 +3,8 @@
 // A round: one player is the POINTER (holds up fingers), the other is the GUESSER (guesses the total number
 // of fingers). Roles swap every round. Both sides run resolveRound() on the same inputs, so both get the same answer.
 
-export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 5, background: 0, shrink: false });
+export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 5, background: 0, music: 0, shrink: false });
+export const ARENAS = 5;                   // arena backgrounds and music tracks: both are picked from 0..ARENAS-1, independently of each other
 export const LIMITS = Object.freeze({ seconds: [3, 20], hits: [1, 10], maxFingers: [1, 10] });
 export const MAX_FINGERS = 10;
 
@@ -26,7 +27,9 @@ export function normalizeSettings(s = {}) {
     seconds: clamp(n('seconds'), LIMITS.seconds),
     hits: clamp(n('hits'), LIMITS.hits),
     maxFingers: clamp(n('maxFingers'), LIMITS.maxFingers),   // quicker matches: both players only use 0..maxFingers
-    background: Math.max(0, Math.min(4, Math.round(Number(s.background) || 0))),
+    background: Math.max(0, Math.min(ARENAS - 1, Math.round(Number(s.background) || 0))),
+    // the music track is its own choice; an older client that only sends the background gets that arena's own track (the old bundle)
+    music: Math.max(0, Math.min(ARENAS - 1, Math.round(Number(s.music === undefined || s.music === null ? s.background : s.music) || 0))),
     shrink: s.shrink === true,                                // optional: the finger limit drops as the match goes on (default OFF)
   };
 }

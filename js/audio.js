@@ -115,6 +115,8 @@ export const TRACKS = [
   'assets/audio/volcano.ogg',
   'assets/audio/space.ogg',
 ];
+/** What the music picker shows (same order as TRACKS). Each arena's own track is the preset; any track can go with any background. */
+export const TRACK_NAMES = ['Dojo', 'Neon Street', 'Rooftop', 'Volcano', 'Space Station'];
 const FADE_S = 1.2;
 
 const cache = new Map();         // index -> decoded AudioBuffer, or null when the file is missing/bad (remembered, so we never retry)
