@@ -1,9 +1,22 @@
 # Finger Fight: decisions
 
+## Current implementation (reviewed 2026-10-30)
+
+This file contains dated history; later decisions supersede earlier ones. Current source/tests establish:
+- Only correct guesses score; no-hand rounds miss, with a separate three-round idle-forfeit rule.
+- Default max fingers 5; shrinking cap optional/off. Open palm is a normal five.
+- ExpressTURN configuration is present in `js/ice.js`; the relay list is not empty. Random ICE is relay-only; private ICE allows direct/fallback. See [TURN_REVIEW.md](TURN_REVIEW.md).
+- Lobby auto-setup, explicit Camera test and Store/Profile try-on can access the camera in addition to guess windows. Hidden page and flow cleanup release it. Opening Profile alone does not start try-on.
+- Cosmetics use an ordered stack (maximum 12 items), with colours/effects and local ownership; payment/ad unlocks are stubs.
+- Canonical repository is P-Patsis/FingerFight; the old FingerRing local remote is unchanged.
+- Current rules: `js/logic.js`; lifecycle: `js/main.js`/`js/hands.js`; ICE: `js/net.js`; tests: `tests/`.
+
+## Historical decisions (superseded where noted above)
+
 - **Separate project from `fingers/`.** That app is a single page counting fingers; this one reuses its counting logic (in `js/gestures.js`, now aspect-ratio aware) and the same MediaPipe CDN setup.
 - **Web app on GitHub Pages, PeerJS (WebRTC) for the room code.** No server of ours. The camera needs https, hence Pages. PeerJS is bundled (`vendor/`, 1.5.4, 93 KB); MediaPipe stays on the CDN (about 17 MB once per player).
 - **Both players use fingers.** Pointer's count = the answer; guesser's count = the guess (0 = fist, no hand seen = no guess = a miss). Photos from both sides are shown at the reveal.
-- **Damage rules** (`logic.js`, tested): right guess = guesser hits pointer for 1; wrong guess + pointer gesture = pointer crits the guesser (middle 2, moutza 2, sideways 3); otherwise a miss; pointer hiding their hand forfeits (guesser hits for 1). Only the pointer's gestures score, so gestures can't be spammed to win: a right guess beats them.
+- **Original damage rules (superseded):** critical hits and single-round no-hand damage were removed. See the current implementation above and `resolveRound`/`trackIdle`.
 - **Both phones compute the result from the same inputs** (`resolveRound`), the host only paces the rounds. No authority server, so a modified client could lie about its own count/gesture; accepted for a friendly game.
 - **Never trust the network:** names, guesses and reveals are validated (`validReveal`, `validGuessMsg`, `sanitizeName`); photos must be small inline JPEGs; the DOM is built with `textContent`, never `innerHTML` with remote text.
 - **Gestures are geometry on MediaPipe landmarks, not a classifier.** Thresholds are in `gestures.js` (`MOUTZA_SPREAD`, `SIDEWAYS_RANGE`). Not tuned on real hands yet. Palm vs back of hand is not detected.
@@ -57,7 +70,7 @@
 - **Music is CC0 only, from OpenGameArt, credited in assets/audio/CREDITS.md.** Missing/undecodable file = no music for that arena, silently. Never add a track whose licence is not confirmed on its source page. Keep the folder under 4 MB. No re-encoding tool is installed here, so files are used as published.
 - **Sound effects are synthesised, never files.** Music plays after the first user tap (browser rule) and only on the lobby/game/result screens.
 - **Visual effects are code-drawn only and always optional.** Every public effect is wrapped so a failure cannot break a match; reduced motion disables shake/flash/wipe/confetti.
-- **Relay servers live in js/ice.js and are EMPTY on purpose.** The PeerJS default TURN hosts are dead (no DNS), and no free relay works without an account. Random matches hide the IP through a relay, so without one they are refused with an explanation rather than hanging or silently exposing the IP. Do not paste a TURN credential into chat logs; it is public once it is in the page, so use a revocable one.
+- **Historical relay setup (superseded; configuration is now present in js/ice.js).** The PeerJS default TURN hosts are dead (no DNS), and no free relay works without an account. Random matches hide the IP through a relay, so without one they are refused with an explanation rather than hanging or silently exposing the IP. Do not paste a TURN credential into chat logs; it is public once it is in the page, so use a revocable one.
 - **Thresholds are data (`TUNING`), not constants.** Change defaults only after looking at real numbers from the debug panel.
 - **Never name a module variable `history`, `location`, `name` etc.** (it shadows the browser global; this broke the address-bar cleanup once).
 
