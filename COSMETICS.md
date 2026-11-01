@@ -210,3 +210,10 @@ on, shows the type chips (Hand ... Effect), the owned items of that type, the ca
   it never hangs, and the button works again afterwards. Changing items, order or colour updates the live view at once.
 * **Ad slot:** the result screen ends with an empty `#adSlot` div (min-height 50px, 320px wide, at the bottom) that only reserves
   space for a native banner. No ad code, no script, no image.
+
+## Skeleton styles, saved looks, favourites (2026-11-01)
+* **Skeleton styles** (`SKELETON_STYLES` in layers.js, drawn by `drawBones` in avatars.js; no shadow blur): `classic`, `thin`, `bold`, `dashed`, `glow`, `joints`. Wire: picture field `ss` (1-12 lower-case letters; unknown ids are drawn as classic), stored locally as `ff-skelstyle`; the colour is the existing `sk` / `ff-skel`.
+* **Chips** (`PROFILE_LAYERS`): Hand, Skeleton, Tattoo, Nail polish, Ring, Glove, Effect. The Hand category holds the owned hands (built-in and user-made); the Skeleton category holds the six styles.
+* **Saved looks** (`js/looks.js`): `ff-looks` = up to 12 `{id, name, base, bc?, lay[{id,c?,k?}], cat?, sk?, ss?}`, `ff-look` = the last applied id. `Inventory.getup()` / `applyGetup()` snapshot and wear a getup, re-validating owned items, colours and the stack limit.
+* **Favourites**: `ff-favbg` (0-4), `ff-favsong` (-1 none, 0-4). Not sent over the network; a new room's settings start from them.
+

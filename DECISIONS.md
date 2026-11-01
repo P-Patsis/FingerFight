@@ -188,3 +188,11 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - **Single-preview rule** (the double-preview bug): live camera showing the selected view > swaying puppet (puppet view, camera off) > static view picture (skeleton view, camera off). Never two panes. The old second "puppet fitting" pane beside the live camera is gone.
 - **Sticky top block** = preview, Choose your Hand, colour picker, chips (preview capped at 24vh so short phones keep room for the cards); only the item cards scroll under it. Done (camera off) is a small corner button in the preview. Item groups and Choose your Hand are horizontal scrolling rows.
 
+## 2026-11-01 (8) — skeleton styles, saved looks, favourites
+- **Skeleton styles are code, not catalogue items.** They are only a way to draw 21 joints, so they live in `layers.js` / `drawBones` with an id list; the wire field `ss` is validated by shape (1-12 lower-case letters), not against the list, so a newer phone's style never gets a picture refused (unknown = Classic). One shared colour, as asked ("the picker applies to the selected style").
+- **Hands moved into the Hand category** and the lobby lost its hand/skeleton rows: customising lives in one place. The lobby keeps the view choice only.
+- **Looks are plain data re-validated on every read and apply**, using the same cleaners as the network (stack, colours, intensity, style id). A look can never wear a locked or unknown item or exceed the stack limit.
+- **Favourites replace the "remembered lobby choice".** The lobby override is for that match only; the old `ff-bg`/`ff-music` values seed the favourites once. Default song is "none" so existing players do not suddenly get menu music.
+- **App-wide scene = the existing #stage.** Match screens (lobby, game, result) keep their own background/music; every other screen uses the favourites. The page-focus pause works on the whole audio context, so it covers menu music too.
+- **Scroll reset after the rebuild** (and snap off for a moment): setting scrollLeft before replacing the cards was re-snapped by the browser.
+

@@ -136,8 +136,10 @@ function show(id) {
   if (id === 'store') { $('wearSlotStore').append($('wearCard')); layoutWear('store'); }
   if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('appSlotProfile').append($('appCard')); layoutWear('profile'); renderProfileItems(); }
   else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('appSlot').append($('appCard')); }
-  if (id === 'menu') { updateRejoin(); music.stop(); }
-  else if (currentMusic >= 0) music.setArena(currentMusic);      // lobby / game / result: the arena's loop (lazy, silent if the file is missing)
+  if (id === 'menu') updateRejoin();
+  if (id === 'lobby' || id === 'game' || id === 'over') { if (currentMusic >= 0) music.setArena(currentMusic); }   // a match: the arena's loop (lazy, silent if the file is missing)
+  else appScene();                                               // everywhere else: my favourite background and song
+  if (id === 'profile') renderFav();
   navSync(id);
 }
 
@@ -148,6 +150,41 @@ function setBackground(i) {
   currentBg = i;
   $('stage').className = 'bg-' + i;
   $('scenery').innerHTML = backgroundHTML(i);      // fixed artwork, no user text
+}
+
+// ---- favourite background + song (Profile): the menus wear the background and play the song; a new room starts with both (the host can still change them in the lobby)
+const clampBg = n => (Number.isInteger(n) && n >= 0 && n < BACKGROUNDS.length ? n : 0);
+const favInit = () => {
+  const bg = store_get('ff-favbg') !== null ? Number(store_get('ff-favbg')) : Number(store_get('ff-bg'));         // the host's old last choice becomes the first favourite
+  const raw = store_get('ff-favsong') !== null ? Number(store_get('ff-favsong')) : (store_get('ff-music') !== null ? Number(store_get('ff-music')) : -1);   // -1 = no song
+  return { bg: clampBg(bg), music: Number.isInteger(raw) && raw >= 0 && raw < TRACK_NAMES.length ? raw : -1 };
+};
+const fav = favInit();
+if (store_get('ff-favbg') === null || store_get('ff-favsong') === null) { store.set('ff-favbg', String(fav.bg)); store.set('ff-favsong', String(fav.music)); }   // written once, so the favourites survive the old keys going away
+/** The scene outside a match (menu, Profile, Store, Stats...): the favourite background, and the favourite song if there is one. */
+function appScene() {
+  setBackground(fav.bg);
+  if (fav.music >= 0) music.setArena(fav.music); else music.stop();
+}
+/** Picking in the Profile takes effect at once (live preview) and is remembered on this phone. */
+function setFav(change) {
+  if ('bg' in change) { fav.bg = clampBg(change.bg); store.set('ff-favbg', String(fav.bg)); }
+  if ('music' in change) { fav.music = Number.isInteger(change.music) && change.music >= 0 && change.music < TRACK_NAMES.length ? change.music : -1; store.set('ff-favsong', String(fav.music)); }
+  appScene(); renderFav();
+}
+function renderFav() {
+  const bgBox = $('favBgPicker'), songBox = $('favSongPicker');
+  bgBox.replaceChildren(); songBox.replaceChildren();
+  BACKGROUNDS.forEach((name, i) => {
+    const b = el('button', 'thumb-' + i + (i === fav.bg ? ' sel' : ''), name); b.type = 'button'; b.dataset.value = String(i); b.onclick = () => setFav({ bg: i });
+    bgBox.append(b);
+  });
+  const none = el('button', 'song' + (fav.music < 0 ? ' sel' : ''), 'No song'); none.type = 'button'; none.dataset.value = '-1'; none.onclick = () => setFav({ music: -1 });
+  songBox.append(none);
+  TRACK_NAMES.forEach((name, i) => {
+    const s = el('button', 'song' + (i === fav.music ? ' sel' : ''), name); s.type = 'button'; s.dataset.value = String(i); s.onclick = () => setFav({ music: i });
+    songBox.append(s);
+  });
 }
 function setMusic(i) {
   currentMusic = i;
@@ -199,7 +236,7 @@ function detectCountry() {
   return '';                                                                            // unknown: no flag is shown
 }
 const myFlag = () => (profile.flag ? countryCode(profile.country) || undefined : undefined);
-const freshSettings = () => normalizeSettings({ ...DEFAULTS, background: Number(store.get('ff-bg')) || 0, music: Number(store.get('ff-music')) || 0 });   // the host's last background and music (each remembered on this phone)
+const freshSettings = () => normalizeSettings({ ...DEFAULTS, background: fav.bg, music: fav.music >= 0 ? fav.music : fav.bg });   // a new room starts with my favourite background and song (no song: the arena's own track); the lobby can still change them
 {
   // a shared link carries the code after the "#": browsers never send that part to any server
   const m = /(?:^|[#&])room=([A-Za-z0-9-]+)/.exec(location.hash || '');
@@ -707,8 +744,7 @@ function enterLobby() {
 /** Host-only changes to the arena: [change] is {background?, music?}; remembered on this phone and sent to the guest with the other settings (validated on arrival). */
 function setArena(change) {
   if (me !== 'host') return;
-  settings = normalizeSettings({ ...settings, ...change });
-  store.set('ff-bg', String(settings.background)); store.set('ff-music', String(settings.music));
+  settings = normalizeSettings({ ...settings, ...change });                  // this match only: the favourites are changed in the Profile
   setScene(); send({ t: 'settings', settings }); renderLobby();
 }
 function buildBgPicker() {
@@ -1844,10 +1880,10 @@ function resetAll() {
   $('camBtn').disabled = false; $('camBtn').textContent = 'Enable camera';
   $('camStatus').textContent = '';
   $('banner').replaceChildren();
-  setBackground(0);
+  setBackground(fav.bg);
 }
 
-setBackground(0);
+setBackground(fav.bg);
 show('menu');
 updateRejoin();
 // A reload (or the browser killing the tab) must not end a private match: pick the session up again by itself.

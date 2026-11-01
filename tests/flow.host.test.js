@@ -85,7 +85,7 @@ test('a friend joins and is accepted; both get ready; the host configures the fi
   assert.equal($('stage').className, 'bg-3', 'changing the music leaves the background'); assert.equal(played.at(-1), 1, 'and plays that track');
   $('bgPicker').children[4].onclick();
   assert.equal(sentOf(conn, 'settings').at(-1).settings.music, 1, 'changing the background leaves the music'); assert.equal(sentOf(conn, 'settings').at(-1).settings.background, 4);
-  assert.equal(globalThis.localStorage.getItem('ff-bg'), '4'); assert.equal(globalThis.localStorage.getItem('ff-music'), '1', 'both remembered on this phone');
+  assert.equal(globalThis.localStorage.getItem('ff-favbg'), '0', 'a lobby change is for this match only: the favourites are set in the Profile');
   // a preset is a background together with its own music
   $('presetPicker').children[2].onclick();
   assert.deepEqual([sentOf(conn, 'settings').at(-1).settings.background, sentOf(conn, 'settings').at(-1).settings.music], [2, 2]);
