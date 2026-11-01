@@ -1,5 +1,17 @@
 # Finger Fight: progress
 
+## 2026-11-01 — Profile text trim (small build)
+- Changed: removed the "Player" card heading (name = label + box); flag = "Show country flag" + toggle on one row, one small input below only when On, accepts a 2-letter code OR an English country name (`countryFromText` in js/names.js, uses Intl.DisplayNames, no network/IP; privacy unchanged, only the resolved code is saved/sent); "Puppet skin" -> "Choose your Hand" (picker label + Profile footnote). Stale-stamp SW re-stamped (ff-deb9d0e6).
+- Verified: 224/224 tests (223 + 1 new country-name test; 1 test updated to look for "Your name" instead of "Player"). NOT yet seen on a phone.
+- Open: check the flag row looks compact on the phone; typing "Greece" / "GR" shows the flag next to the box.
+
+## 2026-10-30 — Documentation and non-destructive maintenance
+- Updated README/current status and investigation notes; no application behaviour changed.
+- README rules/relay/camera/store descriptions now follow source/tests; DECISIONS.md distinguishes current implementation from dated history.
+- Ignore Python bytecode and remove tracked bytecode from the index only; local file retained.
+- TURN recommendation and canonical remote check in TURN_REVIEW.md; credentials and origin unchanged.
+- Validation: existing Node suite 223/223 passed, zero failures/skips; diff whitespace and documentation links checked.
+
 ## NEXT / pending decisions (read this first after a crash)
 - Live at https://p-patsis.github.io/FingerFight/ (repo P-Patsis/FingerFight, public; local git remote still says FingerRing, GitHub redirects). Installable as a PWA (Chrome menu, Install app).
 - Build 3 (flip camera, skeleton scale, open palm legal, wake lock, anti-grief, fewer fingers) is DONE and committed (fcfb37c); the forfeit/wake-lock decisions are resolved (entry below). The user then reported 4 regressions (sound, camera test, photos, flag); see the newest entry. STILL NEEDS A REAL-PHONE TEST: flip camera, skeleton size, wake lock holding the screen, idle warning banner, forfeit landing in the lobby / menu.

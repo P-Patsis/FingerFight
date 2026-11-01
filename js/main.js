@@ -20,7 +20,7 @@ import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
   sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, cameraWarning, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, autoCameraWanted, shrinkNotice, turnMessage, HIT_MS, newIdle, trackIdle, IDLE_ROUNDS,
 } from './logic.js';
-import { cleanName, uniqueName, flagEmoji, countryCode, isObscene } from './names.js';
+import { cleanName, uniqueName, flagEmoji, countryCode, countryFromText, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
 import { isRudeMessage as looksRude, loadTuning } from './gestures.js';
 import { createDebugPanel } from './debug.js';
@@ -216,13 +216,14 @@ function renderProfile() {
   $('flagBtn').classList.toggle('on', profile.flag);
   $('countryRow').hidden = !profile.flag;
   $('countryInput').value = profile.country || '';
+  $('countryHint').textContent = flagEmoji(profile.country);
   renderWho();
 }
 $('nameInput').oninput = () => { store.set('ff-name', sanitizeName($('nameInput').value)); renderProfile(); };
 $('flagBtn').onclick = () => { profile.flag = !profile.flag; store.set('ff-flag', profile.flag ? '1' : '0'); renderProfile(); };
 $('countryInput').oninput = e => {
-  const c = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
-  e.target.value = c; profile.country = c; store.set('ff-country', c);
+  const c = countryFromText(e.target.value);      // the box keeps what was typed; only the matching code is saved
+  profile.country = c; store.set('ff-country', c); $('countryHint').textContent = flagEmoji(c);
 };
 $('profileBtn').onclick = () => { buildStyleCard(); renderProfile(); show('profile'); };
 $('profileBack').onclick = () => show('menu');

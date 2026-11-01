@@ -22,7 +22,7 @@ test('Profile: favourite arena is gone; the arena stays a lobby setting', () => 
 
 test('Profile: Player card, then how the opponent sees my hand, then App settings with the sound controls inside', () => {
   const profile = section('profile');
-  assert.ok(profile.indexOf('Player') < profile.indexOf('id="styleSlotProfile"') && profile.indexOf('id="styleSlotProfile"') < profile.indexOf('id="appSlotProfile"'));
+  assert.ok(profile.indexOf('Your name') < profile.indexOf('id="styleSlotProfile"') && profile.indexOf('id="styleSlotProfile"') < profile.indexOf('id="appSlotProfile"'));
   const app = html.slice(html.indexOf('id="appCard"'), html.indexOf('</div></div>', html.indexOf('id="appCard"')));
   for (const id of ['muteBtn', 'volSlider', 'rudeBtn', 'photoBtn']) assert.ok(app.includes('id="' + id + '"'), id + ' is in the App settings card');
   const style = html.slice(html.indexOf('id="styleCard"'), html.indexOf('id="appSlot"'));

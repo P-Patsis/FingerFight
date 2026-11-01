@@ -124,3 +124,24 @@ export function countryCode(c, allowLanguage = false) {
 }
 export const validCountry = c => countryCode(c) !== '';
 export const flagEmoji = c => { const k = countryCode(c); return k ? String.fromCodePoint(...[...k].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65)) : ''; };
+
+const NAME_ALIASES = { 'UNITED STATES': 'US', USA: 'US', AMERICA: 'US', 'UNITED KINGDOM': 'GB', BRITAIN: 'GB', 'GREAT BRITAIN': 'GB', ENGLAND: 'GB', SCOTLAND: 'GB', WALES: 'GB', HOLLAND: 'NL', 'SOUTH KOREA': 'KR', RUSSIA: 'RU', TURKEY: 'TR', TURKIYE: 'TR', 'CZECH REPUBLIC': 'CZ' };
+let nameMap = null;
+function countryNames() {
+  if (nameMap) return nameMap;
+  nameMap = new Map();
+  try {
+    const dn = new Intl.DisplayNames(['en'], { type: 'region' });
+    for (const r of ISO_REGIONS) { const n = dn.of(r); if (n && n !== r) nameMap.set(n.toUpperCase(), r); }
+  } catch { /* no Intl names here: codes and the aliases still work */ }
+  return nameMap;
+}
+/** What the player typed in the country box: a 2-letter code ("gr") or an English country name ("Greece") -> its code, or ''. */
+export function countryFromText(t) {
+  if (typeof t !== 'string') return '';
+  const s = t.trim().replace(/\s+/g, ' ');
+  if (!s || s.length > 60) return '';
+  if (s.length <= 2) return countryCode(s);
+  const k = s.toUpperCase();
+  return NAME_ALIASES[k] || countryNames().get(k) || '';
+}

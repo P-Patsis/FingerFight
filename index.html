@@ -44,11 +44,10 @@
     <div class="topbar"><button id="profileBack" class="btn small">← Back</button></div>
     <h2 class="logo small">PROFILE</h2>
     <div class="card">
-      <h3 class="card-h">Player</h3>
       <label class="field">Your name<input id="nameInput" maxlength="40" autocomplete="off" placeholder="Fighter"></label>
       <p id="nameNote" class="fine"></p>
-      <div class="set"><span>Show my country flag</span><button id="flagBtn" class="toggle">Off</button></div>
-      <label class="field" id="countryRow">Country code (2 letters, e.g. GR)<input id="countryInput" maxlength="2" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="GR"></label>
+      <div class="set"><span>Show country flag</span><button id="flagBtn" class="toggle">Off</button></div>
+      <label class="field" id="countryRow"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR or Greece" aria-label="Country code or name"><span id="countryHint" class="fine"></span></label>
     </div>
     <div id="styleSlotProfile"></div>
     <div id="appSlotProfile"></div>
@@ -59,7 +58,7 @@
       <div id="profileGrid" class="store-grid"></div>
     </div>
     <button id="profileStore" class="btn ghost">Open the Store</button>
-    <p class="fine">Your IP address is always hidden from strangers (random matches go through a relay). Your name, hand style, puppet skin and sound are saved on this phone and used in every match.</p>
+    <p class="fine">Your IP address is always hidden from strangers (random matches go through a relay). Your name, hand style, hand choice and sound are saved on this phone and used in every match.</p>
   </section>
 
   <!-- ===== Store (cosmetics: browse, preview, unlock, equip) ===== -->
@@ -109,7 +108,7 @@
       <h3 class="card-h">How my opponent sees my hand</h3>
       <div id="modePicker" class="mode-picker"></div>
       <div class="view-preview"><canvas id="viewPreview" width="240" height="150" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
-      <div class="set col" id="skinRow"><span>Puppet skin</span><div id="skinPicker" class="skin-picker"></div></div>
+      <div class="set col" id="skinRow"><span>Choose your Hand</span><div id="skinPicker" class="skin-picker"></div></div>
       <p id="styleNote" class="fine"></p>
     </div></div>
     <div id="appSlot"><div class="card" id="appCard">

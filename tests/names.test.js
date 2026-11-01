@@ -46,3 +46,9 @@ test('browser language to country: a region wins, a bare language maps only wher
   assert.equal(countryCode('xx', true), '');
   assert.equal(flagEmoji(countryCode('el', true)), '🇬🇷');
 });
+
+test('country box: a 2-letter code or an English country name gives the same flag; junk gives none', async () => {
+  const { countryFromText } = await import('../js/names.js');
+  for (const [t, c] of [['GR', 'GR'], ['gr', 'GR'], ['Greece', 'GR'], ['  greece ', 'GR'], ['United Kingdom', 'GB'], ['usa', 'US'], ['Germany', 'DE']]) assert.equal(countryFromText(t), c, t);
+  for (const bad of ['', 'Atlantis', 'Gre', 'ZZ', null, 42]) assert.equal(countryFromText(bad), '', String(bad));
+});
