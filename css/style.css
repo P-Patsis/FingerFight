@@ -473,3 +473,17 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cprow input[type=color] { width: 48px; height: 36px; }
 .cprow button.sw { width: 34px; height: 34px; min-width: 34px; }
 .cprow .btn { padding: 8px 12px; font-size: 13px; }
+
+/* ---------- skeleton category, two-row chips, one-tap colour button ---------- */
+.chips.two-rows { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; justify-content: stretch; }
+.chips.two-rows button { padding: 6px 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-label { display: none; }
+.any-color { position: relative; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #94a3b8; overflow: hidden;
+  background: conic-gradient(#e42525, #e4a825, #a8e425, #25e46a, #25d3e4, #2552e4, #7a25e4, #e425a8, #e42525); }
+.any-color input[type=color] { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); opacity: 0; cursor: pointer; border: 0; padding: 0; }
+
+/* name box and country block: the label line is the same height on both sides, so the two inputs sit on one line */
+.idrow { align-items: flex-start; }
+.namerow > .lab, .flaghead { height: 26px; min-height: 26px; box-sizing: border-box; display: flex; align-items: center; margin: 0; }
+.flaghead .toggle { height: 24px; padding: 0 8px; line-height: 1; }
+.namerow input, .flagrow input { height: 38px; }

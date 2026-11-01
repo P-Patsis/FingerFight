@@ -36,16 +36,17 @@ test('skeleton colour: drawn in the picked colour, default otherwise, junk never
   assert.equal(validPicture({ ...pic, bd: 'blue' }, false), false);
 });
 
-test('Profile: the skeleton colour picker shows for skeleton views, saves a clean colour, and ignores junk', async () => {
+test('Profile: the Skeleton category\'s colour picker saves a clean colour and ignores junk (there is no standalone skeleton colour row)', async () => {
   $('profileBtn').onclick();
+  $('custBtn').onclick();
+  await until(() => !$('custArea').hidden, 'customise open');
   const modes = $('modePicker').children;
-  modes.find(x => x.dataset.mode === 'puppet').onclick();
-  assert.equal($('skelRow').hidden, true, 'not for the puppet view');
   modes.find(x => x.dataset.mode === 'skeleton').onclick();
-  assert.equal($('skelRow').hidden, false);
-  $('skelPicker').children.find(x => x.dataset.color === '#25e46a').onclick();
+  const row = () => $('catColor').children.find(c => c.classList.contains('cprow'));
+  assert.equal(row().dataset.layer, 'skeleton', 'the skeleton view opens the Skeleton category');
+  row().children.find(x => x.dataset.color === '#25e46a').onclick();
   assert.equal(globalThis.localStorage.getItem('ff-skel'), '#25e46a');
-  const any = $('skelPicker').children.find(x => x.type === 'color');
+  const any = row().children.flatMap(c => [c, ...c.children]).find(x => x.type === 'color');
   any.value = 'javascript:1'; any.oninput();
   assert.equal(globalThis.localStorage.getItem('ff-skel'), '', 'junk clears to the default, never stored as is');
   any.value = '#00ff88'; any.oninput();
@@ -172,7 +173,7 @@ test('Profile customise: the Effect panel has the intensity slider, and moving i
   assert.ok(!panelKids.find(x => x.dataset?.act === 'gradient'), 'no gradient anywhere'); assert.ok(!panelKids.find(x => x.dataset?.act === 'intensity'));
   chip('ring').onclick();
   assert.ok($('catColor').children.some(c => c.classList.contains('cprow')), 'rings have a colour row');
-  assert.deepEqual($('profileLayers').children.map(x => x.dataset.value), L.LAYERS, 'Hand, Tattoo, Nails, Ring, Glove, Effect: no Skin tone');
+  assert.deepEqual($('profileLayers').children.map(x => x.dataset.value), L.PROFILE_LAYERS, 'Hand, Skeleton, Tattoo, Nails, Ring, Glove, Effect: no Skin tone');
   assert.equal(b.byId.get('profile').children.some(c => /Your items/.test(c.textContent || '')), false, 'no standalone Your items section');
   $('custBtn').onclick();
   $('profileBack').onclick();
@@ -199,7 +200,7 @@ test('Choose your Hand: built-in hands and the player\'s own hands share one lis
   assert.equal(inv.toggle('myhand').ok, true); assert.equal(inv.baseId, 'myhand');
   $('profileBtn').onclick();
   $('modePicker').children.find(x => x.dataset.mode === 'puppet').onclick();
-  assert.deepEqual($('skinPicker').children.map(x => x.dataset.skin), [...builtIn, 'myhand'].filter(id => C.entryOf(id).free), 'the picker lists built-in (the ones you own) and your own hands together');
+  assert.deepEqual($('profileGrid').children.filter(c => c.matches('.item-card')).map(x => x.dataset.id), [...builtIn, 'myhand'].filter(id => C.entryOf(id).free), 'the Hand category lists built-in (the ones you own) and your own hands together');
   $('profileBack').onclick();
   S.resetSkins();
 });
@@ -308,6 +309,7 @@ test('preset swatches: ONE short row, a few well-spread hues plus white / grey /
 });
 
 test('ONE colour picker above the grid that switches with the category chip: presets + full-spectrum + Original, hand recolour on the Hand chip, no gradient', async () => {
+  await S.loadSkins(async u => ({ ok: true, json: async () => JSON.parse(fs.readFileSync(new URL('../' + String(u).replace(/^.*?(assets\/)/, '$1'), import.meta.url), 'utf8')) }));   // an earlier test reset the skins
   $('profileBtn').onclick();
   $('custBtn').onclick();
   await until(() => !$('custArea').hidden, 'customise open');
@@ -319,28 +321,28 @@ test('ONE colour picker above the grid that switches with the category chip: pre
   assert.equal($('catColor').children.filter(c => c.classList.contains('cprow')).length, 1, 'exactly one picker row');
   const row = $('catColor').children.find(c => c.classList.contains('cprow'));
   assert.equal(row.dataset.layer, 'nails', 'the picker belongs to the chip');
-  assert.ok(row.children.some(x => x.type === 'color'), 'a full colour picker'); assert.ok(row.children.some(x => x.dataset.act === 'default'), 'Original');
+  assert.ok(row.children.flatMap(c => [c, ...c.children]).some(x => x.type === 'color'), 'a full colour picker'); assert.ok(row.children.some(x => x.dataset.act === 'default'), 'Original');
   assert.equal(row.children.filter(x => x.dataset.color).length, L.BASIC_PALETTE.length);
   assert.ok(!all().some(x => x.dataset?.act === 'gradient'), 'no gradient');
-  const input = row.children.find(x => x.type === 'color');
+  const input = row.children.flatMap(c => [c, ...c.children]).find(x => x.type === 'color');
   input.value = '#ff0000'; input.oninput();
   assert.equal(stackOf('nailpolish').c, '#ff0000');
   input.value = 'javascript:alert(1)'; input.oninput();
   assert.equal(stackOf('nailpolish').c, '#ff0000', 'junk is refused');
-  $('profileGrid').scrollLeft = 240; chip('tattoo').onclick();
-  assert.equal($('profileGrid').scrollLeft, 0, 'a new category starts at its first items');
-  assert.equal($('catColor').children[0].textContent, 'Choose colour');
+  // SCROLL RESET: the row is put back at the start AFTER its cards were replaced (resetting before is what the browser undid on the phone)
+  const g = $('profileGrid'), log = []; let sl = 240;
+  const rc = g.replaceChildren.bind(g); g.replaceChildren = (...a) => { log.push('replace'); return rc(...a); };
+  Object.defineProperty(g, 'scrollLeft', { get: () => sl, set: v => { log.push('scroll=' + v); sl = v; }, configurable: true });
+  chip('tattoo').onclick();
+  assert.equal(sl, 0, 'a new category starts at its first items');
+  assert.ok(log.lastIndexOf('replace') >= 0 && log.lastIndexOf('replace') < log.lastIndexOf('scroll=0'), 'the reset comes after the new cards are in: ' + log.join(','));
   assert.equal($('catColor').children.find(c => c.classList.contains('cprow')).dataset.layer, 'tattoo', 'the picker switched with the chip');
   chip('nails').onclick();
   all().find(x => x.dataset?.act === 'default').onclick();
   assert.equal(stackOf('nailpolish').c, undefined, 'Original puts the item colours back');
   // the Hand chip: recolours the selected hand
-  await S.loadSkins(async u => ({ ok: true, json: async () => JSON.parse(fs.readFileSync(new URL('../' + String(u).replace(/^.*?(assets\/)/, '$1'), import.meta.url), 'utf8')) }));   // an earlier test reset the skins
-  $('profileBack').onclick(); $('profileBtn').onclick(); $('custBtn').onclick();
-  await until(() => $('skinPicker').children.length >= 2, 'Choose your Hand lists the hands');
-  const hands = $('skinPicker').children;
-  hands.find(x => x.dataset.skin === 'cartoon').onclick();
   chip('base').onclick();
+  $('profileGrid').children.find(c => c.dataset.id === 'cartoon').onclick();
   const hrow = $('catColor').children.find(c => c.classList.contains('cprow'));
   assert.ok(hrow, 'the Hand chip has the picker for the worn hand');
   hrow.children.find(x => x.dataset.color === '#e42525').onclick();

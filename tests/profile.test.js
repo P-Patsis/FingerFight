@@ -36,20 +36,20 @@ test('Profile: Player card, then how the opponent sees my hand, then App setting
   $('profileBack').onclick();
 });
 
-test('skin picker: one button per loaded skin, the saved choice is marked, picking saves it and hides with non-puppet views', async () => {
+test('HANDS live in the Hand category (no separate row): one card per owned hand, the saved choice is marked, tapping saves it', async () => {
   $('profileBtn').onclick();
-  await until(() => $('skinPicker').children.length === 5, 'the five free hands in the picker (locked ones are unlocked in the Store)');
-  assert.deepEqual($('skinPicker').children.map(x => x.dataset.skin), ['cartoon', 'robot', 'neon', 'paw', 'gauntlet']);
-  assert.deepEqual($('skinPicker').children.filter(x => x.classList.contains('sel')).map(x => x.dataset.skin), ['cartoon'], 'default is the built-in cartoon');
-  $('skinPicker').children.find(x => x.dataset.skin === 'robot').onclick();
+  const cards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
+  await until(() => cards().length === 5, 'the five free hands as cards (locked ones are unlocked in the Store)');
+  assert.deepEqual($('profileLayers').children.map(x => x.dataset.value)[0], 'base', 'Hand is the first chip, and the one that is open');
+  assert.deepEqual(cards().map(x => x.dataset.id), ['cartoon', 'robot', 'neon', 'paw', 'gauntlet']);
+  assert.deepEqual(cards().filter(x => x.classList.contains('eq')).map(x => x.dataset.id), ['cartoon'], 'default is the built-in cartoon');
+  cards().find(x => x.dataset.id === 'robot').onclick();
   assert.equal(globalThis.localStorage.getItem('ff-puppet'), 'robot');
-  assert.deepEqual($('skinPicker').children.filter(x => x.classList.contains('sel')).map(x => x.dataset.skin), ['robot']);
-  assert.equal($('skinRow').hidden, false, 'puppet view: skins shown');
-  $('modePicker').children.find(x => x.dataset.mode === 'skeleton').onclick();
-  assert.equal($('skinRow').hidden, true, 'skeleton view: no skin to choose');
+  assert.deepEqual(cards().filter(x => x.classList.contains('eq')).map(x => x.dataset.id), ['robot']);
+  assert.equal(b.byId.get('skinPicker'), undefined, 'no separate "Choose your Hand" grid any more'); assert.equal(b.byId.get('skelRow'), undefined, 'no standalone skeleton colour row');
   $('modePicker').children.find(x => x.dataset.mode === 'photo-puppet').onclick();
-  assert.equal($('skinRow').hidden, false, 'photo + puppet uses the puppet skin too');
   assert.equal(globalThis.localStorage.getItem('ff-mode'), 'photo-puppet');
+  assert.equal(cards().length, 5, 'a puppet view opens the Hand category');
   $('profileBack').onclick();
 });
 

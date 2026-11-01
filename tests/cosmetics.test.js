@@ -493,7 +493,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.ok(pick().children.filter(x => x.dataset.color).length >= 8, 'ONE line of basic preset swatches');
   pick().children.find(x => x.dataset.color === '#25d3e4').onclick();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#25d3e4');
-  const input = pick().children.find(x => x.type === 'color');
+  const input = pick().children.flatMap(c => [c, ...c.children]).find(x => x.type === 'color');
   input.value = '#12ab34'; input.oninput();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'any colour, live');
   input.value = 'javascript:alert(1)'; input.oninput();
@@ -515,8 +515,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(b.visible(), ['profile']);
   assert.equal($('wearTop').parentElement, $('cWearTop'), 'the preview moved to the Profile customise area');
   const pcards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
-  assert.equal(pcards().length, 0, 'the Hand category has no duplicate cards: the hands live in "Choose your Hand"');
-  assert.match($('profileGrid').children.map(c => c.textContent).join(' '), /Choose your Hand/);
+  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet']), 'the Hand category holds the hands you own (there is no separate hand row)');
   $('profileLayers').children.find(x => x.dataset.value === 'glove').onclick();
   pcards().find(c => c.dataset.id === 'whiteglove').onclick();
   assert.equal(stackIds().at(-1), 'whiteglove');

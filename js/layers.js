@@ -6,7 +6,7 @@ import { parseParticles } from './particles.js';
  *  things in (the stack, see js/inventory.js) does. Only `base` is special: one hand, always the bottom. `tone` is a colour for the
  *  base hand (one at a time) and `effect` is a particle effect (it draws no shapes); the rest are shapes drawn over the hand. */
 export const LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'ring', 'glove', 'effect']);
-export const LAYER_LABELS = Object.freeze({ base: 'Hand', tattoo: 'Tattoo / scar', nails: 'Nail polish', ring: 'Ring', glove: 'Glove', effect: 'Effect' });
+export const LAYER_LABELS = Object.freeze({ base: 'Hand', skeleton: 'Skeleton', tattoo: 'Tattoo / scar', nails: 'Nail polish', ring: 'Ring', glove: 'Glove', effect: 'Effect' });
 export const MAX_STACK = 12;                       // most items worn at once (on top of the base hand)
 export const HEX = /^#[0-9a-fA-F]{6}$/;            // the only colour form that is ever stored or sent: plain #rrggbb
 export const ROLES = Object.freeze(['main', 'dark', 'mid', 'light']);
@@ -70,6 +70,16 @@ export function roleColor(hex, role) {
 }
 /** The quick colours of the category colour picker: a handful of well-spread hues (45 degrees apart) + white, grey, black, kept to ONE line.
  *  Any other colour comes from the full colour picker. */
+/** The skeleton STYLES the player can choose for the skeleton views (drawn by avatars.js `drawBones`; the id travels as `ss`, 1-12 lower-case letters). */
+export const SKELETON_STYLES = [['classic', 'Classic'], ['thin', 'Thin'], ['bold', 'Bold'], ['dashed', 'Dashed'], ['glow', 'Glow'], ['joints', 'Joints']];
+export const SKELETON_STYLE_IDS = SKELETON_STYLES.map(s => s[0]);
+export const DEFAULT_SKELETON_STYLE = 'classic';
+/** A known style id, else null (storage and the UI); an unknown id from the network is simply drawn as classic. */
+export const cleanSkelStyle = s => (SKELETON_STYLE_IDS.includes(s) ? s : null);
+
+/** The Profile's customise chips: the catalogue layers plus the Skeleton styles (which are not wearable items), Hand first, Skeleton second. */
+export const PROFILE_LAYERS = ['base', 'skeleton', 'tattoo', 'nails', 'ring', 'glove', 'effect'];
+
 export const BASIC_PALETTE = Object.freeze(['#e42525', '#e4a825', '#a8e425', '#25e46a', '#25d3e4', '#2552e4', '#7a25e4', '#e425a8', '#ffffff', '#8a8a8a', '#111111']);
 /** Every category has ONE colour picker (the Hand's recolours the worn base hand, when that hand supports it). One plain #rrggbb each, no gradients. */
 export const COLOR_LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'ring', 'glove', 'effect']);

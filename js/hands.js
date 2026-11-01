@@ -1,12 +1,12 @@
 // Camera + hand tracking, and a camera-free simulator with the same interface (?sim=1) for testing.
 // The MediaPipe runtime and hand model are loaded from the CDN, as in the original fingers app (about 17 MB, once).
 import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './gestures.js';
-import { statesFromCount, annotate, FINGERS, TIP_ID } from './avatars.js';
+import { statesFromCount, annotate, FINGERS, TIP_ID, drawBones } from './avatars.js';
 import { viewOf } from './logic.js';
 import { drawPuppet, handBack } from './puppet.js';
 import { skinIdOf } from './skins.js';
 import { resolveLoadout, stackToWire } from './cosmetics.js';
-import { cleanColor } from './layers.js';
+import { cleanColor, cleanSkelStyle } from './layers.js';
 import { ParticleSystem } from './particles.js';
 
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
@@ -29,16 +29,8 @@ function mode_(values) {
   return { value: best, n: bestN };
 }
 
-function drawSkeleton(ctx, hands, w, h, lineWidth, color = '#22d3ee') {
-  ctx.lineWidth = lineWidth;
-  for (const lm of hands) {
-    ctx.strokeStyle = cleanColor(color) || '#22d3ee';
-    for (const [a, b] of CONN) {
-      ctx.beginPath(); ctx.moveTo(lm[a].x * w, lm[a].y * h); ctx.lineTo(lm[b].x * w, lm[b].y * h); ctx.stroke();
-    }
-    ctx.fillStyle = '#fbbf24';
-    for (const p of lm) { ctx.beginPath(); ctx.arc(p.x * w, p.y * h, lineWidth * 1.3, 0, 7); ctx.fill(); }
-  }
+function drawSkeleton(ctx, hands, w, h, lineWidth, color = '#22d3ee', skelStyle = 'classic') {
+  for (const lm of hands) drawBones(ctx, lm.map(p => ({ x: p.x * w, y: p.y * h })), color, lineWidth, skelStyle);
 }
 
 export class HandCam {
@@ -214,9 +206,9 @@ export class HandCam {
   }
 
   /** The picture drawn over MY camera view follows what my opponent sees: puppet views get the puppet, the others the skeleton. */
-  setOverlay(view, skin, stack, baseColor = null, skel = null) {
+  setOverlay(view, skin, stack, baseColor = null, skel = null, skelStyle = null) {
     const v = viewOf(view);
-    this.skel = cleanColor(skel);
+    this.skel = cleanColor(skel); this.skelStyle = cleanSkelStyle(skelStyle) || 'classic';
     const rec = resolveLoadout(skin, stack, baseColor);
     this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec };
     this.particles.setEmitters(v.endsWith('puppet') ? rec.emitters : []);
@@ -242,7 +234,7 @@ export class HandCam {
         try { this.onError?.('Puppet could not be drawn, showing the skeleton instead (' + (e?.name || 'Error') + ': ' + (e?.message || e) + ')'); } catch { /* ignore */ }
       }
     }
-    drawSkeleton(this.ctx, hands, w, h, 3, this.skel);       // the same landmarks the tracker just produced: no second pass over the frame
+    drawSkeleton(this.ctx, hands, w, h, 3, this.skel, this.skelStyle);       // the same landmarks the tracker just produced: no second pass over the frame
   }
 
   pause() {
@@ -293,13 +285,13 @@ export class HandCam {
     const q = x => Math.max(0, Math.min(1000, Math.round(x * 1000)));
     const lm = hands.length ? hands.map(h => h.map(p => [q(mirror ? 1 - p.x : p.x), q(p.y)])) : null;
     const photoMode = mode.startsWith('photo-');
-    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.skel, backs) : '';
+    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.skel, backs, style.skelStyle) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
     if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
   }
 
-  #photo(hands, states, mode, ar, skinId, stack, baseColor, skel = null, backs = []) {
+  #photo(hands, states, mode, ar, skinId, stack, baseColor, skel = null, backs = [], skelStyle = null) {
     const v = this.video;
     if (!v.videoWidth) return '';
     const w = PHOTO_WIDTH, h = Math.round((w * v.videoHeight) / v.videoWidth);
@@ -310,7 +302,7 @@ export class HandCam {
     ctx.save();
     if (mirror) { ctx.translate(w, 0); ctx.scale(-1, 1); }
     ctx.drawImage(v, 0, 0, w, h);
-    if (mode === 'photo-skeleton') drawSkeleton(ctx, hands, w, h, 2, skel);
+    if (mode === 'photo-skeleton') drawSkeleton(ctx, hands, w, h, 2, skel, skelStyle);
     ctx.restore();
     if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
       const rec = resolveLoadout(skinId, stack, baseColor);
@@ -352,6 +344,6 @@ export class SimCam {
       ctx.fillText(String(count), 120, 110);
       photo = c.toDataURL('image/jpeg', 0.6);
     }
-    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined };
+    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined };
   }
 }

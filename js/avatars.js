@@ -5,12 +5,34 @@ import { drawPuppet, statesToLandmarks } from './puppet.js';
 import { getSkin } from './skins.js';
 import { resolveLoadout } from './cosmetics.js';
 import { snapshot } from './particles.js';
-import { cleanColor } from './layers.js';
+import { cleanColor, SKELETON_STYLE_IDS, DEFAULT_SKELETON_STYLE } from './layers.js';
 
 // (The hand itself is the puppet: puppet.js poses a swappable skin from skins.js on the landmarks.)
 
 /** The skeleton lines' default colour; the player can pick another (a plain #rrggbb, also sent to the opponent as `sk`). */
 export const SKELETON_COLOR = '#22d3ee';
+/**
+ * One skeleton hand in a style. [P]: the 21 joints in pixels ({x, y}); [lw]: the base line width; [color]: the bone colour (plain #rrggbb).
+ * Plain strokes and fills only (no shadow blur: that is slow on phones); the glow is a wide faint stroke under the line.
+ */
+export function drawBones(ctx, P, color, lw, style = DEFAULT_SKELETON_STYLE) {
+  const id = SKELETON_STYLE_IDS.includes(style) ? style : DEFAULT_SKELETON_STYLE;
+  const col = cleanColor(color) || SKELETON_COLOR;
+  const width = { classic: 1, thin: 0.45, bold: 2.1, dashed: 1.2, glow: 1, joints: 0.55 }[id] * lw;
+  const stroke = () => { for (const [a, b] of BONES) { ctx.beginPath(); ctx.moveTo(P[a].x, P[a].y); ctx.lineTo(P[b].x, P[b].y); ctx.stroke(); } };
+  if (id === 'glow') {
+    ctx.save(); ctx.globalAlpha = 0.28; ctx.lineWidth = lw * 4; ctx.lineCap = 'round'; ctx.strokeStyle = col; stroke(); ctx.restore();
+  }
+  ctx.lineWidth = width; ctx.strokeStyle = col;
+  if (id === 'dashed') ctx.setLineDash?.([lw * 2.2, lw * 1.6]);
+  stroke();
+  if (id === 'dashed') ctx.setLineDash?.([]);
+  const r = { classic: 1.1, thin: 0.9, bold: 1.5, dashed: 1.4, glow: 1.1, joints: 2.6 }[id] * lw;
+  ctx.fillStyle = id === 'joints' ? col : id === 'glow' ? '#ffffff' : '#fbbf24';
+  for (const p of P) { ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2, r), 0, 7); ctx.fill(); }
+  if (id === 'joints') { ctx.fillStyle = '#fbbf24'; for (const p of P) { ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.2, r * 0.4), 0, 7); ctx.fill(); } }
+}
+
 export const FINGERS = ['thumb', 'index', 'middle', 'ring', 'pinky'];   // numbering order for the little labels
 
 /** Splits a total (0..10) over two hands, filling index, middle, ring, pinky, thumb on each. 0 is one closed fist. */
@@ -73,15 +95,10 @@ function raisedTips(lms, hands, px) {
  * [lms]: up to two hands of 21 integer [x, y] points in 0..1000 (the camera frame). [hands]: finger states, used
  * to number the raised fingertips. [ar]: the camera frame's width / height, so the drawing is not stretched.
  */
-export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = true, color = SKELETON_COLOR) {
+export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = true, color = SKELETON_COLOR, style = DEFAULT_SKELETON_STYLE) {
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h);
   const px = fitter(lms, w, h, ar, 0.1);
-  lms.forEach(hand => {
-    ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = cleanColor(color) || SKELETON_COLOR;
-    for (const [a, b] of BONES) { const A = px(hand[a]), B = px(hand[b]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
-    ctx.fillStyle = '#fbbf24';
-    for (const p of hand) { const P = px(p); ctx.beginPath(); ctx.arc(P.x, P.y, Math.max(2.5, h * 0.018), 0, 7); ctx.fill(); }
-  });
+  lms.forEach(hand => drawBones(ctx, hand.map(px), color, Math.max(2, h * 0.016), style));
   const tips = raisedTips(lms, hands, px);
   if (withNumbers) annotate(ctx, tips, Math.max(8, h * 0.07));
   return tips;
@@ -102,12 +119,12 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
 /** Profile preview: how my current choice looks to the viewer, drawn with the selected skin from a sample open hand.
  *  Photo views get a stand-in "camera picture" (a plain silhouette, never my real camera) with the hand drawn over it.
  *  Returns what was drawn: { camera: bool, hand: 'puppet' | 'skeleton' }. */
-export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELETON_COLOR) {
+export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELETON_COLOR, skelStyle = DEFAULT_SKELETON_STYLE) {
   const puppet = String(mode).endsWith('puppet');
   const camera = String(mode).startsWith('photo');
   const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
   if (!camera) {
-    if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false, rec); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false, skel);
+    if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false, rec); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false, skel, skelStyle);
     return { camera, hand: puppet ? 'puppet' : 'skeleton' };
   }
   const g = ctx.createLinearGradient(0, 0, 0, h);
@@ -120,8 +137,7 @@ export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELET
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
   if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
   else {
-    ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = cleanColor(skel) || SKELETON_COLOR;
-    for (const hand of lms) for (const [a, b] of BONES) { const A = at(hand[a]), B = at(hand[b]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
+    for (const hand of lms) drawBones(ctx, hand.map(at), skel, Math.max(2, h * 0.016), skelStyle);
   }
   return { camera, hand: puppet ? 'puppet' : 'skeleton' };
 }
@@ -147,7 +163,7 @@ export function drawFromMessage(ctx, w, h, msg) {
     ctx.fillText('?', w / 2, h / 2);
     return [];
   }
-  if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar, true, msg.sk);
+  if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar, true, msg.sk, msg.ss);
   const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
   const backs = Array.isArray(msg.bk) ? msg.bk.slice(0, 2).map(x => (x === true || x === false ? x : undefined)) : [];     // which way the sender's hand faced (nails show on the back)
   return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, { ...rec, backs });

@@ -14,35 +14,41 @@ test('name + country flag share ONE row, label over input: Name on the left, a c
 });
 
 test('Profile top block is ONE sticky stack in order: camera preview, Choose your Hand, colour picker, category chips; only the item cards come after', () => {
-  const order = ['modePicker', 'stickyTop', 'previewZone', 'viewPreviewBox', 'liveBox', 'cWearTop', 'skinRow', 'cCat', 'profileLayers', 'custArea', 'profileGrid'].map(at);
+  const order = ['modePicker', 'stickyTop', 'previewZone', 'viewPreviewBox', 'liveBox', 'cWearTop', 'cCat', 'profileLayers', 'custArea', 'profileGrid'].map(at);
   assert.deepEqual(order, [...order].sort((a, b) => a - b));
   const top = html.slice(html.lastIndexOf('<div', at('stickyTop')), at('custArea'));
-  for (const id of ['previewZone', 'skinRow', 'cCat', 'profileLayers']) assert.ok(top.includes('id="' + id + '"'), id + ' is inside the sticky block');
+  for (const id of ['previewZone', 'cCat', 'profileLayers']) assert.ok(top.includes('id="' + id + '"'), id + ' is inside the sticky block');
   assert.ok(!top.includes('id="profileGrid"'), 'the item cards scroll under it, they are not part of it');
   assert.ok(!html.includes('id="wearPhoto"'), 'no standalone Photo toggle');
 });
 
 test('Done (camera off) is a small button INSIDE the preview zone (top-right corner), not a full-width bar', () => {
-  const zone = html.slice(html.lastIndexOf('<div', at('previewZone')), at('skinRow'));
+  const zone = html.slice(html.lastIndexOf('<div', at('previewZone')), at('cCat'));
   assert.ok(zone.includes('id="custDone"'), 'custDone lives in the preview window');
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
   assert.match(css, /\.done-x[^}]*position:\s*absolute/s); assert.match(css, /\.done-x[^}]*top:/s); assert.match(css, /\.done-x[^}]*right:/s);
 });
 
-test('every item group and Choose your Hand is a horizontally scrolling row (no vertical wall of cards)', () => {
+test('the item cards are a horizontally scrolling row (no vertical wall of cards); the category chips are TWO rows, all visible', () => {
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
-  for (const id of ['skinPicker', 'profileLayers', 'profileGrid']) {
-    const tag = html.slice(html.lastIndexOf('<', at(id)), html.indexOf('>', at(id)));
-    assert.match(tag, /\bhrow\b|items-row/, id + ' is a scrolling row');
-  }
+  const tag = id => html.slice(html.lastIndexOf('<', at(id)), html.indexOf('>', at(id)));
+  assert.match(tag('profileGrid'), /\bhrow\b/, 'the cards scroll sideways');
+  assert.match(tag('profileLayers'), /two-rows/); assert.doesNotMatch(tag('profileLayers'), /hrow/, 'the chips do not scroll');
+  assert.ok(!html.includes('Choose your Hand') && !html.includes('id="skinPicker"'), 'hands are in the Hand category now');
+  assert.match(css, /\.chips\.two-rows[^}]*grid-template-columns:\s*repeat\(4,/s, '7 chips in 4 columns = two rows');
   assert.match(css, /\.hrow[^}]*overflow-x:\s*auto/s); assert.match(css, /\.hrow[^}]*flex-wrap:\s*nowrap/s);
 });
 
-test('Choose your Hand can shrink and scroll sideways (no stretch); the colour picker has a "Choose colour" label and roomy targets', () => {
+test('the colour picker has roomy targets and no "Choose colour" caption; the full-colour button is the native input itself (one tap)', () => {
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
-  assert.match(css, /\.hand-row[^{]*\{[^}]*min-width:\s*0/s); assert.match(css, /\.skin-picker\.hrow button\s*\{[^}]*flex:\s*0 0 72px/s);
   assert.match(css, /\.cprow button\.sw\s*\{[^}]*width:\s*34px/s);
   const js = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
-  assert.match(js, /'Choose colour'/); assert.ok(!js.includes('Only drawn data is sent'), 'the redundant drawn-data line is gone');
-  assert.match(js, /\$\('profileGrid'\)\.scrollLeft = 0/, 'a category change resets the item row scroll');
+  assert.ok(!js.includes("'Choose colour'"), 'caption removed'); assert.ok(!js.includes('Only drawn data is sent'), 'the redundant drawn-data line is gone');
+  assert.match(css, /\.any-color input\[type=color\][^}]*opacity:\s*0/s, 'the native input is laid over the rainbow button: no menu of ours in between');
+});
+
+test('name box and country block share one baseline: equal label-line heights and equal input heights', () => {
+  const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  assert.match(css, /\.namerow > \.lab, \.flaghead\s*\{[^}]*height:\s*26px/s); assert.match(css, /\.namerow input, \.flagrow input\s*\{[^}]*height:\s*38px/s);
+  assert.match(css, /\.idrow\s*\{[^}]*align-items:\s*flex-start/s);
 });

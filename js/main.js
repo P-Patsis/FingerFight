@@ -8,11 +8,11 @@ import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
 import { createWakeLock } from './wake.js';
-import { drawFromMessage, drawPuppetPicture, drawViewPreview, statesFromCount, previewHandPx, SKELETON_COLOR, swayOf } from './avatars.js';
+import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPicture, statesFromCount, previewHandPx, SKELETON_COLOR, swayOf } from './avatars.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout } from './cosmetics.js';
-import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
+import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
 import { Stats } from './stats.js';
 import { unlockItem, unlockLabel } from './unlock.js';
@@ -81,7 +81,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
-let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
+let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), skelStyle: cleanSkelStyle(store_get('ff-skelstyle')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
 const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -419,7 +419,7 @@ $('randomBtn').onclick = async () => {
 // Network
 // ---------------------------------------------------------------------------------------------
 const allowPhotos = () => matchKind === 'private';          // random opponents never send, and are never shown, photos
-const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, sk: m.sk, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
+const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, sk: m.sk, ss: m.ss, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
   if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
@@ -736,43 +736,7 @@ const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) 
  *  The Profile's top window shows the selected view itself (skeleton, puppet, with or without the live photo); its puppet fitting lives in the customise controls. Preview only, never sent. */
 const tryOnView = () => (effectiveStyle().mode.startsWith('photo-') ? 'photo-puppet' : 'puppet');
 const inProfileCust = () => cust.on && !$('profile').hidden;
-const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (inProfileCust() ? effectiveStyle().mode : tryOnView()) : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.skel);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
-
-function skinPreview(id) {
-  const c = document.createElement('canvas');
-  c.width = 80; c.height = 80;
-  try { drawPuppetPicture(c.getContext('2d'), 80, 80, [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })], [], 1, getSkin(id), false); } catch { /* the preview is decoration */ }
-  return c;
-}
-
-function buildSkinPicker() {
-  const box = $('skinPicker');
-  box.replaceChildren();
-  for (const id of skinIds().filter(x => inv.owns(x))) {          // locked hands are unlocked in the Store
-    const b = el('button', '');
-    b.type = 'button';
-    b.dataset.skin = id;
-    b.title = getSkin(id).name;
-    b.append(skinPreview(id), el('span', 'nm', getSkin(id).name));
-    b.onclick = () => { inv.toggle(id); syncStyle(); };
-    box.append(b);
-  }
-}
-
-/** The skeleton line colour: quick colours + any colour; plain #rrggbb only, remembered on this phone and sent to the opponent as `sk`. */
-function buildSkelPicker() {
-  const box = $('skelPicker');
-  box.replaceChildren();
-  const set = c => { style.skel = cleanColor(c); store.set('ff-skel', style.skel || ''); };
-  for (const c of [SKELETON_COLOR, ...BASIC_PALETTE]) {
-    const b = el('button', ''); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', 'Skeleton colour ' + c);
-    b.onclick = () => { set(c); renderStyle(); };
-    box.append(b);
-  }
-  const inp = document.createElement('input'); inp.type = 'color'; inp.dataset.act = 'skelAny'; inp.value = style.skel || SKELETON_COLOR; inp.setAttribute('aria-label', 'Pick any skeleton colour');
-  inp.oninput = () => { set(inp.value); renderViewPreview(effectiveStyle().mode); applyOverlay(); };
-  box.append(inp);
-}
+const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (inProfileCust() ? effectiveStyle().mode : tryOnView()) : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.skel, style.skelStyle);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
 
 function buildStyleCard() {
   const modes = $('modePicker');
@@ -782,11 +746,14 @@ function buildStyleCard() {
     if (!isSafeView(v)) b.append(el('span', 'sub', 'sends a real photo'));     // the hint lives on the photo buttons themselves
     b.type = 'button';
     b.dataset.mode = v;
-    b.onclick = () => { if (!viewsFor(matchTypeNow()).includes(v)) return; style.mode = v; store.set('ff-mode', v); renderStyle(); };
+    b.onclick = () => {
+      if (!viewsFor(matchTypeNow()).includes(v)) return;
+      style.mode = v; store.set('ff-mode', v);
+      profileView.layer = v.endsWith('skeleton') ? 'skeleton' : 'base'; profileView.reset = true;     // the category below follows the view (the chips can still be tapped after)
+      renderStyle(); if (!$('profile').hidden) renderProfileItems();
+    };
     modes.append(b);
   }
-  buildSkinPicker();
-  buildSkelPicker();
   $('photoBtn').onclick = () => { showPhotos = !showPhotos; renderStyle(); };
   $('rudeBtn').onclick = () => { hideRude = !hideRude; store.set('ff-rude', hideRude ? '1' : '0'); renderStyle(); };
   renderStyle();
@@ -795,7 +762,7 @@ function buildStyleCard() {
 /** The Profile/lobby preview of the current choice, drawn with the selected skin (a stand-in picture, never the real camera). */
 function renderViewPreview(mode) {
   const c = $('viewPreview');
-  try { const rec = resolveLoadout(style.skin, style.stack, style.baseColor); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, { ...rec, backs: [true] }, style.skel || SKELETON_COLOR); } catch { /* the preview is decoration */ }   // previews show the back of the hand: that is where the nail polish is
+  try { const rec = resolveLoadout(style.skin, style.stack, style.baseColor); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, { ...rec, backs: [true] }, style.skel || SKELETON_COLOR, style.skelStyle || undefined); } catch { /* the preview is decoration */ }   // previews show the back of the hand: that is where the nail polish is
   $('viewPreviewLabel').textContent = 'Preview: ' + ({ skeleton: 'skeleton of your hand', puppet: 'your puppet', 'photo-skeleton': 'camera picture + skeleton', 'photo-puppet': 'camera picture + puppet' }[mode] || '');
 }
 
@@ -807,12 +774,6 @@ function renderStyle() {
     b.hidden = !offered.includes(b.dataset.mode);                 // strangers never even see a photo option
     b.classList.toggle('sel', b.dataset.mode === mode);
   }
-  const chosen = skinIdOf(style.skin);                          // shown as selected; the saved choice itself is only replaced by a click
-  for (const b of $('skinPicker').children) b.classList.toggle('sel', b.dataset.skin === chosen);
-  $('skinRow').hidden = !mode.endsWith('puppet') || skinIds().length < 1;
-  $('skelRow').hidden = !mode.includes('skeleton');            // the skeleton colour only matters for the skeleton views
-  const sk = style.skel || SKELETON_COLOR;
-  for (const b of $('skelPicker').children) if (b.dataset.color) b.classList.toggle('sel', b.dataset.color === sk);
   $('photoRow').hidden = random;
   $('photoBtn').textContent = showPhotos ? 'On' : 'Off';
   $('photoBtn').classList.toggle('on', showPhotos);
@@ -834,7 +795,8 @@ loadCatalog().then(() => { loadUserSkins({ getItem: store_get }, id => !!entryOf
 /** The equipment changed (Store, picker, or the catalogue just loaded): refresh what depends on it. */
 function syncStyle() {
   takeLoadout();
-  if ($('modePicker').children.length) { buildSkinPicker(); renderStyle(); } else applyOverlay();
+  if ($('modePicker').children.length) renderStyle(); else applyOverlay();
+  if (cust.on) renderProfileItems();                              // the Profile's Hand cards / Skeleton styles follow the choice
   if (!$('store').hidden) renderStore();
   if (!$('profile').hidden) renderProfileItems();
 }
@@ -967,7 +929,7 @@ $('startBtn').onclick = () => {
 // has a colour picker. Unlocking goes through js/unlock.js, which is a STUB for now (no ads, no payments): see the boundary comment there.
 // ---------------------------------------------------------------------------------------------
 const storeView = { category: 'all', layer: 'all' };
-const profileView = { category: 'all', layer: 'base' };
+const profileView = { category: 'all', layer: 'base', reset: false };
 let storeAnim = { raf: 0, ps: null, last: 0, rec: null };
 const wearVisible = () => !$('store').hidden || !$('profile').hidden;
 const storeMsg = t => { $('storeMsg').textContent = t; };
@@ -1024,6 +986,28 @@ function itemCard(e) {
   return card;
 }
 
+/** Puts a sideways-scrolling row back at its first item. Done AFTER the cards were replaced, and with scroll-snap off for a moment: otherwise the browser
+ *  re-snaps the new content to the old position (or keeps a smooth scroll in flight), which is why setting scrollLeft before the rebuild did nothing on the phone. */
+function scrollRowToStart(row) {
+  row.style.scrollSnapType = 'none';
+  try { row.scrollTo?.({ left: 0, behavior: 'instant' }); } catch { /* old browsers: the assignment below does it */ }
+  row.scrollLeft = 0;
+  if (globalThis.requestAnimationFrame) globalThis.requestAnimationFrame(() => { row.scrollLeft = 0; row.style.scrollSnapType = ''; }); else row.style.scrollSnapType = '';
+}
+
+/** A Skeleton style card: the sample hand drawn in that style and the current skeleton colour; tap = use it (sent to the opponent as `ss`). */
+function skeletonCard(id, name) {
+  const on = (style.skelStyle || 'classic') === id;
+  const card = el('div', 'item-card' + (on ? ' eq' : '')); card.dataset.id = id; card.dataset.skelstyle = id;
+  card.setAttribute('role', 'button'); card.setAttribute('tabindex', '0'); card.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const cv = document.createElement('canvas'); cv.width = 96; cv.height = 96;
+  try { drawSkeletonPicture(cv.getContext('2d'), 96, 96, sampleLandmarks(), [], 1, false, style.skel || SKELETON_COLOR, id); } catch { /* previews are decoration */ }
+  card.append(cv, el('b', '', name), el('span', 'badge ' + (on ? 'own' : 'lock'), on ? 'In use' : 'Tap to use'));
+  card.onclick = () => { style.skelStyle = id; store.set('ff-skelstyle', id); sfx.ui(); renderStyle(); renderProfileItems(); };
+  card.onkeydown = ev => { if (ev?.key === 'Enter' || ev?.key === ' ') { ev.preventDefault?.(); card.onclick(); } };
+  return card;
+}
+
 function fillGrid(grid, list) {
   grid.replaceChildren();
   if (!list.length) grid.append(el('p', 'fine', 'Nothing here yet.'));
@@ -1045,9 +1029,11 @@ function renderStore() {
 function renderProfileItems() {
   const lays = $('profileLayers');
   lays.replaceChildren();
-  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; $('profileGrid').scrollLeft = 0; }, renderProfileItems);   // a new category starts at its first items
-  if (profileView.layer === 'base') { const g = $('profileGrid'); g.replaceChildren(el('p', 'fine', 'Pick your hand in "Choose your Hand" above; the colour above recolours it.')); }
-  else fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
+  for (const l of PROFILE_LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; profileView.reset = true; }, renderProfileItems);
+  const grid = $('profileGrid');
+  if (profileView.layer === 'skeleton') { grid.replaceChildren(); for (const [id, name] of SKELETON_STYLES) grid.append(skeletonCard(id, name)); }
+  else fillGrid(grid, filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
+  if (profileView.reset) { profileView.reset = false; scrollRowToStart(grid); }      // a new category starts at its first items
   renderWear();
 }
 
@@ -1098,26 +1084,18 @@ function categoryDefault(layer) {
 }
 
 /**
- * The colour picker of the CURRENT category (the Profile's type chip / the Store's type chip), ONE line: the full colour picker (any colour), a handful of
- * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
+ * ONE line: [full-spectrum button][basic presets][Original]. The button IS the native colour input (invisible, laid over a rainbow ring), so ONE tap opens the
+ * device's own colour picker: there is no menu of ours in between. [live] runs while the picker is dragged (the row is not rebuilt under it), [apply] on a
+ * preset / Original / when the picker closes.
  */
-function renderCatColor() {
-  const box = $('catColor'), layer = inProfileCust() ? profileView.layer : storeView.layer;
-  box.replaceChildren();
-  box.hidden = layer === 'all';
-  if (layer === 'all') return;
-  if (layer === 'base' && !inv.handTintable) {
-    box.append(el('p', 'fine', 'This hand keeps its own colours. Pick Cartoon, Neon or Dragon to recolour it.'));
-    return;
-  }
-  const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
-  const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
-  box.append(el('p', 'cc-label', 'Choose colour'));
+function colorRow(layer, cur, apply, live) {
   const row = el('div', 'cprow'); row.dataset.picker = 'any'; row.dataset.layer = layer;
+  const any = el('span', 'any-color');
   const inp = document.createElement('input'); inp.type = 'color'; inp.value = cur || '#ffffff'; inp.dataset.act = 'any'; inp.setAttribute('aria-label', LAYER_LABELS[layer] + ': pick any colour');
-  inp.oninput = () => { inv.setCategoryColor(layer, inp.value); liveColor(); };       // live while dragging; the row is not rebuilt under the picker
-  inp.onchange = () => syncStyle();
-  row.append(inp);
+  inp.oninput = () => live(inp.value);
+  inp.onchange = () => apply(cleanColor(inp.value));
+  any.append(inp);
+  row.append(any);
   for (const c of BASIC_PALETTE) {
     const b = el('button', 'sw' + (cur && c === cur.toLowerCase() ? ' sel' : '')); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', c);
     b.onclick = () => apply(c);
@@ -1126,7 +1104,31 @@ function renderCatColor() {
   const reset = el('button', 'btn tiny ghost', 'Original'); reset.type = 'button'; reset.dataset.act = 'default';
   reset.onclick = () => apply(null);
   row.append(reset);
-  box.append(row);
+  return row;
+}
+/** The Skeleton category's colour: the colour of the selected skeleton style's lines (plain #rrggbb, `sk`), remembered on this phone. */
+function skeletonColorRow(box) {
+  const set = c => { style.skel = cleanColor(c); store.set('ff-skel', style.skel || ''); };
+  box.append(colorRow('skeleton', style.skel || SKELETON_COLOR, c => { set(c); renderStyle(); renderProfileItems(); }, c => { set(c); renderViewPreview(effectiveStyle().mode); applyOverlay(); }));
+}
+
+/**
+ * The colour picker of the CURRENT category (the Profile's type chip / the Store's type chip), ONE line: the full colour picker (any colour), a handful of
+ * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
+ */
+function renderCatColor() {
+  const box = $('catColor'), layer = inProfileCust() ? profileView.layer : storeView.layer;
+  box.replaceChildren();
+  box.hidden = layer === 'all';
+  if (layer === 'all') return;
+  if (layer === 'skeleton') { skeletonColorRow(box); return; }
+  if (layer === 'base' && !inv.handTintable) {
+    box.append(el('p', 'fine', 'This hand keeps its own colours. Pick Cartoon, Neon or Dragon to recolour it.'));
+    return;
+  }
+  const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
+  const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
+  box.append(colorRow(layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); }));
   if (layer === 'effect') {
     const k = st.k || INTENSITY_DEFAULT, ctl = el('div', 'ctl'), val = el('b', '', String(k));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(INTENSITY_MIN); sl.max = String(INTENSITY_MAX); sl.step = '1'; sl.value = String(k); sl.dataset.act = 'intensity'; sl.setAttribute('aria-label', 'Effect intensity');
