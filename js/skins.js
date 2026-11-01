@@ -18,6 +18,7 @@ function fallbackJson() {
 
 const registry = new Map();       // id -> parsed skin
 let order = [];                   // ids in manifest order
+let userOrder = [];               // ids of hands the player made (js/skins.js registerUserSkin), shown after the built-in ones
 let defaultId = DEFAULT_SKIN_ID;
 let loaded = null;                // the loading promise (so it runs once)
 registry.set('plain', parseSkin(fallbackJson()));
@@ -27,8 +28,8 @@ export function getSkin(id) {
   return registry.get(id) || registry.get(defaultId) || registry.get('plain');
 }
 /** Ids of the loadable skins, in manifest order (the picker's content). The built-in fallback is never listed. */
-export const skinIds = () => (order.length ? order : []);
-export const hasSkin = id => order.includes(id);
+export const skinIds = () => (order.length ? [...order, ...userOrder] : []);
+export const hasSkin = id => order.includes(id) || userOrder.includes(id);
 /** The id to use for a saved or received value: a known skin, else the default. */
 export const skinIdOf = id => {
   if (hasSkin(id)) return id;
@@ -63,5 +64,31 @@ export function loadSkins(fetchFn = globalThis.fetch, base = BASE) {
   return loaded;
 }
 
+// ---- user-created hands (the art-template workflow): a skin file the player made, kept on this phone
+export const USER_SKINS_KEY = 'ff-userhands', MAX_USER_SKINS = 8;
+export const isUserSkin = id => userOrder.includes(id);
+/**
+ * Adds a player-made hand (the same JSON as a built-in skin, checked by the same parser). It must not reuse a built-in hand's or an item's id ([taken] says which ids are items). It is listed
+ * in the hand picker after the built-in hands. Returns the id, or throws an Error that says what is wrong.
+ */
+export function registerUserSkin(json, taken = () => false) {
+  const skin = parseSkin(json);
+  if (taken(skin.id)) throw new Error('hand ' + skin.id + ': that id belongs to an item');
+  if (order.includes(skin.id) || skin.id === 'plain') throw new Error('hand ' + skin.id + ': that id belongs to a built-in hand');
+  if (!userOrder.includes(skin.id) && userOrder.length >= MAX_USER_SKINS) throw new Error('at most ' + MAX_USER_SKINS + ' hands of your own');
+  registry.set(skin.id, skin);
+  if (!userOrder.includes(skin.id)) userOrder.push(skin.id);
+  return skin.id;
+}
+/** Reads the player's saved hands (a JSON list of skin files in [storage], e.g. localStorage); a bad one is skipped with a warning. Returns the ids. */
+export function loadUserSkins(storage, taken) {
+  let list = [];
+  try { const raw = storage.getItem(USER_SKINS_KEY); list = raw ? JSON.parse(raw) : []; } catch { list = []; }
+  if (!Array.isArray(list)) return [];
+  const ids = [];
+  for (const j of list.slice(0, MAX_USER_SKINS)) { try { ids.push(registerUserSkin(j, taken)); } catch (e) { console.warn('hands: skipped one of your hands (' + (e.message || e) + ')'); } }
+  return ids;
+}
+
 /** Test helper: forget everything that was loaded. */
-export function resetSkins() { loaded = null; order = []; defaultId = DEFAULT_SKIN_ID; for (const k of [...registry.keys()]) if (k !== 'plain') registry.delete(k); }
+export function resetSkins() { loaded = null; order = []; for (const id of userOrder) registry.delete(id); userOrder = []; defaultId = DEFAULT_SKIN_ID; for (const k of [...registry.keys()]) if (k !== 'plain') registry.delete(k); }

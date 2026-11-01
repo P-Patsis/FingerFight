@@ -68,5 +68,22 @@ export function roleColor(hex, role) {
   if (role === 'light') return rgbToHex(c.map(v => v + (255 - v) * 0.3));
   return hex.toLowerCase();
 }
+/** The quick colours of the category colour picker (a plain list of #rrggbb; the player can also pick any colour). */
+export const BIG_PALETTE = Object.freeze(['#dc2626', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#10b981', '#14b8a6', '#22d3ee', '#0ea5e9', '#3b82f6', '#6366f1',
+  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#7f1d1d', '#78350f', '#14532d', '#1e3a8a', '#f8fafc', '#94a3b8', '#111827']);
+/** The categories that have a colour picker, and the ones where a two-stop gradient makes sense (nails, effects, tattoos, tinted hands). */
+export const COLOR_LAYERS = Object.freeze(['base', 'tone', 'tattoo', 'nails', 'effect']);
+export const GRADIENT_LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'effect']);
+export const INTENSITY_MIN = 1, INTENSITY_MAX = 10, INTENSITY_DEFAULT = 5;
+/** An effect intensity: a whole number 1-10, or null. */
+export const cleanIntensity = k => (Number.isInteger(k) && k >= INTENSITY_MIN && k <= INTENSITY_MAX ? k : null);
+/** Blend two #rrggbb colours: t=0 is [a], t=1 is [b]. */
+export function mixHex(a, b, t) {
+  const x = hexToRgb(a), y = hexToRgb(b);
+  return rgbToHex(x.map((v, i) => v + (y[i] - v) * t));
+}
+/** Where a part sits across the hand for a gradient (0 = thumb side, 1 = pinky side). Only solid colours are ever drawn: each part gets one mix. */
+export const GRADIENT_POS = Object.freeze({ thumb: 0, index: 0.25, middle: 0.5, ring: 0.75, pinky: 1, palm: 0.5 });
+export const partPos = name => GRADIENT_POS[String(name).split('_')[0]] ?? 0.5;
 /** A picked colour, cleaned: lower-case #rrggbb, or null when it is anything else (so nothing but a plain colour is ever kept). */
 export const cleanColor = c => (typeof c === 'string' && HEX.test(c) ? c.toLowerCase() : null);

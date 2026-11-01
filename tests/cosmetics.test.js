@@ -481,26 +481,27 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(stackIds(), ['ruby', 'silverring', 'goldring']);
   btn('ruby', 'remove').onclick();
   assert.deepEqual(stackIds(), ['silverring', 'goldring']); assert.ok(!card('ruby').classList.contains('eq'));
-  // COLOUR PICKER on nail polish
+  // COLOUR PICKER is PER CATEGORY now: one panel for the chosen type, no dot on individual items
   chip('storeLayers', 'nails').onclick();
   card('nailpolish').onclick();
-  assert.ok(btn('nailpolish', 'color'), 'a colour dot on a colourable item'); assert.equal(btn('goldring', 'color'), undefined, 'none on a ring');
-  btn('nailpolish', 'color').onclick();
-  const picker = row('nailpolish').children.find(c => c.dataset?.picker);
-  assert.ok(picker && picker.children.filter(x => x.dataset.color).length >= 6, 'swatches');
-  picker.children.find(x => x.dataset.color === '#22d3ee').onclick();
+  assert.equal(btn('nailpolish', 'color'), undefined, 'no per-item colour dot any more');
+  const panel = () => $('catColor').children.filter(c => c.classList.contains('sw'));
+  assert.ok(panel()[0].children.filter(x => x.dataset.color).length >= 20, 'many swatches');
+  panel()[0].children.find(x => x.dataset.color === '#22d3ee').onclick();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#22d3ee');
-  const input = row('nailpolish').children.find(c => c.dataset?.picker).children.find(x => x.type === 'color');
+  const input = panel()[0].children.find(x => x.type === 'color');
   input.value = '#12ab34'; input.oninput();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'any colour, live');
   input.value = 'javascript:alert(1)'; input.oninput();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'junk is refused');
+  chip('storeLayers', 'ring').onclick();
+  assert.match($('catColor').children.map(c => c.textContent).join(' '), /keep their own colours/, 'rings have no colour panel');
   // EFFECTS: pick them like any item
   chip('storeLayers', 'effect').onclick();
   assert.deepEqual(cards().map(c => c.dataset.id), ['sparkles', 'bubbles', 'glow', 'embers', 'electric']);
   card('bubbles').onclick(); card('glow').onclick();
   assert.deepEqual(stackIds().slice(-2), ['bubbles', 'glow']);
-  assert.ok(btn('bubbles', 'color'), 'each effect has a colour');
+  assert.ok($('catColor').children.some(c => c.dataset?.act === undefined && c.classList.contains('ctl')), 'the Effect category has its colour panel');
   // the preview and the Test snap button: the simulator has no camera, so it says so and still bursts the preview
   await $('storeSnap').onclick();
   assert.match($('wearMsg').textContent, /simulator has no camera/);
@@ -508,9 +509,11 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   $('storeBack').onclick();
   $('profileBtn').onclick();
   assert.deepEqual(b.visible(), ['profile']);
-  assert.equal($('wearCard').parentElement, $('wearSlotProfile'), 'the Wearing card moved to the Profile');
+  assert.equal($('wearTop').parentElement, $('cWearTop'), 'the preview moved to the Profile customise area');
   const pcards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
   assert.ok(pcards().length > 0 && pcards().every(c => c.dataset.id !== 'dragon' && c.dataset.id !== 'electric'), 'only what you own');
+  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet']), 'the Profile starts on the Hand category');
+  $('profileLayers').children.find(x => x.dataset.value === 'glove').onclick();
   pcards().find(c => c.dataset.id === 'whiteglove').onclick();
   assert.equal(stackIds().at(-1), 'whiteglove');
   pcards().find(c => c.dataset.id === 'whiteglove').onclick();
@@ -518,7 +521,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.ok(row('goldring') && btn('goldring', 'up'), 'reorder works here too');
   $('profileBack').onclick();
   $('storeBtn').onclick();
-  assert.equal($('wearCard').parentElement, $('wearSlotStore'));
+  assert.equal($('wearTop').parentElement, $('sWearTop'));
   $('storeClear').onclick();
   assert.deepEqual(stackIds(), []); assert.equal(globalThis.localStorage.getItem('ff-puppet') !== null || true, true);
   $('storeBack').onclick();

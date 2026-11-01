@@ -51,12 +51,6 @@
     </div>
     <div id="styleSlotProfile"></div>
     <div id="appSlotProfile"></div>
-    <div id="wearSlotProfile"></div>
-    <div class="card">
-      <h3 class="card-h">Your items</h3>
-      <div id="profileLayers" class="chips" aria-label="Item type"></div>
-      <div id="profileGrid" class="store-grid"></div>
-    </div>
     <button id="profileStore" class="btn ghost">Open the Store</button>
     <p class="fine">Your IP address is always hidden from strangers (random matches go through a relay). Your name, hand style, hand choice and sound are saved on this phone and used in every match.</p>
   </section>
@@ -107,9 +101,20 @@
     <div id="styleSlot"><div class="card" id="styleCard">
       <h3 class="card-h">How my opponent sees my hand</h3>
       <div id="modePicker" class="mode-picker"></div>
-      <div class="view-preview"><canvas id="viewPreview" width="240" height="150" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
+      <div class="view-preview" id="viewPreviewBox"><canvas id="viewPreview" width="240" height="150" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
+      <div class="set col" id="skelRow"><span>Skeleton colour</span><div id="skelPicker" class="swatches" aria-label="Skeleton line colour"></div></div>
       <div class="set col" id="skinRow"><span>Choose your Hand</span><div id="skinPicker" class="skin-picker"></div></div>
       <p id="styleNote" class="fine"></p>
+      <div id="custOnly">
+        <button id="custBtn" class="btn ghost" type="button" aria-pressed="false">Customise &amp; try on</button>
+        <div id="custArea" class="cust-area" hidden>
+          <div id="cWearTop"></div>
+          <div id="profileLayers" class="chips" aria-label="Item type"></div>
+          <div id="profileGrid" class="store-grid"></div>
+          <div id="cCat"></div>
+          <div id="cWearList"></div>
+        </div>
+      </div>
     </div></div>
     <div id="appSlot"><div class="card" id="appCard">
       <h3 class="card-h">App settings</h3>
@@ -165,17 +170,27 @@
     <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-hidden="true"></div>   <!-- reserved for a native banner ad later: empty on purpose, no ad code -->
   </section>
 
-  <!-- the "Wearing" card is shared by the Store and the Profile (moved into whichever is open): preview or live try-on, the worn list (reorder, colour, remove) -->
+  <!-- the "Wearing" pieces are shared by the Store (inside #wearCard) and the Profile (inside #custArea): the top (preview or live try-on), the category colour panel, and the worn list.
+       They are moved into whichever screen is open; here they are parked (hidden). -->
   <div id="wearCard" class="card store-live">
     <h3 class="card-h">Wearing</h3>
+    <div id="sWearTop"></div>
+    <div id="sCat"></div>
+    <div id="sWearList"></div>
+  </div>
+  <div id="wearTop" class="wear-top">
     <div id="wearBox" class="wear-box">
       <canvas id="storePreview" width="240" height="180" aria-label="Your puppet with everything you have equipped"></canvas>
     </div>
     <p id="wearMsg" class="fine" role="status"></p>
-    <div class="row center wrap"><button id="storeSnap" class="btn tiny">Test snap</button><button id="wearPhoto" class="btn tiny ghost" aria-pressed="false" title="Show your camera photo behind the puppet (this preview only)">Photo: off</button><button id="wearCamOff" class="btn tiny ghost" hidden>Camera off</button><button id="storeClear" class="btn tiny ghost">Clear all</button></div>
+    <div class="row center wrap"><button id="storeSnap" class="btn tiny">Test snap</button><button id="wearPhoto" class="btn tiny ghost" aria-pressed="false" title="Show your camera photo behind the puppet (this preview only)">Photo: off</button><button id="wearCamOff" class="btn tiny ghost" hidden>Camera off</button></div>
+  </div>
+  <div id="catColor" class="cat-color" aria-label="Colour of this category"></div>
+  <div id="wearListBox" class="wear-list-box">
     <div id="storeLoadout" class="fine"></div>
     <ol id="wearList" class="wear-list" aria-label="Worn items, top first"></ol>
     <p class="fine hint" title="The top of the list is drawn over everything below it. Use ▲ ▼ to change the order.">▲▼ top = drawn on top</p>
+    <button id="storeClear" class="btn tiny ghost">Clear all</button>
   </div>
 
   <!-- the camera lives here and is moved into the bottom panel when it is your turn to point -->

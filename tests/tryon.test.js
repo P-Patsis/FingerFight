@@ -44,8 +44,8 @@ test('Test snap in the Store turns the camera on and draws what is worn, in the 
   row('silverring').children.find(c => c.dataset.act === 'down').onclick();
   assert.deepEqual(stack(), ['whiteglove', 'silverring', 'goldring']);
   card('nailpolish').onclick();
-  row('nailpolish').children.find(c => c.dataset.act === 'color').onclick();
-  row('nailpolish').children.find(c => c.dataset.picker).children.find(x => x.dataset.color === '#22d3ee').onclick();
+  $('storeLayers').children.find(x => x.dataset.value === 'nails').onclick();
+  $('catColor').children.find(c => c.classList.contains('sw')).children.find(x => x.dataset.color === '#22d3ee').onclick();
   assert.equal(cam().overlay.rec.layers.find(l => l.id === 'nailpolish').parts.index_tip[0].fill, '#22d3ee');
   // the snap button now fires the snap effect on the live hand
   let bursts = 0; const orig = cam().particles.trigger.bind(cam().particles);
@@ -60,18 +60,41 @@ test('Test snap in the Store turns the camera on and draws what is worn, in the 
   assert.equal($('storePreview').hidden, false);
 });
 
-test('the Camera off button and the Profile work the same way', async () => {
+test('Camera off in the Store; and the Profile\'s merged panel: Customise turns the camera on, shows only Photo, Done / leaving turns it off', async () => {
   reset();
-  $('profileBtn').onclick();
+  $('storeBtn').onclick();
   await $('storeSnap').onclick();
-  assert.deepEqual(events, ['start', 'run']); assert.equal($('wearCard').parentElement, $('wearSlotProfile'));
-  assert.equal($('camBox').parentElement, $('wearBox'));
   $('wearCamOff').onclick();
   assert.ok(events.includes('stop')); assert.equal($('camBox').hidden, true); assert.equal($('wearCamOff').hidden, true);
-  await $('storeSnap').onclick();                                   // and back on
-  assert.equal(events.filter(e => e === 'start').length, 2);
+  $('storeBack').onclick();
+  // PROFILE: one panel; the Customise button is the only way in, and it brings the camera with it
+  reset();
+  $('profileBtn').onclick();
+  assert.equal($('custArea').hidden, true, 'closed until asked'); assert.equal(events.length, 0, 'opening the Profile does not touch the camera');
+  assert.equal($('custOnly').hidden, false);
+  $('custBtn').onclick();
+  await until(() => events.includes('run'), 'camera on');
+  assert.deepEqual(events, ['start', 'run']);
+  assert.equal($('custArea').hidden, false); assert.equal($('viewPreviewBox').hidden, true, 'one preview at a time');
+  assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('camBox').parentElement, $('wearBox'));
+  assert.equal($('wearTop').classList.contains('pmode'), true, 'Profile mode hides Test snap and Camera off: Photo is the only camera control');
+  assert.equal($('wearPhoto').hidden, false);
+  assert.equal(cam().overlay.puppet, true);
+  $('wearPhoto').onclick();
+  assert.equal($('wearPhoto').textContent, 'Photo: on');
+  $('custBtn').onclick();                                            // Done
+  assert.ok(events.includes('stop'), 'tracks stopped'); assert.equal(cam().cameraOn, false);
+  assert.equal($('custArea').hidden, true); assert.equal($('viewPreviewBox').hidden, false); assert.equal($('camBox').hidden, true);
+  // on again, then leave the screen: the camera goes off and the mode ends
+  reset();
+  $('custBtn').onclick();
+  await until(() => events.includes('run'), 'camera on again');
   $('profileBack').onclick();
   assert.equal(cam().cameraOn, false, 'leaving the Profile switches it off');
+  assert.equal($('custArea').hidden, true);
+  $('profileBtn').onclick();
+  assert.equal($('custArea').hidden, true, 'a fresh visit starts closed'); assert.equal(events.filter(e => e === 'start').length, 1, 'and without a camera');
+  $('profileBack').onclick();
 });
 
 test('a camera that cannot start says why and never hangs; the Test snap button works again afterwards', async () => {

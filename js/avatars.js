@@ -5,9 +5,12 @@ import { drawPuppet, statesToLandmarks } from './puppet.js';
 import { getSkin } from './skins.js';
 import { resolveLoadout } from './cosmetics.js';
 import { snapshot } from './particles.js';
+import { cleanColor } from './layers.js';
 
 // (The hand itself is the puppet: puppet.js poses a swappable skin from skins.js on the landmarks.)
 
+/** The skeleton lines' default colour; the player can pick another (a plain #rrggbb, also sent to the opponent as `sk`). */
+export const SKELETON_COLOR = '#22d3ee';
 export const FINGERS = ['thumb', 'index', 'middle', 'ring', 'pinky'];   // numbering order for the little labels
 
 /** Splits a total (0..10) over two hands, filling index, middle, ring, pinky, thumb on each. 0 is one closed fist. */
@@ -70,11 +73,11 @@ function raisedTips(lms, hands, px) {
  * [lms]: up to two hands of 21 integer [x, y] points in 0..1000 (the camera frame). [hands]: finger states, used
  * to number the raised fingertips. [ar]: the camera frame's width / height, so the drawing is not stretched.
  */
-export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = true) {
+export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = true, color = SKELETON_COLOR) {
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h);
   const px = fitter(lms, w, h, ar, 0.1);
   lms.forEach(hand => {
-    ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = cleanColor(color) || SKELETON_COLOR;
     for (const [a, b] of BONES) { const A = px(hand[a]), B = px(hand[b]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
     ctx.fillStyle = '#fbbf24';
     for (const p of hand) { const P = px(p); ctx.beginPath(); ctx.arc(P.x, P.y, Math.max(2.5, h * 0.018), 0, 7); ctx.fill(); }
@@ -86,7 +89,7 @@ export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = tru
 
 /** Puppet picture: the skin posed on the landmarks, fitted to the picture like the skeleton (a little more room: it is wider than the bones). */
 export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers = true, rec = null) {
-  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h);
+  if (!rec?.noBg) { ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h); }       // noBg: the caller already painted the background (it draws under a transform)
   const px = fitter(lms, w, h, ar, 0.16);
   const pts = lms.map(hand => hand.map(px));
   drawPuppet(ctx, pts, skin, rec?.layers || []);
@@ -99,12 +102,12 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
 /** Profile preview: how my current choice looks to the viewer, drawn with the selected skin from a sample open hand.
  *  Photo views get a stand-in "camera picture" (a plain silhouette, never my real camera) with the hand drawn over it.
  *  Returns what was drawn: { camera: bool, hand: 'puppet' | 'skeleton' }. */
-export function drawViewPreview(ctx, w, h, mode, skin, rec = null) {
+export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELETON_COLOR) {
   const puppet = String(mode).endsWith('puppet');
   const camera = String(mode).startsWith('photo');
   const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
   if (!camera) {
-    if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false, rec); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false);
+    if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false, rec); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false, skel);
     return { camera, hand: puppet ? 'puppet' : 'skeleton' };
   }
   const g = ctx.createLinearGradient(0, 0, 0, h);
@@ -117,7 +120,7 @@ export function drawViewPreview(ctx, w, h, mode, skin, rec = null) {
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
   if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || []); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
   else {
-    ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = Math.max(2, h * 0.016); ctx.strokeStyle = cleanColor(skel) || SKELETON_COLOR;
     for (const hand of lms) for (const [a, b] of BONES) { const A = at(hand[a]), B = at(hand[b]); ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
   }
   return { camera, hand: puppet ? 'puppet' : 'skeleton' };
@@ -144,8 +147,8 @@ export function drawFromMessage(ctx, w, h, msg) {
     ctx.fillText('?', w / 2, h / 2);
     return [];
   }
-  if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar);
-  const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
+  if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar, true, msg.sk);
+  const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc, msg.bd);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
   return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, rec);
 }
 
@@ -154,4 +157,12 @@ export function previewHandPx(w, h) {
   const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
   const px = fitter(lms, w, h, 1, 0.16);
   return lms.map(hand => hand.map(px));
+}
+
+/** The idle sway of the static preview (camera off): the hand turns about its vertical axis, gently, past edge-on so BOTH faces show:
+ *  the front (nails and tattoos) and the back (mirrored, no nails: they sit on the other side). Period 8 s, +-110 degrees. */
+export const SWAY_PERIOD_S = 8, SWAY_MAX_RAD = 1.92;
+export function swayOf(nowMs) {
+  const a = SWAY_MAX_RAD * Math.sin((nowMs / 1000) * 2 * Math.PI / SWAY_PERIOD_S), c = Math.cos(a);
+  return { angle: a, back: c < 0, scale: Math.abs(c) < 0.06 ? (c < 0 ? -0.06 : 0.06) : c };
 }

@@ -32,6 +32,20 @@ The type is only metadata for browsing/filtering (and for what the Store shows).
 `roleColor`), `js/cosmetics.js` (catalogue, `parseItem`, `resolveLoadout`, stack helpers), `js/inventory.js` (the worn stack),
 `rigPlan(lm, skin, layers)` in `js/puppet.js` (one whole pass per item, in list order).
 
+## Colour per category (current)
+
+The colour is chosen **per category**, not per item: Hand, Skin tone, Tattoo / scar, Nail polish and Effect each have one picker
+(24+ quick colours, any colour, "Original colours"). It applies to everything worn of that type and to anything worn later
+(`Inventory.setCategoryColor`, stored in `ff-catstyle` and copied onto each worn entry). Rings and gloves have no picker.
+* **Gradient** (`GRADIENT_LAYERS`: hand, tattoo, nails, effect; not skin tone): a second `#rrggbb` stop. Each rig part gets one solid mix by
+  its place across the hand (thumb side = stop 1, pinky side = stop 2); particles pick from a 5-colour palette between the stops. No canvas
+  gradients and no CSS strings. Wire: `lay[].d` (only with `c`), picture `bd` for the hand.
+* **Effect intensity** 1-10 (5 = as authored), `lay[].k`: scales rate / burst / size (`scaleEmitters`) inside the per-emitter limits; the
+  90-particle / 6-emitter caps still bound everything.
+* **Skeleton colour**: picture field `sk` (`#rrggbb`), stored as `ff-skel`.
+* **Migration:** colours picked per item by earlier versions become the category colour on first load (`ff-catstyle` absent).
+The per-item description below is how the colour reaches each item (tint roles); the pickers are per category.
+
 ## Colour pickers
 
 Items that differ only by colour are ONE item with a **tint**. Collapsed: `pale tan brown deep orc frost` -> **`skintone`**;
@@ -163,6 +177,14 @@ answers `{granted: true}`. The default provider is the stub: it grants at once. 
 start-up with an AdMob rewarded-ad or Google Play Billing implementation (a real purchase must be verified server-side before it
 answers granted). Nothing else changes: the Store, the inventory and the tests are already written against that interface.
 Ownership is a flag on the phone: fine for a friendly game, not a security boundary.
+
+## Profile: one merged panel
+
+"How my opponent sees my hand" holds the view choice, the preview, the skeleton colour (skeleton views), "Choose your Hand" (built-in hands
+and the player's own hands from `ff-userhands`, see `registerUserSkin`, in one grid) and **Customise & try on**. Customise turns the camera
+on, shows the type chips (Hand ... Effect), the owned items of that type, the category colour panel and the worn list; the only camera
+control is **Photo: on/off**. Done, leaving the Profile or hiding the page turns the camera off. With the camera off the preview sways
+(about +-110 degrees over 8 s, `swayOf`) so both faces show; the mirrored back shows no nail polish. There is no separate "Your items" section.
 
 ## Store and end-screen ad slot
 

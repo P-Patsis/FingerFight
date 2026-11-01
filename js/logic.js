@@ -195,18 +195,23 @@ export const validCos = c => c === undefined || c === null
   || (typeof c === 'object' && !Array.isArray(c) && Object.keys(c).length <= COS_KEYS.length
     && Object.entries(c).every(([k, v]) => COS_KEYS.includes(k) && typeof v === 'string' && /^[a-z]{1,12}$/.test(v)));
 
-/** The worn items of a picture: `lay`, a list of at most 12 {id, c?}: an item id (1-12 lower-case letters) and optionally a plain #rrggbb colour.
- *  Nothing else can travel in it; the receiver draws from its own copies in this order. `bc` is the base hand's colour (plain #rrggbb). */
+/** The worn items of a picture: `lay`, a list of at most 12 {id, c?, d?, k?}: an item id (1-12 lower-case letters), optionally a plain #rrggbb colour `c`,
+ *  a second #rrggbb gradient stop `d` (only with `c`) and a whole-number effect intensity `k` (1-10). Nothing else can travel in it; the receiver
+ *  draws from its own copies in this order and decides itself where a gradient / intensity applies. `bc` is the base hand's colour (plain #rrggbb),
+ *  `bd` its second gradient stop, `sk` the colour of the skeleton lines. */
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
 export const validLay = l => l === undefined || l === null
   || (Array.isArray(l) && l.length <= 12 && l.every(e => e && typeof e === 'object' && !Array.isArray(e)
-    && Object.keys(e).every(k => k === 'id' || k === 'c') && typeof e.id === 'string' && /^[a-z]{1,12}$/.test(e.id)
-    && (e.c === undefined || /^#[0-9a-fA-F]{6}$/.test(e.c))));
-export const validBc = c => c === undefined || c === null || (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c));
+    && Object.keys(e).every(k => k === 'id' || k === 'c' || k === 'd' || k === 'k') && typeof e.id === 'string' && /^[a-z]{1,12}$/.test(e.id)
+    && (e.c === undefined || HEX6.test(e.c))
+    && (e.d === undefined || (e.c !== undefined && HEX6.test(e.d)))
+    && (e.k === undefined || (Number.isInteger(e.k) && e.k >= 1 && e.k <= 10))));
+export const validBc = c => c === undefined || c === null || (typeof c === 'string' && HEX6.test(c));
 
 export function validPicture(m, allowPhoto) {
   return !!m && normalizeView(m.view) !== null
     && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
-    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc)
+    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc) && validBc(m.bd) && validBc(m.sk)
     && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
     && validPhoto(m.photo) && (allowPhoto || m.photo === '')
     && (allowPhoto || isSafeView(m.view));

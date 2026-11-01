@@ -6,7 +6,7 @@
 //   effect     - a particle effect (no shapes)
 // Colour pickers: an item with a `tint` is drawn in the colour the player picked (see layers.js). Only plain #rrggbb is ever kept.
 import { parseShapes, PART_NAMES } from './puppet.js';
-import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor } from './layers.js';
+import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor, cleanIntensity, mixHex, partPos, GRADIENT_LAYERS, INTENSITY_DEFAULT } from './layers.js';
 import { loadSkins, skinIds, getSkin, skinIdOf, hasSkin } from './skins.js';
 
 const BASE = 'assets/items/';
@@ -108,13 +108,23 @@ export function cleanStack(list) {
     const id = typeof e === 'string' ? e : e && typeof e === 'object' ? e.id : null;
     if (typeof id !== 'string' || !ITEM_ID.test(id) || seen.has(id)) continue;
     seen.add(id);
-    out.push({ id, color: cleanColor(e && typeof e === 'object' ? (e.color ?? e.c) : null) });
+    const o = e && typeof e === 'object' ? e : {};
+    const color = cleanColor(o.color ?? o.c);
+    const entry = { id, color }, color2 = color ? cleanColor(o.color2 ?? o.d) : null, k = cleanIntensity(o.k);
+    if (color2) entry.color2 = color2;                 // optional fields exist only when set
+    if (k) entry.k = k;
+    out.push(entry);
     if (out.length >= MAX_STACK) break;
   }
   return out;
 }
-/** The wire form of a stack: [{id, c?}]: ids and plain colours only. */
-export const stackToWire = stack => cleanStack(stack).map(e => (e.color ? { id: e.id, c: e.color } : { id: e.id }));
+/** The wire form of a stack: [{id, c?, d?, k?}]: ids, plain #rrggbb colours (d = the second gradient stop) and a 1-10 effect intensity only. */
+export const stackToWire = stack => cleanStack(stack).map(e => {
+  const o = { id: e.id };
+  if (e.color) { o.c = e.color; if (e.color2) o.d = e.color2; }
+  if (e.k) o.k = e.k;
+  return o;
+});
 export const stackFromWire = lay => cleanStack(lay);
 
 /** The items that used to be one file per colour are now one item + a colour: old id -> [new id, colour]. Used to migrate saved
@@ -143,38 +153,53 @@ export const stackOf = x => (Array.isArray(x) ? cleanStack(x.map(e => (e && LEGA
 // ---- colours applied ---------------------------------------------------------------------------------------------------------
 
 const recolorCache = new Map();
-function recolor(kind, owner, picked, build) {
-  const key = kind + '/' + owner.id + '/' + picked;
+function recolor(kind, owner, key2, build) {
+  const key = kind + '/' + owner.id + '/' + key2;
   if (recolorCache.has(key)) return recolorCache.get(key);
   const out = build();
   if (recolorCache.size > 300) recolorCache.clear();
   recolorCache.set(key, out);
   return out;
 }
+/** Colour for one part: the picked colour, or (a gradient) a mix of the two stops by where the part sits across the hand. Always a plain #rrggbb. */
+const stopAt = (c1, c2, t) => (c2 ? mixHex(c1, c2, t) : c1);
 const mapper = (tint, picked) => c => {
   const role = typeof c === 'string' ? tint.map[c.toLowerCase()] : null;
   return role ? roleColor(picked, role) : c;
 };
 const mapShapes = (shapes, f) => shapes.map(s => ({ ...s, fill: f(s.fill), stroke: f(s.stroke) }));
-const mapParticles = (list, f) => list.map(p => ({ ...p, color: f(p.color) }));
+/** Particle colours: [f] maps one colour; with a gradient every emitter also gets a small palette (the stops and the mixes between) that its particles pick from. */
+const mapParticles = (list, tint, c1, c2) => list.map(p => {
+  const out = { ...p, color: mapper(tint, c1)(p.color) };
+  if (c2) out.palette = [0, 0.25, 0.5, 0.75, 1].map(t => mapper(tint, mixHex(c1, c2, t))(p.color));
+  return out;
+});
 
-/** A base hand (or a skin) with its tint applied for [picked]: the colours named in the tint map change, nothing else. */
-function tintedSkin(skin, tint, picked, salt = '') {
-  return recolor('s', skin, salt + '/' + picked + tint.default + Object.keys(tint.map).join(), () => {
-    const f = mapper(tint, picked), out = { ...skin, parts: {} };
-    for (const [name, def] of Object.entries(skin.parts)) out.parts[name] = { ...def, shapes: mapShapes(def.shapes, f) };
-    out.overlays = skin.overlays.map(o => ({ ...o, shapes: mapShapes(o.shapes, f) }));
-    out.particles = mapParticles(skin.particles, f);
+/** A base hand (or a skin) with its tint applied for [c1] (+ a second gradient stop [c2]): the colours named in the tint map change, nothing else. */
+function tintedSkin(skin, tint, c1, c2 = null, salt = '') {
+  return recolor('s', skin, salt + '/' + c1 + '/' + (c2 || '') + tint.default + Object.keys(tint.map).join(), () => {
+    const out = { ...skin, parts: {} };
+    for (const [name, def] of Object.entries(skin.parts)) out.parts[name] = { ...def, shapes: mapShapes(def.shapes, mapper(tint, stopAt(c1, c2, partPos(name)))) };
+    out.overlays = skin.overlays.map(o => ({ ...o, shapes: mapShapes(o.shapes, mapper(tint, stopAt(c1, c2, partPos(o.part)))) }));
+    out.particles = mapParticles(skin.particles, tint, c1, c2);
     return out;
   });
 }
-function tintedItem(item, picked) {
-  return recolor('i', item, picked, () => {
-    const f = mapper(item.tint, picked), out = { ...item, parts: {} };
-    for (const [name, shapes] of Object.entries(item.parts)) out.parts[name] = mapShapes(shapes, f);
-    out.particles = mapParticles(item.particles, f);
+function tintedItem(item, c1, c2 = null) {
+  return recolor('i', item, c1 + '/' + (c2 || ''), () => {
+    const out = { ...item, parts: {} };
+    for (const [name, shapes] of Object.entries(item.parts)) out.parts[name] = mapShapes(shapes, mapper(item.tint, stopAt(c1, c2, partPos(name))));
+    out.particles = mapParticles(item.particles, item.tint, c1, c2);
     return out;
   });
+}
+/** Effect intensity [k] (1-10, 5 = as authored): scales each emitter's rate / burst / size, always inside the per-emitter limits (rate 40, burst 30);
+ *  the particle system's own caps (90 particles, 6 emitters) then bound the total, so intensity can never exceed them. */
+export function scaleEmitters(list, k) {
+  const kk = cleanIntensity(k);
+  if (!kk || kk === INTENSITY_DEFAULT) return list;
+  const f = kk / INTENSITY_DEFAULT;
+  return list.map(e => ({ ...e, rate: e.rate ? Math.min(40, Math.max(0.5, e.rate * f)) : 0, burst: e.burst ? Math.min(30, Math.max(1, Math.round(e.burst * f))) : 0, size: Math.min(1.25, Math.max(0.8, 0.75 + 0.25 * f)) }));
 }
 
 /** The colour an entry is drawn in: the picked one if the item has a colour picker, else null. */
@@ -190,10 +215,10 @@ export const colorOf = (id, picked) => { const e = entryOf(id); return e && e.ti
  * [stack] may also be an old {layer: id} object (a phone that still sends that). Unknown ids are ignored (another phone may have items
  * this one lacks); nothing here can throw on bad input.
  */
-export function resolveLoadout(baseId, stack, baseColor = null) {
+export function resolveLoadout(baseId, stack, baseColor = null, baseColor2 = null) {
   let baseSkin = getSkin(skinIdOf(baseId));
-  const bc = cleanColor(baseColor);
-  if (baseSkin.tint && bc && bc !== baseSkin.tint.default) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc);
+  const bc = cleanColor(baseColor), bc2 = bc && GRADIENT_LAYERS.includes('base') ? cleanColor(baseColor2) : null;
+  if (baseSkin.tint && bc && (bc !== baseSkin.tint.default || bc2)) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc, bc2);
   const layers = [], emitters = [...baseSkin.particles];
   let tone = null;
   for (const e of stackOf(stack)) {
@@ -201,11 +226,12 @@ export function resolveLoadout(baseId, stack, baseColor = null) {
     if (!it) continue;
     const picked = it.tint ? e.color || it.tint.default : null;
     if (it.layer === 'tone') { tone = { it, picked }; continue; }              // one skin tone: the last one wins
-    const drawn = it.tint && picked !== it.tint.default ? tintedItem(it, picked) : it;
-    emitters.push(...drawn.particles);
+    const picked2 = it.tint && e.color && GRADIENT_LAYERS.includes(it.layer) ? e.color2 : null;           // a second stop only where a gradient makes sense
+    const drawn = it.tint && (picked !== it.tint.default || picked2) ? tintedItem(it, picked, picked2) : it;
+    emitters.push(...(it.layer === 'effect' ? scaleEmitters(drawn.particles, e.k) : drawn.particles));
     if (it.layer !== 'effect') layers.push(drawn);
   }
-  const skin = tone && !baseSkin.whole ? tintedSkin(baseSkin, tone.it.tint, tone.picked, bc || '') : baseSkin;
+  const skin = tone && !baseSkin.whole ? tintedSkin(baseSkin, tone.it.tint, tone.picked, null, (bc || '') + '/' + (bc2 || '')) : baseSkin;
   return { skin, layers, emitters };
 }
 
