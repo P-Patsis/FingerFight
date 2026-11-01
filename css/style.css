@@ -319,12 +319,10 @@ input:focus { outline: none; border-color: var(--cyan); }
 .flagrow > span:first-child { font-size: 14px; }
 .flag-in { flex: 1 1 auto; display: inline-flex; align-items: center; gap: 4px; min-width: 0; justify-content: flex-end; }
 .flag-in[hidden] { display: none; }
-.flag-in input { width: 100%; max-width: 130px; min-width: 70px; box-sizing: border-box; padding: 6px 8px; font-size: 14px; border-radius: 8px; border: 2px solid #475569; background: #0f172a; color: var(--ink); }
 .flag-icon { font-size: 20px; line-height: 1; min-width: 1em; }
 .preview-zone { width: 100%; display: flex; flex-direction: column; align-items: center; }
 #cWearTop { width: 100%; }
 #cWearTop .wear-top { width: 100%; }
-.wear-top.pmode .wear-box { width: 100%; }   /* Profile: the try-on window is the full panel width */
 .view-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0 2px; }
 .view-preview canvas { width: min(100%, 240px); height: auto; border-radius: 10px; border: 2px solid #334155; background: #0f172a; }
 
@@ -418,15 +416,39 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cat-color .set { width: 100%; }
 .swatches button, .cat-color .sw button { width: 28px; height: 28px; min-width: 28px; }
 
-/* ---------- the preview zone: sticks to the top while the customise controls scroll underneath ---------- */
-.preview-zone { width: 100%; gap: 6px; }
-.pz-row { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: center; align-items: flex-start; width: 100%; }
+/* ---------- the top block (preview, hand row, colour, category chips) sticks to the top while customising; only the item rows scroll under it ---------- */
+.sticky-top { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sticky-top.stuck { position: sticky; top: 0; z-index: 6; background: #0b1220; margin: 0 -14px; width: calc(100% + 28px); padding: 6px 14px 8px; box-sizing: border-box; border-bottom: 1px solid #334155; }
+.preview-zone { width: 100%; gap: 4px; position: relative; display: flex; flex-direction: column; align-items: center; }
+.pz-row { display: flex; justify-content: center; width: 100%; }
 .pz-row > * { min-width: 0; }
-.pz-row > #cWearTop { width: auto; }
-.preview-zone .wear-box { width: min(100%, calc(30vh * 1.3333)); max-height: 30vh; }
-.preview-zone .view-preview canvas { max-height: 30vh; width: auto; max-width: 100%; }
-.pz-row.two > * { flex: 1 1 0; max-width: calc(50% - 4px); }
-.pz-row.two .wear-box { width: 100%; max-height: none; }
-.pz-row.two .view-preview canvas { width: 100%; max-height: none; }
+.preview-zone .wear-box { width: min(100%, calc(24vh * 1.3333)); max-height: 24vh; }
+.preview-zone .view-preview { margin: 0; }
+.preview-zone .view-preview canvas { max-height: 24vh; width: auto; max-width: 100%; }
 #cWearTop .wear-top { gap: 4px; }
-.preview-zone.stuck { position: sticky; top: 0; z-index: 6; background: #0b1220; margin: 0 -14px; width: calc(100% + 28px); padding: 6px 14px 8px; box-sizing: border-box; border-bottom: 1px solid #334155; }
+.done-x { position: absolute; top: 4px; right: 4px; z-index: 7; padding: 3px 9px; font-size: 12px; line-height: 1.2; border: 1px solid #64748b; border-radius: 999px; background: #0f172acc; color: var(--ink); }
+.done-x[hidden] { display: none; }
+
+/* ---------- horizontal-scroll rows: swipe sideways through the choices ---------- */
+.hrow { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; overflow-y: hidden; width: 100%; padding-bottom: 4px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scroll-snap-type: x proximity; justify-content: flex-start; }
+.hrow > * { flex: 0 0 auto; scroll-snap-align: start; }
+.skin-picker.hrow { display: flex; }
+.skin-picker.hrow button { width: 60px; }
+.chips.hrow { justify-content: flex-start; width: 100%; gap: 6px; }
+.chips.hrow button { white-space: nowrap; }
+.items-row .item-card { width: 112px; }
+.items-row .item-card canvas { width: 88px; height: 88px; }
+
+/* ---------- name / flag one-liners ---------- */
+.namerow > span { font-size: 14px; flex: 0 0 auto; }
+.inline-in, .flag-in input { flex: 1 1 auto; min-width: 70px; max-width: 200px; box-sizing: border-box; padding: 6px 8px; font-size: 14px; border-radius: 8px; border: 2px solid #475569; background: #0f172a; color: var(--ink); }
+
+/* ---------- the category colour row: ONE line (colour button, presets, Original); swipes sideways if the screen is narrow ---------- */
+.cat-color { width: 100%; box-sizing: border-box; background: none; border: 0; padding: 0; text-align: left; }
+.cprow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; overflow-x: auto; width: 100%; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.cprow > * { flex: 0 0 auto; }
+.cprow input[type=color] { width: 40px; height: 28px; padding: 0; border: 2px solid #94a3b8; border-radius: 8px; background: none; }
+.cprow button.sw { width: 24px; height: 24px; min-width: 24px; border-radius: 50%; border: 2px solid #475569; padding: 0; }
+.cprow button.sw.sel { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+.cprow .btn { padding: 4px 10px; font-size: 12px; }
+.cat-color .ctl { display: flex; align-items: center; gap: 8px; width: 100%; }

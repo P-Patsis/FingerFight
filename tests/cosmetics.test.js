@@ -32,7 +32,7 @@ const memStorage = () => { const m = new Map(); return { getItem: k => m.get(k) 
 
 // ---- the vocabulary and the shipped items -----------------------------------------------------------------------------------
 test('layer types, the stack limit and categories', () => {
-  assert.deepEqual(LAYERS, ['base', 'tone', 'tattoo', 'nails', 'ring', 'glove', 'effect']);
+  assert.deepEqual(LAYERS, ['base', 'tattoo', 'nails', 'ring', 'glove', 'effect'], 'no Skin tone category: the Hand category recolours the hand');
   assert.equal(layersMod.LAYER_Z, undefined, 'the draw order is no longer a fixed z per type: it is the order the items were equipped in');
   assert.ok(MAX_STACK >= 8 && MAX_STACK <= 16);
   assert.deepEqual(CATEGORIES, ['human', 'animal', 'scifi', 'fantasy', 'premade']);
@@ -80,7 +80,7 @@ test('CLICK ORDER: the last item worn is drawn on top, and multiples of one type
 
 test('free stacking: nothing is blocked, every combination of owned items draws', () => {
   const free = catalog().filter(e => e.free && e.layer !== 'base').map(e => e.id);
-  assert.ok(free.length >= 12);
+  assert.ok(free.length >= 11);
   for (const base of ['cartoon', 'robot', 'paw', 'gauntlet', 'neon']) {
     const rec = resolveLoadout(base, free.slice(0, MAX_STACK).map(id => ({ id })));
     assert.ok(rigPlan(pts, rec.skin, rec.layers).length >= 16);
@@ -101,17 +101,19 @@ test('items map onto the named parts only; a bad item is refused', () => {
   assert.throws(() => parseItem({ ...ok, particles: [{ effect: 'confetti', color: '#fff', rate: 1 }] }), /effect/);
 });
 
-test('the skin tone is a colour picker on ONE item: it recolours the base where it uses the skin colours, and leaves other hands alone', () => {
+test('the HAND recolours: the Hand category colour tints the worn hand (cartoon, neon, dragon), other hands keep their own colours', () => {
   const fill = rec => rec.skin.parts.palm.shapes[0].fill;
   assert.equal(fill(resolveLoadout('cartoon', [])), '#f6c9a0');
-  const deep = resolveLoadout('cartoon', [{ id: 'skintone', color: '#7a4a2b' }]);
+  const deep = resolveLoadout('cartoon', [], '#7a4a2b');
   assert.equal(fill(deep), '#7a4a2b', 'the picked colour is the skin');
   assert.notEqual(deep.skin.parts.palm.shapes[0].stroke, '#9a5b2e', 'the outline follows (darker)');
-  assert.notEqual(fill(resolveLoadout('cartoon', [{ id: 'skintone', color: '#86b35a' }])), fill(deep), 'any colour');
-  assert.equal(fill(resolveLoadout('cartoon', [{ id: 'skintone' }])), '#e3ad7c', 'no colour picked yet: the item default');
-  assert.equal(fill(resolveLoadout('robot', [{ id: 'skintone', color: '#7a4a2b' }])), fill(resolveLoadout('robot', [])), 'robot has no skin colours to change');
-  assert.equal(fill(resolveLoadout('gauntlet', [{ id: 'skintone', color: '#86b35a' }])), fill(resolveLoadout('gauntlet', [])), 'a premade whole hand is finished: no tone');
-  assert.deepEqual(resolveLoadout('cartoon', [{ id: 'skintone', color: '#7a4a2b' }, { id: 'skintone', color: '#ffffff' }]).skin.parts.palm.shapes[0].fill, '#7a4a2b', 'one tone');
+  assert.notEqual(fill(resolveLoadout('cartoon', [], '#86b35a')), fill(deep), 'any colour');
+  assert.equal(fill(resolveLoadout('robot', [], '#7a4a2b')), fill(resolveLoadout('robot', [])), 'robot has no colour to change');
+  assert.equal(fill(resolveLoadout('gauntlet', [], '#86b35a')), fill(resolveLoadout('gauntlet', [])), 'a premade whole hand is finished');
+  assert.equal(entryOf('skintone'), null, 'the Skin tone item is gone');
+  // a phone still on the previous version sends the skin colour as a worn item: it is the hand colour now
+  assert.equal(fill(resolveLoadout('cartoon', [{ id: 'skintone', color: '#7a4a2b' }])), '#7a4a2b');
+  assert.equal(fill(resolveLoadout('cartoon', [{ id: 'skintone', color: '#7a4a2b' }], '#86b35a')), '#86b35a', 'an explicit hand colour wins');
 });
 
 test('unknown, malformed or hostile entries in a stack are ignored, never thrown on', () => {
@@ -159,9 +161,6 @@ test('TAP TO TOGGLE: wearing an item adds it on top, tapping it again takes it o
   assert.deepEqual(inv.toggle('paw'), { ok: true, on: true }); assert.equal(inv.baseId, 'paw'); assert.equal(st.m.get('ff-puppet'), 'paw');
   assert.deepEqual(inv.toggle('paw'), { ok: true, on: true }, 'the hand cannot be taken off');
   assert.equal(inv.toggle('dragon').ok, false, 'a locked hand cannot be worn'); assert.equal(inv.baseId, 'paw');
-  // one skin tone at a time
-  inv.toggle('skintone'); inv.toggle('skintone'); inv.toggle('skintone');
-  assert.equal(inv.stack.filter(s => s.id === 'skintone').length, 1);
   assert.equal(inv.loadoutWith('goldring').stack.at(-1).id === 'goldring' || inv.isEquipped('goldring'), true);
   const empty = new Inventory(memStorage()), lw = empty.loadoutWith('goldring');
   assert.deepEqual(lw.stack.map(s => s.id), ['goldring'], 'loadoutWith previews an item without wearing it'); assert.deepEqual(empty.stack, []);
@@ -169,7 +168,9 @@ test('TAP TO TOGGLE: wearing an item adds it on top, tapping it again takes it o
   const full = new Inventory(memStorage());
   const wearable = catalog().filter(e => e.free && e.layer !== 'base').map(e => e.id);
   let n = 0; for (const id of wearable) if (full.toggle(id).ok) n++;
-  assert.equal(n, MAX_STACK); assert.equal(full.stack.length, MAX_STACK); full.grant('ruby'); assert.equal(full.toggle('ruby').full, true, 'the 13th item is refused'); assert.equal(full.isEquipped('ruby'), false);
+  assert.equal(n, wearable.length, 'every free wearable fits'); assert.equal(full.stack.length, Math.min(wearable.length, MAX_STACK));
+  while (full.stack.length < MAX_STACK) { const extra = catalog().find(e => e.layer !== 'base' && !full.isEquipped(e.id)); full.grant(extra.id); full.toggle(extra.id); }
+  full.grant('ruby'); full.remove('ruby'); assert.equal(full.toggle('ruby').full, true, 'past the limit is refused'); assert.equal(full.isEquipped('ruby'), false);
 });
 
 test('MANUAL REORDER: moving an item up or down changes the draw order, the ends stop, and it persists', () => {
@@ -197,7 +198,7 @@ test('COLOUR PICKERS: only plain #rrggbb is accepted and stored, only on items t
   for (const bad of ['red', 'url(#a)', '#12', '#12345', '#1234567', '#gggggg', 'rgb(1,2,3)', '#22d3ee; evil', 5, {}, undefined]) {
     assert.equal(inv.setColor('nailpolish', bad), false, String(bad)); assert.equal(inv.colorOf('nailpolish'), '#22d3ee', 'unchanged');
   }
-  assert.equal(inv.setColor('goldring', '#ff0000'), false, 'a ring has no picker'); assert.equal(inv.setColor('whiteglove', '#ff0000'), false, 'not worn / no picker');
+  assert.equal(inv.setColor('goldring', '#ff0000'), true, 'a ring has a picker now'); inv.setColor('goldring', null); assert.equal(inv.setColor('whiteglove', '#ff0000'), false, 'not worn');
   assert.equal(inv.setColor('nailpolish', null), true); assert.equal(inv.colorOf('nailpolish'), '#dc2626');
   inv.setColor('nailpolish', '#22d3ee');
   assert.equal(new Inventory(st).colorOf('nailpolish'), '#22d3ee', 'the colour persists');
@@ -211,20 +212,21 @@ test('COLOUR PICKERS: only plain #rrggbb is accepted and stored, only on items t
   const neon = resolveLoadout('neon', [], '#ec4899');
   assert.ok(JSON.stringify(neon.skin.parts.palm.shapes).includes('#ec4899') && !JSON.stringify(neon.skin.parts.palm.shapes).includes('#22d3ee'));
   assert.equal(inv.setColor('robot', '#ec4899'), false, 'the robot has no picker'); assert.equal(inv.setColor('cartoon', '#ec4899'), false, 'only the worn hand');
-  inv.toggle('cartoon'); assert.equal(inv.baseColor, null, 'a new hand starts in its own colours');
+  inv.toggle('cartoon'); assert.equal(inv.baseColor, null, 'a hand with no picked colour starts in its own colours');
   assert.ok(JSON.stringify(resolveLoadout('dragon', [], '#3b82f6').skin.parts.palm.shapes).includes('#3b82f6'));
   assert.equal(resolveLoadout('robot', [], '#3b82f6').skin, getSkin('robot'), 'a hand without a picker ignores a colour');
 });
 
-test('COLOUR items collapsed: skin tones, nail polishes and tattoos are one item + a picker; tint data is validated like network input', () => {
+test('COLOUR items collapsed: nail polishes and tattoos are one item + a picker; tint data is validated like network input', () => {
   for (const gone of ['pale', 'tan', 'brown', 'deep', 'orc', 'frost', 'rednails', 'blacknails', 'neonnails']) assert.equal(entryOf(gone), null, gone + ' is now a colour of another item');
-  for (const id of ['skintone', 'nailpolish', 'tribal', 'scar', 'runes', 'neon', 'dragon', 'sparkles', 'bubbles', 'glow', 'embers', 'electric']) assert.ok(entryOf(id)?.tint, id + ' has a colour picker');
-  for (const id of ['goldring', 'whiteglove', 'robot', 'gauntlet']) assert.equal(entryOf(id).tint, null);
+  for (const id of ['cartoon', 'nailpolish', 'tribal', 'scar', 'runes', 'neon', 'dragon', 'sparkles', 'bubbles', 'glow', 'embers', 'electric']) assert.ok(entryOf(id)?.tint, id + ' has a colour picker');
+  for (const id of ['goldring', 'silverring', 'ruby', 'whiteglove', 'leather', 'fingerless', 'knight']) assert.ok(entryOf(id).tint, id + ': every category has a colour picker, so rings and gloves can be recoloured');
+  for (const id of ['robot', 'gauntlet', 'paw']) assert.equal(entryOf(id).tint, null, id + ' keeps its own colours');
   const ok = JSON.parse(read('assets/items/nailpolish.json'));
   assert.throws(() => parseItem({ ...ok, tint: { ...ok.tint, default: 'red' } }), /#rrggbb/);
   assert.throws(() => parseItem({ ...ok, tint: { ...ok.tint, map: { '#dc2626': 'sparkle' } } }), /main/);
   assert.throws(() => parseItem({ ...ok, tint: { ...ok.tint, swatches: ['url(#x)'] } }), /swatches/);
-  assert.throws(() => parseItem({ ...JSON.parse(read('assets/items/skintone.json')), tint: undefined }), /tone needs a "tint"/);
+  assert.throws(() => parseItem({ ...ok, layer: 'tone' }), /layer must be/, 'there is no tone layer any more');
 });
 
 test('MIGRATION: an old saved inventory (one item per layer, colour items) becomes a stack + colours', () => {
@@ -233,10 +235,12 @@ test('MIGRATION: an old saved inventory (one item per layer, colour items) becom
   st.m.set('ff-owned', JSON.stringify(['blacknails', 'ruby']));
   st.m.set('ff-puppet', 'robot');
   const inv = new Inventory(st);
-  assert.deepEqual(inv.stack, [{ id: 'skintone', color: '#7a4a2b' }, { id: 'scar', color: null }, { id: 'nailpolish', color: '#111827' }, { id: 'goldring', color: null }, { id: 'whiteglove', color: null }],
-    'same order as the old fixed z-order, old colour items = base item + its colour');
+  assert.deepEqual(inv.stack, [{ id: 'scar', color: null }, { id: 'nailpolish', color: '#111827' }, { id: 'goldring', color: null }, { id: 'whiteglove', color: null }],
+    'same order as the old fixed z-order, old colour items = base item + its colour; the old skin tone moved onto the cartoon hand');
+  assert.equal(inv.handColors.cartoon, '#7a4a2b', 'the old skin tone is the cartoon hand\'s colour now');
   assert.ok(st.m.has('ff-stack'), 'saved in the new format'); assert.equal(inv.baseId, 'robot'); assert.equal(inv.owns('ruby'), true, 'the grant list is kept as is');
-  assert.deepEqual(new Inventory(st).stack.map(s => s.id), ['skintone', 'scar', 'nailpolish', 'goldring', 'whiteglove'], 'and read back from it afterwards');
+  assert.deepEqual(new Inventory(st).stack.map(s => s.id), ['scar', 'nailpolish', 'goldring', 'whiteglove'], 'and read back from it afterwards');
+  assert.equal(new Inventory(st).handColors.cartoon, '#7a4a2b', 'the hand colour is kept');
   // old items that are gone / not owned are dropped on load; the stack in the new key wins over the old key
   const st2 = memStorage();
   st2.m.set('ff-cos', JSON.stringify({ ring: 'ruby', glove: 'leather' }));
@@ -244,7 +248,7 @@ test('MIGRATION: an old saved inventory (one item per layer, colour items) becom
   const st3 = memStorage(); st3.m.set('ff-cos', JSON.stringify({ ring: 'goldring' })); st3.m.set('ff-stack', JSON.stringify([{ id: 'whiteglove' }]));
   assert.deepEqual(new Inventory(st3).stack.map(s => s.id), ['whiteglove']);
   // a phone still sending the old wire format is drawn the same way
-  const old = resolveLoadout('cartoon', { tone: 'deep', nails: 'neonnails' });
+  const old = resolveLoadout('cartoon', { tone: 'deep', nails: 'neonnails' });      // (the old tone arrives as a skintone entry, which is the hand colour now)
   assert.equal(old.skin.parts.palm.shapes[0].fill, '#7a4a2b'); assert.equal(old.layers[0].parts.index_tip[0].fill, '#22d3ee');
   assert.deepEqual(legacyStack({ ring: 'goldring', evil: 'x' }), [{ id: 'goldring', color: null }]);
 });
@@ -485,18 +489,17 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   chip('storeLayers', 'nails').onclick();
   card('nailpolish').onclick();
   assert.equal(btn('nailpolish', 'color'), undefined, 'no per-item colour dot any more');
-  const pick = () => $('catColor').children.find(c => c.classList.contains('cpick'));
-  const swatches = () => pick().children.find(c => c.classList.contains('sw'));
-  assert.ok(swatches().children.filter(x => x.dataset.color).length >= 12, 'a tidy row of preset swatches');
-  swatches().children.find(x => x.dataset.color === '#25e4e4').onclick();
-  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#25e4e4');
-  const input = pick().children.find(c => c.classList.contains('cp-head')).children.find(x => x.type === 'color');
+  const pick = () => $('catColor').children.find(c => c.classList.contains('cprow'));
+  assert.ok(pick().children.filter(x => x.dataset.color).length >= 8, 'ONE line of basic preset swatches');
+  pick().children.find(x => x.dataset.color === '#25d3e4').onclick();
+  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#25d3e4');
+  const input = pick().children.find(x => x.type === 'color');
   input.value = '#12ab34'; input.oninput();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'any colour, live');
   input.value = 'javascript:alert(1)'; input.oninput();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'junk is refused');
   chip('storeLayers', 'ring').onclick();
-  assert.match($('catColor').children.map(c => c.textContent).join(' '), /keep their own colours/, 'rings have no colour panel');
+  assert.ok($('catColor').children.some(c => c.classList.contains('cprow')), 'rings have their own colour picker now');
   // EFFECTS: pick them like any item
   chip('storeLayers', 'effect').onclick();
   assert.deepEqual(cards().map(c => c.dataset.id), ['sparkles', 'bubbles', 'glow', 'embers', 'electric']);
@@ -512,8 +515,8 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(b.visible(), ['profile']);
   assert.equal($('wearTop').parentElement, $('cWearTop'), 'the preview moved to the Profile customise area');
   const pcards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
-  assert.ok(pcards().length > 0 && pcards().every(c => c.dataset.id !== 'dragon' && c.dataset.id !== 'electric'), 'only what you own');
-  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet']), 'the Profile starts on the Hand category');
+  assert.equal(pcards().length, 0, 'the Hand category has no duplicate cards: the hands live in "Choose your Hand"');
+  assert.match($('profileGrid').children.map(c => c.textContent).join(' '), /Choose your Hand/);
   $('profileLayers').children.find(x => x.dataset.value === 'glove').onclick();
   pcards().find(c => c.dataset.id === 'whiteglove').onclick();
   assert.equal(stackIds().at(-1), 'whiteglove');

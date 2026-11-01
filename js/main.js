@@ -12,7 +12,7 @@ import { drawFromMessage, drawPuppetPicture, drawViewPreview, statesFromCount, p
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout } from './cosmetics.js';
-import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BIG_PALETTE, GRADIENT_LAYERS, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
+import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
 import { Stats } from './stats.js';
 import { unlockItem, unlockLabel } from './unlock.js';
@@ -81,7 +81,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
-let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, baseColor2: null, skel: cleanColor(store_get('ff-skel')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
+let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
 const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
 function store_get(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -90,7 +90,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
 /** Copies what the inventory says is worn into the style that is drawn and sent. */
-function takeLoadout() { const L = inv.loadout(); style.skin = L.base; style.baseColor = L.baseColor; style.baseColor2 = L.baseColor2; style.stack = L.stack; }
+function takeLoadout() { const L = inv.loadout(); style.skin = L.base; style.baseColor = L.baseColor; style.stack = L.stack; }
 const stats = new Stats({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // local play statistics (this phone only)
 const inv = new Inventory({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // owned items and equipment (this phone only)
 takeLoadout();
@@ -419,7 +419,7 @@ $('randomBtn').onclick = async () => {
 // Network
 // ---------------------------------------------------------------------------------------------
 const allowPhotos = () => matchKind === 'private';          // random opponents never send, and are never shown, photos
-const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, bd: m.bd, sk: m.sk, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
+const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, sk: m.sk, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
   if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
@@ -736,7 +736,7 @@ const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) 
  *  The Profile's top window shows the selected view itself (skeleton, puppet, with or without the live photo); its puppet fitting lives in the customise controls. Preview only, never sent. */
 const tryOnView = () => (effectiveStyle().mode.startsWith('photo-') ? 'photo-puppet' : 'puppet');
 const inProfileCust = () => cust.on && !$('profile').hidden;
-const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (inProfileCust() ? effectiveStyle().mode : tryOnView()) : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.baseColor2, style.skel);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
+const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (inProfileCust() ? effectiveStyle().mode : tryOnView()) : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.skel);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
 
 function skinPreview(id) {
   const c = document.createElement('canvas');
@@ -764,7 +764,7 @@ function buildSkelPicker() {
   const box = $('skelPicker');
   box.replaceChildren();
   const set = c => { style.skel = cleanColor(c); store.set('ff-skel', style.skel || ''); };
-  for (const c of [SKELETON_COLOR, ...BIG_PALETTE]) {
+  for (const c of [SKELETON_COLOR, ...BASIC_PALETTE]) {
     const b = el('button', ''); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', 'Skeleton colour ' + c);
     b.onclick = () => { set(c); renderStyle(); };
     box.append(b);
@@ -795,7 +795,7 @@ function buildStyleCard() {
 /** The Profile/lobby preview of the current choice, drawn with the selected skin (a stand-in picture, never the real camera). */
 function renderViewPreview(mode) {
   const c = $('viewPreview');
-  try { const rec = resolveLoadout(style.skin, style.stack, style.baseColor, style.baseColor2); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, { ...rec, backs: [true] }, style.skel || SKELETON_COLOR); } catch { /* the preview is decoration */ }   // previews show the back of the hand: that is where the nail polish is
+  try { const rec = resolveLoadout(style.skin, style.stack, style.baseColor); drawViewPreview(c.getContext('2d'), c.width, c.height, mode, rec.skin, { ...rec, backs: [true] }, style.skel || SKELETON_COLOR); } catch { /* the preview is decoration */ }   // previews show the back of the hand: that is where the nail polish is
   $('viewPreviewLabel').textContent = 'Preview: ' + ({ skeleton: 'skeleton of your hand', puppet: 'your puppet', 'photo-skeleton': 'camera picture + skeleton', 'photo-puppet': 'camera picture + puppet' }[mode] || '');
 }
 
@@ -977,7 +977,7 @@ function sampleLandmarks() { return [statesToLandmarks({ thumb: true, index: tru
 /** A small still of the puppet wearing [load] ({base, baseColor, stack}): used on every item card. */
 function drawCard(canvas, load) {
   try {
-    const rec = resolveLoadout(load.base, load.stack, load.baseColor, load.baseColor2);
+    const rec = resolveLoadout(load.base, load.stack, load.baseColor);
     drawPuppetPicture(canvas.getContext('2d'), canvas.width, canvas.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], seed: load.base + JSON.stringify(load.stack) });
   } catch { /* previews are decoration */ }
 }
@@ -1041,12 +1041,13 @@ function renderStore() {
   renderWear();
 }
 
-/** The Profile's customise list: one type at a time (Hand, Skin tone, Tattoo / scar, Nail polish, Ring, Glove, Effect), only what you own (the Store has everything). */
+/** The Profile's customise list: one type at a time (Hand, Tattoo / scar, Nail polish, Ring, Glove, Effect) in a sideways-scrolling row, only what you own (the Store has everything). */
 function renderProfileItems() {
   const lays = $('profileLayers');
   lays.replaceChildren();
   for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; }, renderProfileItems);
-  fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
+  if (profileView.layer === 'base') { const g = $('profileGrid'); g.replaceChildren(el('p', 'fine', 'Pick your hand in "Choose your Hand" above; the colour above recolours it.')); }
+  else fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
   renderWear();
 }
 
@@ -1058,17 +1059,21 @@ function layoutWear(where) {
 }
 
 // ---- customise mode (Profile): the camera goes on with it and off when it ends (state: `cust`, declared at the top)
-/** What the Profile's preview zone shows. Normal: the opponent-view picture. Customise: the TOP window follows the selected view (the live camera
- *  with the skeleton / puppet drawn as chosen, over the photo for photo views; the static picture while the camera is not on), and the puppet FITTING
- *  (the swaying puppet wearing everything) sits beside it, or alone when the selected view is already a puppet on the live camera. The zone sticks to the top while scrolling. */
+/** What the Profile's preview zone shows: EXACTLY ONE picture for the selected view, never a leftover pane.
+ *  Normal: the opponent-view picture. Customise: the live camera showing the selected view itself (the skeleton, or the puppet, over the photo for the photo
+ *  views); while the camera is not on, a puppet view shows the swaying puppet wearing everything, a skeleton view its static picture.
+ *  The whole top block (preview, hand row, colour, type chips) is pinned while customising. */
 function layoutPreview() {
   const c = inProfileCust(), live = c && tryOn.on, puppetView = effectiveStyle().mode.endsWith('puppet');
-  const top = !c || (!live && !puppetView), fit = c && !(live && puppetView), liveShown = live;
-  $('viewPreviewBox').hidden = !top; $('liveBox').hidden = !liveShown;
-  $('cWearTop').hidden = !c; $('wearBox').hidden = c && !fit;
-  $('previewZone').classList.toggle('stuck', c);
-  $('pzRow').classList.toggle('two', [top, liveShown, c && fit].filter(Boolean).length > 1);
-  if (c && fit) startStoreAnim();
+  const which = !c ? 'static' : live ? 'live' : puppetView ? 'fit' : 'static';
+  $('viewPreviewBox').hidden = which !== 'static';
+  $('liveBox').hidden = which !== 'live';
+  $('cWearTop').hidden = which !== 'fit';
+  $('wearBox').hidden = false;
+  $('stickyTop').classList.toggle('stuck', c);
+  $('custBtn').hidden = c; $('custDone').hidden = !c;
+  $('profileLayers').hidden = !c; $('cCat').hidden = !c;
+  if (which === 'fit') startStoreAnim();
 }
 function leaveCust() {
   cust.on = false;
@@ -1076,6 +1081,7 @@ function leaveCust() {
   $('custBtn').textContent = 'Customise & try on'; $('custBtn').setAttribute('aria-pressed', 'false');
   layoutPreview();
 }
+$('custDone').onclick = () => { if (cust.on) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
 $('custBtn').onclick = () => {
   if (cust.on) { leaveCust(); stopTryOn(); return; }                 // "Done": the camera goes off and the plain preview is back
   cust.on = true;
@@ -1085,74 +1091,48 @@ $('custBtn').onclick = () => {
   startTryOn();                                                      // camera ON (says why when it cannot)
 };
 
-const GRADIENT_SECOND = '#a855f7';
 /** The first colour a category starts from when nothing was picked: the default of its first colourable item (the hand: the worn hand). */
 function categoryDefault(layer) {
   if (layer === 'base') return entryOf(inv.baseId)?.tint?.default || null;
   return catalog().find(e => e.layer === layer && e.tint)?.tint.default || null;
 }
-/** The quick colours: an even spread over the spectrum (+ white, grey, black); skin tone starts with its own skin colours. */
-function categorySwatches(layer) {
-  const own = layer === 'tone' ? catalog().filter(e => e.layer === 'tone' && e.tint).flatMap(e => e.tint.swatches) : [];
-  return [...new Set([...own, ...BIG_PALETTE])];
-}
 
 /**
- * The colour panel of the CURRENT category (Profile chip / Store type chip): ONE colour, or a two-stop gradient where the category allows it, for everything
- * of that type, plus the effect intensity. Each colour has a full colour picker (any colour) and a tidy row of spread-out presets; "Original" puts the item colours back.
+ * The colour picker of the CURRENT category (the Profile's type chip / the Store's type chip), ONE line: the full colour picker (any colour), a handful of
+ * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
  */
 function renderCatColor() {
   const box = $('catColor'), layer = inProfileCust() ? profileView.layer : storeView.layer;
   box.replaceChildren();
   box.hidden = layer === 'all';
   if (layer === 'all') return;
-  if (!inv.colorable(layer) || (layer === 'base' && !entryOf(inv.baseId)?.tint)) {
-    box.append(el('p', 'fine', layer === 'base' ? 'This hand has its own fixed colours.' : LAYER_LABELS[layer] + ' items keep their own colours.'));
+  if (layer === 'base' && !inv.handTintable) {
+    box.append(el('p', 'fine', 'This hand keeps its own colours. Pick Cartoon, Neon or Dragon to recolour it.'));
     return;
   }
-  const st = inv.categoryStyle(layer), start = categoryDefault(layer);
-  const cur = st.c || start, grad = GRADIENT_LAYERS.includes(layer);
-  box.append(el('h4', '', LAYER_LABELS[layer] + ' colour'));
-  const apply = (c, d) => { inv.setCategoryColor(layer, c, d); syncStyle(); };
-  /** One colour picker: its label, the native picker (any colour) and the preset row. */
-  const picker = (label, now, onPick, onLive, act) => {
-    const wrap = el('div', 'cpick'); wrap.dataset.picker = act;
-    const head = el('div', 'cp-head'); head.append(el('span', 'lbl', label));
-    const inp = document.createElement('input'); inp.type = 'color'; inp.value = now || '#ffffff'; inp.dataset.act = act; inp.setAttribute('aria-label', label + ': pick any colour');
-    inp.oninput = () => { onLive(inp.value); liveColor(); };          // live while dragging; the panel is not rebuilt under the picker
-    inp.onchange = () => syncStyle();
-    head.append(inp);
-    wrap.append(head);
-    const sw = el('div', 'sw');
-    for (const c of categorySwatches(layer)) {
-      const b = el('button', c === now ? 'sel' : ''); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', c);
-      b.onclick = () => onPick(c);
-      sw.append(b);
-    }
-    wrap.append(sw);
-    box.append(wrap);
-  };
-  if (grad) {                                                          // the gradient switch comes first, so it is easy to find
-    const row = el('div', 'set'); row.append(el('span', '', 'Gradient (two colours)'));
-    const gb = el('button', 'toggle' + (st.d ? ' on' : ''), st.d ? 'On' : 'Off'); gb.type = 'button'; gb.dataset.act = 'gradient'; gb.setAttribute('aria-pressed', String(!!st.d));
-    gb.onclick = () => { const n = inv.categoryStyle(layer), c = n.c || cur; apply(c, n.d ? null : c.toLowerCase() === GRADIENT_SECOND ? '#22d3ee' : GRADIENT_SECOND); };
-    row.append(gb); box.append(row);
+  const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
+  const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
+  const row = el('div', 'cprow'); row.dataset.picker = 'any'; row.dataset.layer = layer;
+  const inp = document.createElement('input'); inp.type = 'color'; inp.value = cur || '#ffffff'; inp.dataset.act = 'any'; inp.setAttribute('aria-label', LAYER_LABELS[layer] + ': pick any colour');
+  inp.oninput = () => { inv.setCategoryColor(layer, inp.value); liveColor(); };       // live while dragging; the row is not rebuilt under the picker
+  inp.onchange = () => syncStyle();
+  row.append(inp);
+  for (const c of BASIC_PALETTE) {
+    const b = el('button', 'sw' + (cur && c === cur.toLowerCase() ? ' sel' : '')); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', c);
+    b.onclick = () => apply(c);
+    row.append(b);
   }
-  if (grad && st.d) {
-    const now = () => inv.categoryStyle(layer);                       // read when used: a live drag of one stop must not undo the other
-    picker('Stop A', cur, c => apply(c, now().d), v => inv.setCategoryColor(layer, v, now().d), 'stopA');
-    picker('Stop B', st.d, c => apply(now().c || cur, c), v => inv.setCategoryColor(layer, now().c || cur, v), 'stopB');
-  } else picker('Colour', cur, c => apply(c, null), v => inv.setCategoryColor(layer, v, null), 'any');
+  const reset = el('button', 'btn tiny ghost', 'Original'); reset.type = 'button'; reset.dataset.act = 'default';
+  reset.onclick = () => apply(null);
+  row.append(reset);
+  box.append(row);
   if (layer === 'effect') {
     const k = st.k || INTENSITY_DEFAULT, ctl = el('div', 'ctl'), val = el('b', '', String(k));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(INTENSITY_MIN); sl.max = String(INTENSITY_MAX); sl.step = '1'; sl.value = String(k); sl.dataset.act = 'intensity'; sl.setAttribute('aria-label', 'Effect intensity');
     sl.oninput = () => { if (inv.setIntensity(Number(sl.value))) { val.textContent = sl.value; liveColor(); } };   // more / bigger particles, always inside the particle caps
     sl.onchange = () => syncStyle();
-    ctl.append(el('span', 'lbl', 'Intensity'), sl, val); box.append(ctl);
+    ctl.append(el('span', 'fine', 'Intensity'), sl, val); box.append(ctl);
   }
-  const reset = el('button', 'btn tiny ghost', 'Original'); reset.type = 'button'; reset.dataset.act = 'default';
-  reset.onclick = () => apply(null, null);
-  const ctl2 = el('div', 'ctl'); ctl2.append(reset); box.append(ctl2);
 }
 
 /** The worn list (top first, then the base hand) with reorder and remove, the category colour panel, and the preview. */
@@ -1186,7 +1166,7 @@ function renderWear() {
 
 /** The big preview: the puppet with everything worn and its particle effects running (the same capped particle system the camera uses). */
 function refreshPreview() {
-  const rec = resolveLoadout(style.skin, style.stack, style.baseColor, style.baseColor2);
+  const rec = resolveLoadout(style.skin, style.stack, style.baseColor);
   storeAnim.rec = rec;
   if (!storeAnim.ps) storeAnim.ps = new ParticleSystem();
   storeAnim.ps.setEmitters(rec.emitters);
@@ -1228,7 +1208,7 @@ function liveColor() {
   clearTimeout(liveTimer);
   liveTimer = setTimeout(() => {
     if (!$('store').hidden) fillGrid($('storeGrid'), filterCatalog(catalog(), storeView));
-    if (!$('profile').hidden && cust.on) fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
+    if (!$('profile').hidden && cust.on && profileView.layer !== 'base') fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
     renderViewPreview(effectiveStyle().mode);
   }, 250);
 }

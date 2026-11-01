@@ -45,8 +45,8 @@ test('Test snap in the Store turns the camera on and draws what is worn, in the 
   assert.deepEqual(stack(), ['whiteglove', 'silverring', 'goldring']);
   card('nailpolish').onclick();
   $('storeLayers').children.find(x => x.dataset.value === 'nails').onclick();
-  $('catColor').children.find(c => c.classList.contains('cpick')).children.find(c => c.classList.contains('sw')).children.find(x => x.dataset.color === '#25e4e4').onclick();
-  assert.equal(cam().overlay.rec.layers.find(l => l.id === 'nailpolish').parts.index_tip[0].fill, '#25e4e4');
+  $('catColor').children.find(c => c.classList.contains('cprow')).children.find(x => x.dataset.color === '#25d3e4').onclick();
+  assert.equal(cam().overlay.rec.layers.find(l => l.id === 'nailpolish').parts.index_tip[0].fill, '#25d3e4');
   // the snap button now fires the snap effect on the live hand
   let bursts = 0; const orig = cam().particles.trigger.bind(cam().particles);
   cam().particles.trigger = (n, h) => { bursts += n === 'snap' ? 1 : 0; return orig(n, h); };
@@ -76,27 +76,28 @@ test('Camera off in the Store; and the Profile\'s merged panel: Customise turns 
   await until(() => events.includes('run'), 'camera on');
   assert.deepEqual(events, ['start', 'run']);
   assert.equal($('custArea').hidden, false);
-  assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('cWearTop').hidden, false); assert.equal($('camBox').parentElement, $('liveBox'));
+  assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('cWearTop').hidden, true, 'the puppet fitting pane is not shown beside the live camera'); assert.equal($('camBox').parentElement, $('liveBox'));
   assert.equal($('wearTop').classList.contains('pmode'), true, 'Profile mode hides Test snap and Camera off: no camera buttons at all in Profile mode');
   assert.equal(b.byId.get('wearPhoto'), undefined, 'the standalone Photo button is gone');
-  // the TOP window shows the selected view itself; the puppet fitting is a separate pane in the customise controls
+  // the TOP window shows the selected view itself, and NOTHING else: exactly one preview per selected view (no leftover puppet pane)
   const feedHidden = () => $('video').classList.contains('feed-hidden');
   const pick = m => $('modePicker').children.find(x => x.dataset.mode === m).onclick();
-  const shown = () => ({ top: !$('viewPreviewBox').hidden, live: !$('liveBox').hidden, fit: !$('wearBox').hidden, two: $('pzRow').classList.contains('two') });
+  const shown = () => ({ top: !$('viewPreviewBox').hidden, live: !$('liveBox').hidden, fit: !$('cWearTop').hidden, two: $('pzRow').classList.contains('two') });
   assert.equal($('camBox').parentElement, $('liveBox'), 'the camera is the top window in the Profile');
   pick('puppet'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), true, 'Puppet: the puppet alone on the dark background');
   assert.deepEqual(shown(), { top: false, live: true, fit: false, two: false }, 'a puppet view on the live camera needs no second pane');
   pick('skeleton'); assert.equal(cam().overlay.puppet, false, 'Skeleton: the SKELETON (not the puppet)'); assert.equal(feedHidden(), true);
-  assert.deepEqual(shown(), { top: false, live: true, fit: true, two: true }, 'the puppet fitting appears beside it');
+  assert.deepEqual(shown(), { top: false, live: true, fit: false, two: false }, 'DOUBLE-PREVIEW FIX: Skeleton after the camera was on shows the skeleton only, no puppet pane beside it');
   pick('photo-puppet'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), false, 'Photo + puppet: my live picture with the puppet over it');
   pick('photo-skeleton'); assert.equal(cam().overlay.puppet, false, 'Photo + skeleton: my live picture with the skeleton over it'); assert.equal(feedHidden(), false);
-  assert.equal(shown().fit, true);
-  assert.equal($('previewZone').classList.contains('stuck'), true, 'the preview zone is pinned while customising');
+  assert.deepEqual(shown(), { top: false, live: true, fit: false, two: false });
+  assert.equal($('stickyTop').classList.contains('stuck'), true, 'the top block is pinned while customising');
+  assert.equal($('custDone').hidden, false, 'the small Done sits in the preview corner'); assert.equal($('custBtn').hidden, true);
   pick('puppet'); assert.equal(feedHidden(), true);
-  $('custBtn').onclick();                                            // Done
+  $('custDone').onclick();                                           // Done
   assert.ok(events.includes('stop'), 'tracks stopped'); assert.equal(cam().cameraOn, false);
-  assert.equal($('previewZone').classList.contains('stuck'), false, 'not pinned when not customising');
-  assert.equal($('custArea').hidden, true); assert.equal($('viewPreviewBox').hidden, false); assert.equal($('camBox').hidden, true);
+  assert.equal($('stickyTop').classList.contains('stuck'), false, 'not pinned when not customising'); assert.equal($('custDone').hidden, true);
+  assert.equal($('custArea').hidden, true); assert.deepEqual(shown(), { top: true, live: false, fit: false, two: false }, 'camera off: just the one static preview'); assert.equal($('camBox').hidden, true);
   // on again, then leave the screen: the camera goes off and the mode ends
   reset();
   $('custBtn').onclick();

@@ -214,10 +214,10 @@ export class HandCam {
   }
 
   /** The picture drawn over MY camera view follows what my opponent sees: puppet views get the puppet, the others the skeleton. */
-  setOverlay(view, skin, stack, baseColor = null, baseColor2 = null, skel = null) {
+  setOverlay(view, skin, stack, baseColor = null, skel = null) {
     const v = viewOf(view);
     this.skel = cleanColor(skel);
-    const rec = resolveLoadout(skin, stack, baseColor, baseColor2);
+    const rec = resolveLoadout(skin, stack, baseColor);
     this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec };
     this.particles.setEmitters(v.endsWith('puppet') ? rec.emitters : []);
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
@@ -293,13 +293,13 @@ export class HandCam {
     const q = x => Math.max(0, Math.min(1000, Math.round(x * 1000)));
     const lm = hands.length ? hands.map(h => h.map(p => [q(mirror ? 1 - p.x : p.x), q(p.y)])) : null;
     const photoMode = mode.startsWith('photo-');
-    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.baseColor2, style.skel, backs) : '';
+    const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.skel, backs) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
     if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), bd: cleanColor(style.baseColor) ? cleanColor(style.baseColor2) || undefined : undefined, sk: cleanColor(style.skel) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
   }
 
-  #photo(hands, states, mode, ar, skinId, stack, baseColor, baseColor2 = null, skel = null, backs = []) {
+  #photo(hands, states, mode, ar, skinId, stack, baseColor, skel = null, backs = []) {
     const v = this.video;
     if (!v.videoWidth) return '';
     const w = PHOTO_WIDTH, h = Math.round((w * v.videoHeight) / v.videoWidth);
@@ -313,7 +313,7 @@ export class HandCam {
     if (mode === 'photo-skeleton') drawSkeleton(ctx, hands, w, h, 2, skel);
     ctx.restore();
     if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
-      const rec = resolveLoadout(skinId, stack, baseColor, baseColor2);
+      const rec = resolveLoadout(skinId, stack, baseColor);
       drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec.skin, rec.layers, backs);
     }
     const tips = [];
@@ -352,6 +352,6 @@ export class SimCam {
       ctx.fillText(String(count), 120, 110);
       photo = c.toDataURL('image/jpeg', 0.6);
     }
-    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), bd: cleanColor(style.baseColor) ? cleanColor(style.baseColor2) || undefined : undefined, sk: cleanColor(style.skel) || undefined };
+    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined };
   }
 }

@@ -43,8 +43,8 @@ test('Profile: the skeleton colour picker shows for skeleton views, saves a clea
   assert.equal($('skelRow').hidden, true, 'not for the puppet view');
   modes.find(x => x.dataset.mode === 'skeleton').onclick();
   assert.equal($('skelRow').hidden, false);
-  $('skelPicker').children.find(x => x.dataset.color === '#25e425').onclick();
-  assert.equal(globalThis.localStorage.getItem('ff-skel'), '#25e425');
+  $('skelPicker').children.find(x => x.dataset.color === '#25e46a').onclick();
+  assert.equal(globalThis.localStorage.getItem('ff-skel'), '#25e46a');
   const any = $('skelPicker').children.find(x => x.type === 'color');
   any.value = 'javascript:1'; any.oninput();
   assert.equal(globalThis.localStorage.getItem('ff-skel'), '', 'junk clears to the default, never stored as is');
@@ -54,7 +54,7 @@ test('Profile: the skeleton colour picker shows for skeleton views, saves a clea
 });
 
 // ---- per-category colours --------------------------------------------------------------------------------------------------------
-test('colour per CATEGORY: one colour for everything worn of that type (and for what is worn later); rings and gloves have none', () => {
+test('colour per CATEGORY: one colour for everything worn of that type (and for what is worn later); rings and gloves have one too', () => {
   const inv = new Inventory(memStorage());
   inv.toggle('tribal'); inv.toggle('scar'); inv.toggle('nailpolish'); inv.toggle('goldring');
   assert.equal(inv.setCategoryColor('tattoo', '#22d3ee'), true);
@@ -62,76 +62,66 @@ test('colour per CATEGORY: one colour for everything worn of that type (and for 
   assert.equal(inv.stack.find(s => s.id === 'nailpolish').color, null, 'other categories untouched');
   inv.grant('runes'); inv.toggle('runes');
   assert.equal(inv.stack.find(s => s.id === 'runes').color, '#22d3ee', 'a tattoo worn later takes the category colour');
-  assert.equal(inv.setCategoryColor('ring', '#ff0000'), false); assert.equal(inv.setCategoryColor('glove', '#ff0000'), false);
+  assert.equal(inv.setCategoryColor('ring', '#ff0000'), true, 'rings have a picker'); assert.equal(inv.stack.find(s => s.id === 'goldring').color, '#ff0000');
   assert.equal(inv.setCategoryColor('tattoo', 'red'), false); assert.equal(inv.setCategoryColor('tattoo', 'url(#a)'), false); assert.equal(inv.categoryStyle('tattoo').c, '#22d3ee');
-  assert.equal(inv.setCategoryColor('tone', '#e3ad7c'), true); inv.toggle('skintone');
-  assert.equal(inv.stack.find(s => s.id === 'skintone').color, '#e3ad7c', 'skin tone has its own category colour');
-  inv.setCategoryColor('base', '#ff8800'); inv.toggle('neon');
-  assert.equal(inv.baseColor, '#ff8800', 'the hand colour is a category colour too');
+  assert.equal(inv.setCategoryColor('tone', '#e3ad7c'), false, 'there is no skin tone category');
+  inv.toggle('neon'); assert.equal(inv.setCategoryColor('base', '#ff8800'), true);
+  assert.equal(inv.baseColor, '#ff8800', 'the Hand category colour recolours the worn hand');
+  inv.toggle('robot'); assert.equal(inv.setCategoryColor('base', '#ff8800'), false, 'a hand that cannot be recoloured refuses it');
+  inv.toggle('neon'); assert.equal(inv.baseColor, '#ff8800', 'each hand remembers its own colour');
   inv.setCategoryColor('tattoo', null);
   assert.ok(inv.stack.filter(s => ['tribal', 'scar', 'runes'].includes(s.id)).every(s => s.color === null), 'Original colours');
 });
 
 test('colours per category are saved on the phone and come back after a reload', () => {
   const st = memStorage(), inv = new Inventory(st);
-  inv.toggle('nailpolish'); inv.setCategoryColor('nails', '#12ab34', '#a855f7');
+  inv.toggle('nailpolish'); inv.setCategoryColor('nails', '#12ab34');
   const back = new Inventory(st);
-  assert.deepEqual(back.categoryStyle('nails'), { c: '#12ab34', d: '#a855f7', k: null });
-  assert.deepEqual(JSON.parse(st.m.get('ff-stack')), [{ id: 'nailpolish', c: '#12ab34', d: '#a855f7' }]);
+  assert.deepEqual(back.categoryStyle('nails'), { c: '#12ab34', k: null });
+  assert.deepEqual(JSON.parse(st.m.get('ff-stack')), [{ id: 'nailpolish', c: '#12ab34' }]);
   st.m.set('ff-catstyle', JSON.stringify({ nails: { c: 'blue', d: '#fff' }, ring: { c: '#ff0000' }, tattoo: { c: '#112233', d: 'x', k: 99 }, junk: 1 }));
   const clean = new Inventory(st);
-  assert.deepEqual(clean.categoryStyle('nails'), { c: null, d: null, k: null }, 'bad colours dropped');
-  assert.deepEqual(clean.categoryStyle('tattoo'), { c: '#112233', d: null, k: null });
-  assert.equal(clean.categoryStyle('ring').c, null, 'no picker for rings');
+  assert.deepEqual(clean.categoryStyle('nails'), { c: null, k: null }, 'bad colours dropped');
+  assert.deepEqual(clean.categoryStyle('tattoo'), { c: '#112233', k: null }, 'a gradient stop is dropped');
+  assert.equal(clean.categoryStyle('ring').c, '#ff0000');
 });
 
-test('MIGRATION: colours picked per item (older versions) become the category colour, unified across the category; hand colour too', () => {
+test('MIGRATION: per-item colours, gradients and the skin tone from older versions become single category / hand colours', () => {
   const st = memStorage();
-  st.m.set('ff-stack', JSON.stringify([{ id: 'tribal', c: '#aa0000' }, { id: 'scar' }, { id: 'nailpolish', c: '#00aa00' }, { id: 'goldring' }]));
+  st.m.set('ff-stack', JSON.stringify([{ id: 'tribal', c: '#aa0000' }, { id: 'scar' }, { id: 'nailpolish', c: '#00aa00', d: '#0000ff' }, { id: 'goldring' }]));
   st.m.set('ff-puppet', 'neon'); st.m.set('ff-bcolor', '#0000aa');
   const inv = new Inventory(st);
-  assert.equal(inv.categoryStyle('tattoo').c, '#aa0000'); assert.equal(inv.categoryStyle('nails').c, '#00aa00'); assert.equal(inv.categoryStyle('base').c, '#0000aa');
+  assert.equal(inv.categoryStyle('tattoo').c, '#aa0000'); assert.equal(inv.categoryStyle('nails').c, '#00aa00', 'a gradient keeps only stop A');
+  assert.equal(inv.baseColor, '#0000aa', 'the old hand colour is the worn hand\'s colour');
   assert.equal(inv.stack.find(s => s.id === 'scar').color, '#aa0000', 'the other tattoo follows the category');
-  assert.ok(st.m.get('ff-catstyle'), 'written once');
-  // the oldest format: separate colour variants of one item
+  assert.ok(inv.stack.every(s => !('color2' in s)), 'no second stop survives');
   const old = memStorage();
   old.m.set('ff-cos', JSON.stringify({ tone: 'orc', nails: 'rednails' }));
   const o = new Inventory(old);
-  assert.deepEqual(o.stack.map(s => [s.id, s.color]), [['skintone', '#86b35a'], ['nailpolish', '#dc2626']]);
-  assert.equal(o.categoryStyle('tone').c, '#86b35a'); assert.equal(o.categoryStyle('nails').c, '#dc2626');
+  assert.deepEqual(o.stack.map(s => [s.id, s.color]), [['nailpolish', '#dc2626']], 'the tone is no worn item');
+  assert.equal(o.handColors.cartoon, '#86b35a', 'the old skin tone is the cartoon hand colour'); assert.equal(o.categoryStyle('nails').c, '#dc2626');
+  const tone = memStorage();
+  tone.m.set('ff-stack', JSON.stringify([{ id: 'skintone', c: '#7a4a2b' }, { id: 'nailpolish', c: '#111827' }]));
+  const t = new Inventory(tone);
+  assert.ok(!t.stack.some(s => s.id === 'skintone')); assert.equal(t.handColors.cartoon, '#7a4a2b');
 });
 
-// ---- gradients ---------------------------------------------------------------------------------------------------------------
-test('gradient: two plain #rrggbb stops only, over the wire and in storage; drawn as solid mixes, never as CSS', () => {
-  const ok = [{ id: 'nailpolish', c: '#ff0000', d: '#0000ff' }];
-  assert.equal(validLay(ok), true);
+// ---- no gradients ------------------------------------------------------------------------------------------------------------
+test('there are no gradients: a phone on the previous version may still send a second stop (d / bd), it is accepted as plain #rrggbb and never drawn or stored', () => {
+  assert.equal(validLay([{ id: 'nailpolish', c: '#ff0000', d: '#0000ff' }]), true, 'old phones still validate');
   for (const bad of [[{ id: 'nailpolish', d: '#0000ff' }], [{ id: 'nailpolish', c: '#ff0000', d: 'blue' }], [{ id: 'nailpolish', c: '#ff0000', d: 'linear-gradient(red,blue)' }],
-    [{ id: 'nailpolish', c: '#ff0000', d: '#00f' }], [{ id: 'nailpolish', c: '#ff0000', d: '#0000ff', x: 1 }], [{ id: 'nailpolish', c: '#ff0000', d: ['#000000', '#ffffff'] }]]) assert.equal(validLay(bad), false, JSON.stringify(bad));
+    [{ id: 'nailpolish', c: '#ff0000', d: '#0000ff', x: 1 }]]) assert.equal(validLay(bad), false, JSON.stringify(bad));
   assert.equal(validBc('#123456'), true); assert.equal(validBc('url(#x)'), false);
-  assert.deepEqual(stackToWire([{ id: 'nailpolish', color: '#ff0000', color2: '#0000ff' }, { id: 'goldring', color: null, color2: '#0000ff' }, { id: 'scar', color: null, color2: 'x' }]),
-    [{ id: 'nailpolish', c: '#ff0000', d: '#0000ff' }, { id: 'goldring' }, { id: 'scar' }], 'a second stop never travels without a first, and junk is dropped');
-  assert.deepEqual(cleanStack([{ id: 'nailpolish', c: '#ff0000', d: 'nope' }]), [{ id: 'nailpolish', color: '#ff0000' }]);
+  assert.deepEqual(stackToWire([{ id: 'nailpolish', color: '#ff0000', color2: '#0000ff' }, { id: 'scar', color: null }]), [{ id: 'nailpolish', c: '#ff0000' }, { id: 'scar' }], 'only one colour ever leaves');
+  assert.deepEqual(cleanStack([{ id: 'nailpolish', c: '#ff0000', d: '#0000ff' }]), [{ id: 'nailpolish', color: '#ff0000' }], 'a stored second stop is dropped');
   const rec = resolveLoadout('cartoon', [{ id: 'nailpolish', color: '#ff0000', color2: '#0000ff' }]);
-  const nails = rec.layers.find(l => l.id === 'nailpolish');
-  const fills = ['thumb', 'index', 'middle', 'ring', 'pinky'].map(f => nails.parts[f + '_tip'][0].fill);
-  assert.equal(new Set(fills).size, 5, 'each nail gets its own mix across the hand');
-  assert.ok(fills.every(f => /^#[0-9a-f]{6}$/.test(f)), 'only plain colours are ever drawn');
-  assert.equal(fills[0], '#ff0000', 'thumb side = stop 1'); assert.equal(fills[4], '#0000ff', 'pinky side = stop 2');
-  // gradients only where they make sense: a tone ignores the second stop, a ring has no colour at all
-  const tone = resolveLoadout('cartoon', [{ id: 'skintone', color: '#e3ad7c', color2: '#0000ff' }]);
-  const plain = resolveLoadout('cartoon', [{ id: 'skintone', color: '#e3ad7c' }]);
-  assert.deepEqual(tone.skin.parts.index_base.shapes, plain.skin.parts.index_base.shapes);
-  // a gradient hand (neon) and gradient effects
-  const neon = resolveLoadout('neon', [], '#ff0000', '#0000ff');
-  assert.notDeepEqual(neon.skin.parts.thumb_base.shapes, neon.skin.parts.pinky_base.shapes);
-  const fx = resolveLoadout('cartoon', [{ id: 'bubbles', color: '#ff0000', color2: '#0000ff' }]);
-  assert.ok(fx.emitters[0].palette.length >= 3 && fx.emitters[0].palette.every(c => /^#[0-9a-f]{6}$/.test(c)));
-  // storage: categories that allow it
-  const inv = new Inventory(memStorage()); inv.toggle('nailpolish'); inv.toggle('goldring');
-  assert.equal(inv.setCategoryColor('nails', '#ff0000', '#0000ff'), true); assert.deepEqual(inv.categoryStyle('nails'), { c: '#ff0000', d: '#0000ff', k: null });
-  assert.equal(inv.setCategoryColor('nails', '#ff0000', 'blue'), false, 'a bad second stop refuses the whole change');
-  assert.equal(inv.setCategoryColor('tone', '#e3ad7c', '#0000ff'), true); assert.equal(inv.categoryStyle('tone').d, null, 'no gradient for skin tone');
-  inv.setCategoryColor('nails', '#ff0000', null); assert.equal(inv.categoryStyle('nails').d, null, 'gradient off');
+  const fills = ['thumb', 'index', 'middle', 'ring', 'pinky'].map(f => rec.layers.find(l => l.id === 'nailpolish').parts[f + '_tip'][0].fill);
+  assert.equal(new Set(fills).size, 1, 'every nail is the one colour'); assert.equal(fills[0], '#ff0000');
+  const neon = resolveLoadout('neon', [], '#ff0000');
+  assert.deepEqual(neon.skin.parts.thumb_base.shapes, resolveLoadout('neon', [], '#ff0000').skin.parts.thumb_base.shapes);
+  assert.ok(L.mixHex === undefined && L.partPos === undefined, 'the gradient helpers are gone');
+  const inv = new Inventory(memStorage()); inv.toggle('nailpolish');
+  assert.equal(inv.setCategoryColor('nails', '#ff0000', '#0000ff'), true); assert.deepEqual(inv.categoryStyle('nails'), { c: '#ff0000', k: null }, 'the extra argument is ignored');
 });
 
 // ---- effect intensity --------------------------------------------------------------------------------------------------------
@@ -179,12 +169,10 @@ test('Profile customise: the Effect panel has the intensity slider, and moving i
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'bubbles').k, 9);
   chip('nails').onclick();
   const panelKids = $('catColor').children.flatMap(c => [c, ...c.children]);
-  assert.ok(panelKids.find(x => x.dataset?.act === 'gradient'), 'nails offer a gradient'); assert.ok(!panelKids.find(x => x.dataset?.act === 'intensity'));
+  assert.ok(!panelKids.find(x => x.dataset?.act === 'gradient'), 'no gradient anywhere'); assert.ok(!panelKids.find(x => x.dataset?.act === 'intensity'));
   chip('ring').onclick();
-  assert.ok(!$('catColor').children.flatMap(c => [c, ...c.children]).find(x => x.dataset?.act === 'gradient'));
-  chip('tone').onclick();
-  assert.ok(!$('catColor').children.flatMap(c => [c, ...c.children]).find(x => x.dataset?.act === 'gradient'), 'no gradient for skin tone');
-  assert.deepEqual($('profileLayers').children.map(x => x.dataset.value), L.LAYERS, 'Hand, Skin tone, Tattoo, Nails, Ring, Glove, Effect');
+  assert.ok($('catColor').children.some(c => c.classList.contains('cprow')), 'rings have a colour row');
+  assert.deepEqual($('profileLayers').children.map(x => x.dataset.value), L.LAYERS, 'Hand, Tattoo, Nails, Ring, Glove, Effect: no Skin tone');
   assert.equal(b.byId.get('profile').children.some(c => /Your items/.test(c.textContent || '')), false, 'no standalone Your items section');
   $('custBtn').onclick();
   $('profileBack').onclick();
@@ -308,50 +296,53 @@ test('the Profile preview picture changes with the selected view (skeleton vs pu
 });
 
 // ---- colour picker overhaul ----------------------------------------------------------------------------------------------------
-test('preset swatches are an even spread over the spectrum (no clusters of near-identical blues) plus white / grey / black', () => {
+test('preset swatches: ONE short row, a few well-spread hues plus white / grey / black', () => {
   const hue = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (!d) return null;
     const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return ((h * 60) + 360) % 360; };
-  const hues = L.BIG_PALETTE.map(hue).filter(h => h !== null).sort((a, b) => a - b);
-  assert.ok(hues.length >= 12 && L.BIG_PALETTE.length <= 16, 'a small tidy row');
+  const hues = L.BASIC_PALETTE.map(hue).filter(h => h !== null).sort((a, b) => a - b);
+  assert.ok(hues.length >= 7 && L.BASIC_PALETTE.length <= 12, 'a basic row, not a wall');
   let maxGap = 0, minGap = 360; for (let i = 0; i < hues.length; i++) { const gap = (hues[(i + 1) % hues.length] - hues[i] + 360) % 360; maxGap = Math.max(maxGap, gap); minGap = Math.min(minGap, gap); }
-  assert.ok(maxGap <= 40, 'no hole in the spectrum (largest gap ' + maxGap.toFixed(0) + ' degrees)'); assert.ok(minGap >= 20, 'no near-duplicates (smallest gap ' + minGap.toFixed(0) + ' degrees)');
-  assert.ok(L.BIG_PALETTE.every(c => /^#[0-9a-f]{6}$/.test(c)) && new Set(L.BIG_PALETTE).size === L.BIG_PALETTE.length);
+  assert.ok(maxGap <= 70, 'no hole in the spectrum (largest gap ' + maxGap.toFixed(0) + ' degrees)'); assert.ok(minGap >= 25, 'no near-duplicates (smallest gap ' + minGap.toFixed(0) + ' degrees)');
+  assert.ok(['#ffffff', '#111111'].every(c => L.BASIC_PALETTE.includes(c)));
+  assert.ok(L.BASIC_PALETTE.every(c => /^#[0-9a-f]{6}$/.test(c)) && new Set(L.BASIC_PALETTE).size === L.BASIC_PALETTE.length);
 });
 
-test('the Gradient switch is obvious: Off = one picker; On = two pickers (Stop A, Stop B) that both apply; skin tone has no gradient', async () => {
+test('ONE colour picker above the grid that switches with the category chip: presets + full-spectrum + Original, hand recolour on the Hand chip, no gradient', async () => {
   $('profileBtn').onclick();
   $('custBtn').onclick();
   await until(() => !$('custArea').hidden, 'customise open');
   const chip = v => $('profileLayers').children.find(x => x.dataset.value === v);
   const all = () => $('catColor').children.flatMap(function f(c) { return [c, ...c.children.flatMap(f)]; });
-  const wornNails = () => JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish');
+  const stackOf = id => JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === id);
   chip('nails').onclick();
   $('profileGrid').children.find(c => c.dataset.id === 'nailpolish').onclick();
-  let toggle = all().find(x => x.dataset?.act === 'gradient');
-  assert.ok(toggle && toggle.classList.contains('toggle') && toggle.textContent === 'Off', 'a clear Gradient switch, off to start with');
-  assert.deepEqual($('catColor').children.filter(c => c.classList.contains('cpick')).map(c => c.dataset.picker), ['any'], 'one picker');
-  assert.ok(all().some(x => x.type === 'color'), 'a full colour picker, not only swatches');
-  toggle.onclick();
-  toggle = all().find(x => x.dataset?.act === 'gradient');
-  assert.equal(toggle.textContent, 'On');
-  assert.deepEqual($('catColor').children.filter(c => c.classList.contains('cpick')).map(c => c.dataset.picker), ['stopA', 'stopB'], 'two pickers');
-  const input = n => all().find(x => x.type === 'color' && x.dataset.act === n);
-  input('stopA').value = '#ff0000'; input('stopA').oninput();
-  input('stopB').value = '#0000ff'; input('stopB').oninput();
-  assert.deepEqual([wornNails().c, wornNails().d], ['#ff0000', '#0000ff'], 'both stops apply');
-  input('stopB').value = 'javascript:alert(1)'; input('stopB').oninput();
-  assert.equal(wornNails().d, '#0000ff', 'junk is refused');
-  const rec = resolveLoadout('cartoon', C.cleanStack([wornNails()]));
-  assert.notEqual(rec.layers[0].parts.thumb_tip[0].fill, rec.layers[0].parts.pinky_tip[0].fill, 'the gradient is drawn');
-  all().find(x => x.dataset?.act === 'gradient').onclick();
-  assert.deepEqual($('catColor').children.filter(c => c.classList.contains('cpick')).map(c => c.dataset.picker), ['any'], 'back to one picker');
-  assert.equal(wornNails().d, undefined, 'single colour again'); assert.equal(wornNails().c, '#ff0000');
+  assert.equal($('catColor').children.filter(c => c.classList.contains('cprow')).length, 1, 'exactly one picker row');
+  const row = $('catColor').children.find(c => c.classList.contains('cprow'));
+  assert.equal(row.dataset.layer, 'nails', 'the picker belongs to the chip');
+  assert.ok(row.children.some(x => x.type === 'color'), 'a full colour picker'); assert.ok(row.children.some(x => x.dataset.act === 'default'), 'Original');
+  assert.equal(row.children.filter(x => x.dataset.color).length, L.BASIC_PALETTE.length);
+  assert.ok(!all().some(x => x.dataset?.act === 'gradient'), 'no gradient');
+  const input = row.children.find(x => x.type === 'color');
+  input.value = '#ff0000'; input.oninput();
+  assert.equal(stackOf('nailpolish').c, '#ff0000');
+  input.value = 'javascript:alert(1)'; input.oninput();
+  assert.equal(stackOf('nailpolish').c, '#ff0000', 'junk is refused');
+  chip('tattoo').onclick();
+  assert.equal($('catColor').children.find(c => c.classList.contains('cprow')).dataset.layer, 'tattoo', 'the picker switched with the chip');
+  chip('nails').onclick();
   all().find(x => x.dataset?.act === 'default').onclick();
-  assert.equal(wornNails().c, undefined, 'Original puts the item colours back');
-  chip('tone').onclick();
-  assert.ok(!all().some(x => x.dataset?.act === 'gradient'), 'skin tone is a single colour'); assert.ok(all().some(x => x.type === 'color'));
-  chip('effect').onclick();
-  assert.ok(all().some(x => x.dataset?.act === 'gradient'), 'effects can use a gradient');
+  assert.equal(stackOf('nailpolish').c, undefined, 'Original puts the item colours back');
+  // the Hand chip: recolours the selected hand
+  await S.loadSkins(async u => ({ ok: true, json: async () => JSON.parse(fs.readFileSync(new URL('../' + String(u).replace(/^.*?(assets\/)/, '$1'), import.meta.url), 'utf8')) }));   // an earlier test reset the skins
+  $('profileBack').onclick(); $('profileBtn').onclick(); $('custBtn').onclick();
+  await until(() => $('skinPicker').children.length >= 2, 'Choose your Hand lists the hands');
+  const hands = $('skinPicker').children;
+  hands.find(x => x.dataset.skin === 'cartoon').onclick();
+  chip('base').onclick();
+  const hrow = $('catColor').children.find(c => c.classList.contains('cprow'));
+  assert.ok(hrow, 'the Hand chip has the picker for the worn hand');
+  hrow.children.find(x => x.dataset.color === '#e42525').onclick();
+  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-hcolors')).cartoon, '#e42525', 'the cartoon hand is recoloured');
   $('custBtn').onclick();
   $('profileBack').onclick();
 });

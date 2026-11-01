@@ -2,16 +2,16 @@
 //   ff-owned   JSON list of item ids granted by an unlock (free items are owned without being listed)
 //   ff-stack   JSON [{id, c?}]  what is worn on top of the base hand, in the order it was equipped (last = drawn on top); c = a picked #rrggbb
 //   ff-puppet  the equipped BASE hand (the key the skin picker has always used)
-//   ff-bcolor  the picked colour of the base hand, when it has a colour picker (ff-bcolor2: the second stop of a gradient)
-//   ff-catstyle JSON {layer: {c, d?, k?}}  the colour (+ second gradient stop, + effect intensity) picked PER CATEGORY: base, tone, tattoo, nails, effect
+//   ff-bcolor  the picked colour of the worn base hand (when that hand supports recolouring); ff-hcolors keeps one colour per hand: {handId: '#rrggbb'}
+//   ff-catstyle JSON {layer: {c, k?}}  the colour (+ effect intensity) picked PER CATEGORY: tattoo, nails, ring, glove, effect. The Hand's colour is per hand (ff-hcolors).
 //   ff-cos     the OLD format (one item per layer); read once to migrate, never written again
 // Nothing here talks to a network. Ownership is a plain flag on this phone, which is fine for a friendly game; real purchases will
 // need a server-side receipt check (see js/unlock.js, where that boundary is marked).
 import { entryOf, cleanStack, legacyStack, catalogReady, stackToWire } from './cosmetics.js';
-import { MAX_STACK, cleanColor, cleanIntensity, COLOR_LAYERS, GRADIENT_LAYERS } from './layers.js';
+import { MAX_STACK, cleanColor, cleanIntensity, COLOR_LAYERS } from './layers.js';
 import { skinIdOf } from './skins.js';
 
-export const OWNED_KEY = 'ff-owned', STACK_KEY = 'ff-stack', OLD_COS_KEY = 'ff-cos', BASE_KEY = 'ff-puppet', BASE_COLOR_KEY = 'ff-bcolor', BASE_COLOR2_KEY = 'ff-bcolor2', CAT_KEY = 'ff-catstyle';
+export const OWNED_KEY = 'ff-owned', STACK_KEY = 'ff-stack', OLD_COS_KEY = 'ff-cos', BASE_KEY = 'ff-puppet', BASE_COLOR_KEY = 'ff-bcolor', HAND_COLORS_KEY = 'ff-hcolors', CAT_KEY = 'ff-catstyle';
 
 const memoryStore = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } }; };
 
@@ -22,9 +22,9 @@ export class Inventory {
     this.granted = new Set();
     this.stack = [];                 // [{id, color}], bottom to top
     this.base = null;
-    this.baseColor = null;
-    this.baseColor2 = null;
-    this.cat = {};                    // per-category colour: {layer: {c, d, k}}
+    this.baseColor = null;           // the worn hand's colour (from handColors)
+    this.handColors = {};            // {handId: '#rrggbb'}: each hand keeps its own colour
+    this.cat = {};                   // per-category colour: {layer: {c, k}}
     this.load();
   }
   #read(k) { try { return this.storage.getItem(k); } catch { return null; } }
@@ -36,52 +36,62 @@ export class Inventory {
     this.granted = new Set(Array.isArray(list) ? list.filter(x => typeof x === 'string').slice(0, 500) : []);
     const raw = this.#read(BASE_KEY);
     this.base = typeof raw === 'string' && raw ? raw : null;
-    this.baseColor = cleanColor(this.#read(BASE_COLOR_KEY));
-    this.baseColor2 = this.baseColor ? cleanColor(this.#read(BASE_COLOR2_KEY)) : null;
     const saved = this.#json(STACK_KEY);
-    if (Array.isArray(saved)) this.stack = cleanStack(saved);
-    else { this.stack = legacyStack(this.#json(OLD_COS_KEY)); if (this.stack.length) this.#saveStack(); }   // migration: old one-per-layer equipment (+ old colour items) -> stack + colour
+    let stack;
+    if (Array.isArray(saved)) stack = cleanStack(saved);
+    else { stack = legacyStack(this.#json(OLD_COS_KEY)); }              // migration: old one-per-layer equipment (+ old colour items) -> stack + colour
+    // hand colours: one per hand. Older versions kept ONE colour for the worn hand (ff-bcolor), and the skin colour as a worn "skintone" item:
+    // both move onto the worn hand (the Hand category's colour); a gradient's second stop is dropped (stop A stays).
+    const hc = this.#json(HAND_COLORS_KEY);
+    this.handColors = {};
+    if (hc && typeof hc === 'object' && !Array.isArray(hc)) for (const [id, c] of Object.entries(hc).slice(0, 40)) { const cc = cleanColor(c); if (cc && /^[a-z]{1,12}$/.test(id)) this.handColors[id] = cc; }
+    let migrated = !Array.isArray(saved) && stack.length > 0;
+    const oldBc = cleanColor(this.#read(BASE_COLOR_KEY));
+    if (oldBc && !this.handColors[this.baseId]) { this.handColors[this.baseId] = oldBc; migrated = true; }          // the worn hand's old colour (neon, dragon)
+    const tone = stack.find(e => e.id === 'skintone');
+    if (tone) {                                                                                                   // the old skin tone recoloured the cartoon hand: that is its colour now
+      stack = stack.filter(e => e.id !== 'skintone'); migrated = true;
+      if (cleanColor(tone.color) && !this.handColors.cartoon) this.handColors.cartoon = cleanColor(tone.color);
+    }
+    this.stack = stack;
     const cat = this.#json(CAT_KEY);
-    this.cat = cat && typeof cat === 'object' && !Array.isArray(cat) ? cleanCat(cat) : null;
+    const rawCat = cat && typeof cat === 'object' && !Array.isArray(cat) ? cat : null;
+    if (rawCat) {                                                                                                 // category colours saved for 'tone' / 'base' by the previous version
+      const tc = cleanColor(rawCat.tone?.c), bc = cleanColor(rawCat.base?.c);
+      if (tc && !this.handColors.cartoon) { this.handColors.cartoon = tc; migrated = true; }
+      if (bc && !this.handColors[this.baseId]) { this.handColors[this.baseId] = bc; migrated = true; }
+    }
+    this.cat = rawCat ? cleanCat(rawCat) : null;
     this.#sanitize();
     if (!this.cat) this.#migrateCat();
+    this.baseColor = (catalogReady() ? (entryOf(this.baseId)?.tint ? this.handColors[this.baseId] : null) : this.handColors[this.baseId]) || null;
+    if (migrated) { this.#saveHands(); this.#saveStack(); if (rawCat) this.#saveCat(); }
   }
-  /** First run of the per-category colours: whatever colour each worn item (and the hand) already had becomes its category's colour, applied to all of that category. */
+  /** First run of the per-category colours: whatever colour each worn item already had becomes its category's colour, applied to all of that category. */
   #migrateCat() {
     this.cat = {};
     if (catalogReady()) {
-      for (const e of this.stack) { const x = entryOf(e.id); if (x && e.color && COLOR_LAYERS.includes(x.layer)) this.cat[x.layer] = { c: e.color, d: e.color2 || null, k: e.k || null }; }
-      if (this.baseColor) this.cat.base = { c: this.baseColor, d: this.baseColor2, k: null };
-      this.#applyAllCats();
+      for (const e of this.stack) { const x = entryOf(e.id); if (x && e.color && COLOR_LAYERS.includes(x.layer) && x.layer !== 'base') this.cat[x.layer] = { c: e.color, k: e.k || null }; }
+      for (const e of this.stack) this.#applyCat(e);
       this.#saveCat();
     } else this.cat = null;                       // the catalogue is not in yet: load() runs again when it is
   }
-  #applyAllCats() {
-    for (const e of this.stack) this.#applyCat(e);
-    if (this.cat?.base && entryOf(this.baseId)?.tint) { this.baseColor = this.cat.base.c; this.baseColor2 = this.cat.base.d || null; }
-  }
-  /** Gives a worn entry its category's colour / gradient / intensity (only what its item can take). */
+  /** Gives a worn entry its category's colour / intensity (only what its item can take). */
   #applyCat(e) {
     const x = entryOf(e.id), c = x && this.cat?.[x.layer];
     if (!x || !c) return;
-    if (x.tint && c.c) { e.color = c.c; setOpt(e, 'color2', GRADIENT_LAYERS.includes(x.layer) ? c.d : null); }
+    if (x.tint && c.c) e.color = c.c;
     if (x.layer === 'effect' && c.k) e.k = c.k;
   }
   #saveCat() { this.#write(CAT_KEY, JSON.stringify(this.cat || {})); }
+  #saveHands() { this.#write(HAND_COLORS_KEY, JSON.stringify(this.handColors)); this.#write(BASE_COLOR_KEY, this.baseColor || this.handColors[this.baseId] || ''); }
   /** An equipped item that no longer exists, is not owned, or is a hand is dropped (a removed item, a cleared grant, hand-edited storage). */
   #sanitize() {
     if (!catalogReady()) return;                       // nothing to judge against yet: load() runs again once the catalogue is in
     const before = JSON.stringify(this.stack);
-    const seenTone = [];
-    this.stack = this.stack.filter(e => {
-      const x = entryOf(e.id);
-      if (!x || x.layer === 'base' || !this.owns(e.id)) return false;
-      if (x.layer === 'tone') seenTone.push(e.id);
-      return true;
-    });
-    if (seenTone.length > 1) this.stack = this.stack.filter(e => entryOf(e.id).layer !== 'tone' || e.id === seenTone[seenTone.length - 1]);
+    this.stack = this.stack.filter(e => { const x = entryOf(e.id); return !!x && x.layer !== 'base' && this.owns(e.id); });
     this.stack = this.stack.map(e => (entryOf(e.id).tint ? e : { id: e.id, color: null }));
-    if (this.baseColor && !entryOf(this.baseId)?.tint) { this.baseColor = null; this.baseColor2 = null; }
+    for (const id of Object.keys(this.handColors)) if (!entryOf(id)?.tint) delete this.handColors[id];       // only a hand that can be recoloured keeps a colour
     if (JSON.stringify(this.stack) !== before) this.#saveStack();
   }
   #saveStack() { this.#write(STACK_KEY, JSON.stringify(stackToWire(this.stack))); }
@@ -105,8 +115,8 @@ export class Inventory {
 
   /**
    * TAP: wears an owned item, or takes it off if it is already worn. A new item goes on TOP of the stack (so the order is the tap
-   * order). Several items of the same type are allowed; a hand is single (tapping the worn hand keeps it: the hand is always there)
-   * and so is the skin tone (a new tone replaces the old one). Returns {ok, on} (ok=false: locked/unknown/stack full, nothing changed).
+   * order). Several items of the same type are allowed; a hand is single (tapping the worn hand keeps it: the hand is always there).
+   * Returns {ok, on} (ok=false: locked/unknown/stack full, nothing changed).
    */
   toggle(id) {
     const e = entryOf(id);
@@ -114,14 +124,12 @@ export class Inventory {
     if (e.layer === 'base') {
       if (this.baseId !== id) {
         this.base = id; this.#write(BASE_KEY, id);
-        const c = e.tint ? this.cat?.base : null;           // the hand colour belongs to the category: a tinted hand takes it over
-        this.baseColor = c?.c || null; this.baseColor2 = c?.c ? c.d || null : null;
-        this.#write(BASE_COLOR_KEY, this.baseColor || ''); this.#write(BASE_COLOR2_KEY, this.baseColor2 || '');
+        this.baseColor = e.tint ? this.handColors[id] || null : null;       // each hand has its own colour
+        this.#saveHands();
       }
       return { ok: true, on: true };
     }
     if (this.isEquipped(id)) return { ok: this.remove(id), on: false };
-    if (e.layer === 'tone') this.stack = this.stack.filter(s => entryOf(s.id)?.layer !== 'tone');
     if (this.stack.length >= MAX_STACK) return { ok: false, on: false, full: true };
     const entry = { id, color: null };
     this.#applyCat(entry);                              // a new item is worn in its category's colour
@@ -153,38 +161,45 @@ export class Inventory {
     if (!e || !e.tint) return false;
     const c = color === null ? null : cleanColor(color);
     if (color !== null && !c) return false;
-    if (e.layer === 'base') { if (this.baseId !== id) return false; this.baseColor = c; this.baseColor2 = null; this.#write(BASE_COLOR_KEY, c || ''); this.#write(BASE_COLOR2_KEY, ''); return true; }
+    if (e.layer === 'base') { if (this.baseId !== id) return false; this.#setHandColor(c); return true; }
     const s = this.stack.find(x => x.id === id);
     if (!s) return false;
-    s.color = c; setOpt(s, 'color2', null);
+    s.color = c;
     this.#saveStack();
     return true;
   }
+  #setHandColor(c) {
+    if (c) this.handColors[this.baseId] = c; else delete this.handColors[this.baseId];
+    this.baseColor = c;
+    this.#saveHands();
+  }
 
-  /** Which categories have a colour picker (those with at least one colourable item). */
+  /** Every category has a colour picker; the Hand's works only on a hand that supports recolouring (see `handTintable`). */
   colorable(layer) { return COLOR_LAYERS.includes(layer); }
-  /** The category's current colour settings {c, d, k}: what was picked, else null fields. */
-  categoryStyle(layer) { const c = this.cat?.[layer]; return { c: c?.c || null, d: c?.d || null, k: c?.k || null }; }
+  /** Whether the worn hand can be recoloured (cartoon, neon, dragon...; robot, paw and the premade hands keep their own colours). */
+  get handTintable() { return !!entryOf(this.baseId)?.tint; }
+  /** The category's current colour settings {c, k}: what was picked, else null fields. For the Hand: the worn hand's colour. */
+  categoryStyle(layer) {
+    if (layer === 'base') return { c: this.handTintable ? this.baseColor : null, k: null };
+    const c = this.cat?.[layer];
+    return { c: c?.c || null, k: c?.k || null };
+  }
   /**
-   * ONE colour for a whole category (nail polish, skin tone, tattoos, effects, the hand): [c] = #rrggbb, [d] = an optional second
-   * #rrggbb for a two-stop gradient (only nails / effects / tattoos / the hand). c = null puts the original colours back. Applies to
-   * everything worn in that category and to anything worn later. Returns false for a category without a picker or a bad colour.
+   * ONE plain #rrggbb for a whole category (nail polish, tattoos, rings, gloves, effects) or for the worn hand: it applies to everything worn in that
+   * category and to anything worn later. c = null puts the original colours back. Returns false for a bad colour or, for the Hand, a hand that
+   * cannot be recoloured. (A second argument from older callers, the gradient stop, is ignored: there are no gradients any more.)
    */
-  setCategoryColor(layer, c, d = null) {
+  setCategoryColor(layer, c) {
     if (!COLOR_LAYERS.includes(layer)) return false;
-    const c1 = c === null ? null : cleanColor(c), c2 = d === null || d === undefined ? null : cleanColor(d);
-    if (c !== null && !c1) return false;
-    if (d !== null && d !== undefined && !c2) return false;
+    const c1 = c === null || c === undefined ? null : cleanColor(c);
+    if (c !== null && c !== undefined && !c1) return false;
+    if (layer === 'base') { if (!this.handTintable) return false; this.#setHandColor(c1); return true; }
     if (!this.cat) this.cat = {};
     const keep = this.cat[layer] || {};
-    this.cat[layer] = { c: c1, d: c1 && GRADIENT_LAYERS.includes(layer) ? c2 : null, k: keep.k || null };
+    this.cat[layer] = { c: c1, k: keep.k || null };
     for (const e of this.stack) {
       const x = entryOf(e.id);
-      if (x?.layer === layer && x.tint) { e.color = c1; setOpt(e, 'color2', this.cat[layer].d); }
-    }
-    if (layer === 'base' && entryOf(this.baseId)?.tint) {
-      this.baseColor = c1; this.baseColor2 = this.cat.base.d;
-      this.#write(BASE_COLOR_KEY, c1 || ''); this.#write(BASE_COLOR2_KEY, this.baseColor2 || '');
+      if (x?.layer === layer && x.tint) e.color = c1;
     }
     this.#saveCat(); this.#saveStack();
     return true;
@@ -194,7 +209,7 @@ export class Inventory {
     const kk = k === null ? null : cleanIntensity(k);
     if (k !== null && !kk) return false;
     if (!this.cat) this.cat = {};
-    this.cat.effect = { ...(this.cat.effect || { c: null, d: null }), k: kk };
+    this.cat.effect = { ...(this.cat.effect || { c: null }), k: kk };
     for (const e of this.stack) if (entryOf(e.id)?.layer === 'effect') setOpt(e, 'k', kk);
     this.#saveCat(); this.#saveStack();
     return true;
@@ -207,16 +222,13 @@ export class Inventory {
   }
 
   /** What the picture recipe needs: {base, baseColor, stack}. */
-  loadout() { return { base: this.baseId, baseColor: this.baseColor, baseColor2: this.baseColor2, stack: this.stack.map(s => ({ ...s })) }; }
+  loadout() { return { base: this.baseId, baseColor: this.baseColor, stack: this.stack.map(s => ({ ...s })) }; }
   /** The loadout with one item tapped on top (for the Store cards), without changing anything; already worn: unchanged. */
   loadoutWith(id) {
     const e = entryOf(id), out = this.loadout();
     if (!e) return out;
-    if (e.layer === 'base') { out.base = id; out.baseColor = null; out.baseColor2 = null; }
-    else if (!out.stack.some(s => s.id === id)) {
-      if (e.layer === 'tone') out.stack = out.stack.filter(s => entryOf(s.id)?.layer !== 'tone');
-      out.stack.push({ id, color: null });
-    }
+    if (e.layer === 'base') { out.base = id; out.baseColor = e.tint ? this.handColors[id] || null : null; }
+    else if (!out.stack.some(s => s.id === id)) out.stack.push({ id, color: null });
     return out;
   }
 }
@@ -224,14 +236,14 @@ export class Inventory {
 /** Sets an optional entry field, or removes it when [v] is empty (entries only carry what is set). */
 function setOpt(e, key, v) { if (v) e[key] = v; else delete e[key]; }
 
-/** A saved category-colour map, cleaned: only known categories, plain #rrggbb colours, a gradient stop only where one makes sense, a 1-10 intensity. */
+/** A saved category-colour map, cleaned: only known categories (not the Hand, whose colours are per hand), plain #rrggbb colours, a 1-10 intensity. A gradient's second stop `d` is dropped. */
 function cleanCat(raw) {
   const out = {};
   for (const l of COLOR_LAYERS) {
+    if (l === 'base') continue;
     const r = raw[l];
     if (!r || typeof r !== 'object') continue;
-    const c = cleanColor(r.c);
-    out[l] = { c, d: c && GRADIENT_LAYERS.includes(l) ? cleanColor(r.d) : null, k: l === 'effect' ? cleanIntensity(r.k) : null };
+    out[l] = { c: cleanColor(r.c), k: l === 'effect' ? cleanIntensity(r.k) : null };
   }
   return out;
 }

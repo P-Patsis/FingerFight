@@ -181,3 +181,10 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - Colour: kept presets AND a full picker (not picker-only): presets are one evenly spread row (hue steps of 30 degrees), everything else is the native picker. The gradient switch sits first in the panel and is the only way to a second stop.
 - The preview zone is sticky only while customising, inside the card, and capped at 30vh so the items stay reachable on a short screen.
 
+## 2026-11-01 (6) — one-line colour picker, no gradients, no skin tone, sticky top block
+- **Gradients removed.** One plain `#rrggbb` per category. Saved gradients keep stop A; `d`/`bd` stay *accepted* by the validators (an updated phone must not reject a not-yet-updated one) but are ignored and never stored or drawn. Chosen over deleting the fields from validation, which would have broken mixed-version matches.
+- **Skin tone category removed; the Hand colour recolours the hand.** Colour is per hand (`ff-hcolors`), so switching hands never tints a neon hand with the cartoon skin colour. Hands without a `tint` (robot, paw, premade) say so instead of showing a dead picker. The old skin-tone colour migrates to the cartoon hand. Rings and gloves were given tints so every chip has a picker.
+- **One picker above the grid**, switching with the chip; presets cut to 11 basic colours on one line. The Hand category shows a hint instead of duplicating the hands that live in "Choose your Hand".
+- **Single-preview rule** (the double-preview bug): live camera showing the selected view > swaying puppet (puppet view, camera off) > static view picture (skeleton view, camera off). Never two panes. The old second "puppet fitting" pane beside the live camera is gone.
+- **Sticky top block** = preview, Choose your Hand, colour picker, chips (preview capped at 24vh so short phones keep room for the cards); only the item cards scroll under it. Done (camera off) is a small corner button in the preview. Item groups and Choose your Hand are horizontal scrolling rows.
+

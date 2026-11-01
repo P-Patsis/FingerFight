@@ -148,7 +148,7 @@ export function drawFromMessage(ctx, w, h, msg) {
     return [];
   }
   if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar, true, msg.sk);
-  const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc, msg.bd);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
+  const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc);               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
   const backs = Array.isArray(msg.bk) ? msg.bk.slice(0, 2).map(x => (x === true || x === false ? x : undefined)) : [];     // which way the sender's hand faced (nails show on the back)
   return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, { ...rec, backs });
 }

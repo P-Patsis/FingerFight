@@ -198,10 +198,10 @@ export const validCos = c => c === undefined || c === null
   || (typeof c === 'object' && !Array.isArray(c) && Object.keys(c).length <= COS_KEYS.length
     && Object.entries(c).every(([k, v]) => COS_KEYS.includes(k) && typeof v === 'string' && /^[a-z]{1,12}$/.test(v)));
 
-/** The worn items of a picture: `lay`, a list of at most 12 {id, c?, d?, k?}: an item id (1-12 lower-case letters), optionally a plain #rrggbb colour `c`,
- *  a second #rrggbb gradient stop `d` (only with `c`) and a whole-number effect intensity `k` (1-10). Nothing else can travel in it; the receiver
- *  draws from its own copies in this order and decides itself where a gradient / intensity applies. `bc` is the base hand's colour (plain #rrggbb),
- *  `bd` its second gradient stop, `sk` the colour of the skeleton lines. */
+/** The worn items of a picture: `lay`, a list of at most 12 {id, c?, k?}: an item id (1-12 lower-case letters), optionally ONE plain #rrggbb colour `c`
+ *  and a whole-number effect intensity `k` (1-10). Nothing else can travel in it; the receiver draws from its own copies in this order. `bc` is the
+ *  base hand's colour (plain #rrggbb), `sk` the colour of the skeleton lines. There are no gradients any more; a phone still on the previous version may
+ *  send a second stop (`d` in a `lay` entry, `bd` beside `bc`): it is still checked as a plain #rrggbb so such a picture is not refused, and then ignored. */
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 export const validLay = l => l === undefined || l === null
   || (Array.isArray(l) && l.length <= 12 && l.every(e => e && typeof e === 'object' && !Array.isArray(e)

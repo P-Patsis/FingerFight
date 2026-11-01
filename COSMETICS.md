@@ -11,12 +11,12 @@ and everything rigs to the same 16 named puppet parts.
 * **Several items of the same type are allowed** (multiple rings, several tattoos...). Each item can be worn once; tapping it again
   removes that one. At most **12** items (`MAX_STACK`).
 * The **base hand** is the bottom layer and single-select: tapping another hand swaps it; tapping the worn hand keeps it (the hand is
-  always there). The **skin tone** is single too (a hand has one skin colour): a new tone replaces the old one.
+  always there). There is no separate skin-tone item any more: the **Hand colour** recolours the worn hand (see below).
 * **Free stacking:** nothing is blocked. There is no fixed z per type any more; the list order is the only rule.
 * **Manual reorder:** the "Wearing" card lists the stack, top first, with **▲ ▼ arrows** (move over / under its neighbour) and ✕ (take
   off). Arrows were chosen over drag-and-drop because they are big tap targets that work reliably on a touch phone (drag handles inside a
-  scrolling page fight the scroll). Reordering redraws the preview, the live try-on and what the opponent sees at once. A skin tone and an
-  effect draw no shapes, so their position does not matter visually.
+  scrolling page fight the scroll). Reordering redraws the preview, the live try-on and what the opponent sees at once. An effect
+  draws no shapes, so its position does not matter visually.
 
 | item type (`layer`) | what it is | drawn as |
 |---|---|---|
@@ -34,12 +34,15 @@ The type is only metadata for browsing/filtering (and for what the Store shows).
 
 ## Colour per category (current)
 
-The colour is chosen **per category**, not per item: Hand, Skin tone, Tattoo / scar, Nail polish and Effect each have one picker
-(a full colour picker for any colour, one row of 15 evenly spread presets, "Original"; the Gradient switch comes first and reveals Stop A / Stop B). It applies to everything worn of that type and to anything worn later
-(`Inventory.setCategoryColor`, stored in `ff-catstyle` and copied onto each worn entry). Rings and gloves have no picker.
-* **Gradient** (`GRADIENT_LAYERS`: hand, tattoo, nails, effect; not skin tone): a second `#rrggbb` stop. Each rig part gets one solid mix by
-  its place across the hand (thumb side = stop 1, pinky side = stop 2); particles pick from a 5-colour palette between the stops. No canvas
-  gradients and no CSS strings. Wire: `lay[].d` (only with `c`), picture `bd` for the hand.
+The colour is chosen **per category**, not per item: Hand, Tattoo / scar, Nail polish, Ring, Glove and Effect each have ONE picker, shown above the
+item cards, that switches with the category chip. It is one line: a native full-spectrum colour button, `BASIC_PALETTE` (11 well-spread presets: 8 hues, white,
+grey, black) and "Original". It applies to everything worn of that type and to anything worn later (`Inventory.setCategoryColor`, stored in
+`ff-catstyle` and copied onto each worn entry). One plain `#rrggbb` only.
+* **Hand colour** is per hand (`ff-hcolors`, `Inventory.handColors`): the Hand chip recolours the *worn* hand when that hand has a `tint` (cartoon, neon,
+  dragon); robot, paw and the premade hands keep their own colours and the picker says so. Switching hands never tints one hand with another's colour.
+  The old Skin tone category is gone; an old skin-tone colour becomes the cartoon hand's colour.
+* **No gradients** any more. A phone on the previous version may still send `lay[].d` / picture `bd`: they validate as plain `#rrggbb`, receivers ignore them, and
+  stored values are dropped (a saved gradient keeps only stop A).
 * **Effect intensity** 1-10 (5 = as authored), `lay[].k`: scales rate / burst / size (`scaleEmitters`) inside the per-emitter limits; the
   90-particle / 6-emitter caps still bound everything.
 * **Skeleton colour**: picture field `sk` (`#rrggbb`), stored as `ff-skel`.
@@ -48,9 +51,8 @@ The per-item description below is how the colour reaches each item (tint roles);
 
 ## Colour pickers
 
-Items that differ only by colour are ONE item with a **tint**. Collapsed: `pale tan brown deep orc frost` -> **`skintone`**;
-`rednails blacknails neonnails` -> **`nailpolish`**. Tattoos (`tribal scar runes`), the hands **neon** (glow) and **dragon** (scales) and
-every **effect** have a picker too. Rings, gloves and the other hands do not.
+Items that differ only by colour are ONE item with a **tint**. Collapsed: `rednails blacknails neonnails` -> **`nailpolish`** (the former skin tones are now the cartoon hand's colour). Tattoos, rings and gloves,
+the hands **cartoon**, **neon** (glow) and **dragon** (scales) and every **effect** have a picker too. Robot, paw and premade hands do not.
 
 ```jsonc
 "tint": {
@@ -104,10 +106,10 @@ A base hand is a **skin file** (`assets/skins/<id>.json`, SKINS.md) with extra o
 
 `"whole": true` marks a **premade whole hand**: one finished piece (the built-in `gauntlet` is steel plates with a glowing core;
 `goldhand` is polished gold). It is the same 16-part format, so it rigs the same way and other items (rings, nails, tattoos,
-a glove) still stack on top. The only difference: a skin tone is never applied to it. Premade hands use category `premade`.
+a glove) still stack on top. The only difference: it cannot be recoloured. Premade hands use category `premade`.
 
 Built in: bases `cartoon` `robot` `neon` (glow colour) `paw` (animal) `dragon` (fantasy, locked, scale colour) `gauntlet` (premade)
-`goldhand` (premade, locked); `skintone`; tattoos `tribal scar runes`; `nailpolish`; rings `goldring silverring ruby`; gloves
+`goldhand` (premade, locked); tattoos `tribal scar runes`; `nailpolish`; rings `goldring silverring ruby`; gloves
 `whiteglove leather fingerless knight`; effects `sparkles bubbles glow embers` (free) and `electric` (locked). `tools/make_skins.py` and `tools/make_items.py` drew
 them (the JSON is the asset; write yours by hand or with any tool).
 
@@ -154,7 +156,7 @@ order, at most 12 entries `{ "id": "goldring" }` or `{ "id": "nailpolish", "c": 
 are not exactly `#rrggbb`, longer lists), and a refused picture is dropped like any bad message. The receiver draws with **its own
 copies**, in that order; an id it does not have is simply not drawn. Random opponents get cosmetics too (drawn data, never camera pixels).
 Compatibility: the first version sent `cos` (`{tone, tattoo, nails, ring, glove}` ids); it is still accepted (`validCos`) and drawn
-(old colour items map to `skintone` / `nailpolish` + their colour, `LEGACY_ITEMS`), but this version sends `lay` only, so an old phone
+(old colour items map to the hand colour / `nailpolish` + their colour, `LEGACY_ITEMS`), but this version sends `lay` only, so an old phone
 shows no cosmetics from a new one until it updates (the site updates itself).
 
 ## Ownership and what is worn (`js/inventory.js`)
@@ -164,7 +166,7 @@ owned without being listed), `ff-stack` (the worn list, in order, with picked co
 picker always used), `ff-bcolor` (the base hand's picked colour). Wearing requires ownership; a saved entry that is unknown, not owned,
 a hand, has a colour it cannot take, or a second tone is dropped on load.
 **Migration:** an inventory saved by the first version (`ff-cos`, one item per type) is converted once on load, in the old draw order:
-`pale tan brown deep orc frost` become `skintone` + that tone's colour, `rednails blacknails neonnails` become `nailpolish` + its colour,
+`pale tan brown deep orc frost` become the cartoon hand's colour, `rednails blacknails neonnails` become `nailpolish` + its colour,
 every other id is unchanged; the result is written to `ff-stack` and `ff-cos` is never read again. `ff-owned` is kept as is. (The colour
 variants are now free colours of a free item; the old locked orc / frost / black / neon variants are no longer paywalled.)
 

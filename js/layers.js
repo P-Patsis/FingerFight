@@ -5,8 +5,8 @@ import { parseParticles } from './particles.js';
 /** The item TYPES (used for browsing and for what an item is). They do NOT decide the drawing order: the order the player equipped
  *  things in (the stack, see js/inventory.js) does. Only `base` is special: one hand, always the bottom. `tone` is a colour for the
  *  base hand (one at a time) and `effect` is a particle effect (it draws no shapes); the rest are shapes drawn over the hand. */
-export const LAYERS = Object.freeze(['base', 'tone', 'tattoo', 'nails', 'ring', 'glove', 'effect']);
-export const LAYER_LABELS = Object.freeze({ base: 'Hand', tone: 'Skin tone', tattoo: 'Tattoo / scar', nails: 'Nail polish', ring: 'Ring', glove: 'Glove', effect: 'Effect' });
+export const LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'ring', 'glove', 'effect']);
+export const LAYER_LABELS = Object.freeze({ base: 'Hand', tattoo: 'Tattoo / scar', nails: 'Nail polish', ring: 'Ring', glove: 'Glove', effect: 'Effect' });
 export const MAX_STACK = 12;                       // most items worn at once (on top of the base hand)
 export const HEX = /^#[0-9a-fA-F]{6}$/;            // the only colour form that is ever stored or sent: plain #rrggbb
 export const ROLES = Object.freeze(['main', 'dark', 'mid', 'light']);
@@ -68,22 +68,13 @@ export function roleColor(hex, role) {
   if (role === 'light') return rgbToHex(c.map(v => v + (255 - v) * 0.3));
   return hex.toLowerCase();
 }
-/** The quick colours of the category colour picker (a plain list of #rrggbb; the player can also pick any colour). */
-export const BIG_PALETTE = Object.freeze(['#e42525', '#e48525', '#e4e425', '#85e425', '#25e425', '#25e485', '#25e4e4', '#2585e4', '#2525e4', '#8525e4', '#e425e4', '#e42585',
-  '#ffffff', '#8a8a8a', '#111111']);   // 12 hues 30 degrees apart (red -> pink) + white, grey, black: an even spread, no clusters; any other colour comes from the colour picker
-/** The categories that have a colour picker, and the ones where a two-stop gradient makes sense (nails, effects, tattoos, tinted hands). */
-export const COLOR_LAYERS = Object.freeze(['base', 'tone', 'tattoo', 'nails', 'effect']);
-export const GRADIENT_LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'effect']);
+/** The quick colours of the category colour picker: a handful of well-spread hues (45 degrees apart) + white, grey, black, kept to ONE line.
+ *  Any other colour comes from the full colour picker. */
+export const BASIC_PALETTE = Object.freeze(['#e42525', '#e4a825', '#a8e425', '#25e46a', '#25d3e4', '#2552e4', '#7a25e4', '#e425a8', '#ffffff', '#8a8a8a', '#111111']);
+/** Every category has ONE colour picker (the Hand's recolours the worn base hand, when that hand supports it). One plain #rrggbb each, no gradients. */
+export const COLOR_LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'ring', 'glove', 'effect']);
 export const INTENSITY_MIN = 1, INTENSITY_MAX = 10, INTENSITY_DEFAULT = 5;
 /** An effect intensity: a whole number 1-10, or null. */
 export const cleanIntensity = k => (Number.isInteger(k) && k >= INTENSITY_MIN && k <= INTENSITY_MAX ? k : null);
-/** Blend two #rrggbb colours: t=0 is [a], t=1 is [b]. */
-export function mixHex(a, b, t) {
-  const x = hexToRgb(a), y = hexToRgb(b);
-  return rgbToHex(x.map((v, i) => v + (y[i] - v) * t));
-}
-/** Where a part sits across the hand for a gradient (0 = thumb side, 1 = pinky side). Only solid colours are ever drawn: each part gets one mix. */
-export const GRADIENT_POS = Object.freeze({ thumb: 0, index: 0.25, middle: 0.5, ring: 0.75, pinky: 1, palm: 0.5 });
-export const partPos = name => GRADIENT_POS[String(name).split('_')[0]] ?? 0.5;
 /** A picked colour, cleaned: lower-case #rrggbb, or null when it is anything else (so nothing but a plain colour is ever kept). */
 export const cleanColor = c => (typeof c === 'string' && HEX.test(c) ? c.toLowerCase() : null);

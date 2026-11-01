@@ -79,7 +79,7 @@ export class ParticleSystem {
     const fx = EFFECTS[em.effect], s = handScale(lm), a = anchor(em.where, lm, rnd);
     const ang = rnd() * Math.PI * 2, sp = (fx.speed[0] + rnd() * (fx.speed[1] - fx.speed[0])) * 60 * s;
     const life = fx.life[0] + rnd() * (fx.life[1] - fx.life[0]);
-    this.list.push({ kind: fx.kind, color: em.palette ? em.palette[Math.floor(rnd() * em.palette.length)] : em.color, x: a.x, y: a.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp + (fx.gravity ? fx.gravity * 60 * s : 0), g: fx.gravity * 60 * s,
+    this.list.push({ kind: fx.kind, color: em.color, x: a.x, y: a.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp + (fx.gravity ? fx.gravity * 60 * s : 0), g: fx.gravity * 60 * s,
       size: fx.size * s * (em.size || 1), life, age: 0, rot: rnd() * 6.28 });
   }
 

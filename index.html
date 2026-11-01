@@ -45,7 +45,7 @@
     <div class="topbar"><button id="profileBack" class="btn small">← Back</button></div>
     <h2 class="logo small">PROFILE</h2>
     <div class="card">
-      <label class="field">Your name<input id="nameInput" maxlength="40" autocomplete="off" placeholder="Fighter"></label>
+      <div class="set namerow"><span>Your name</span><input id="nameInput" class="inline-in" maxlength="40" autocomplete="off" placeholder="Fighter" aria-label="Your name"></div>
       <p id="nameNote" class="fine"></p>
       <div class="set flagrow"><span>Show country flag</span><span id="countryRow" class="flag-in"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR / Greece" aria-label="Country code or name"><span id="countryHint" class="flag-icon"></span></span><button id="flagBtn" class="toggle">Off</button></div>
     </div>
@@ -119,22 +119,25 @@
     <div id="styleSlot"><div class="card" id="styleCard">
       <h3 class="card-h">How my opponent sees my hand</h3>
       <div id="modePicker" class="mode-picker"></div>
-      <div id="previewZone" class="preview-zone">
-        <div id="pzRow" class="pz-row">
-          <div class="view-preview" id="viewPreviewBox"><canvas id="viewPreview" width="240" height="150" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
-          <div id="liveBox" class="wear-box live-box" hidden></div>
-          <div id="cWearTop" hidden></div>
-        </div>
-        <div id="cMsg"></div>
-      </div>
       <div class="set col" id="skelRow"><span>Skeleton colour</span><div id="skelPicker" class="swatches" aria-label="Skeleton line colour"></div></div>
-      <div id="custOnly"><button id="custBtn" class="btn ghost" type="button" aria-pressed="false">Customise &amp; try on</button></div>
-      <div class="set col" id="skinRow"><span>Choose your Hand</span><div id="skinPicker" class="skin-picker"></div></div>
+      <div id="stickyTop" class="sticky-top">
+        <div id="previewZone" class="preview-zone">
+          <div id="pzRow" class="pz-row">
+            <div class="view-preview" id="viewPreviewBox"><canvas id="viewPreview" width="240" height="150" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
+            <div id="liveBox" class="wear-box live-box" hidden></div>
+            <div id="cWearTop" hidden></div>
+          </div>
+          <button id="custDone" class="done-x" type="button" aria-label="Done (camera off)" title="Done: camera off" hidden>✕ Done</button>
+          <div id="cMsg"></div>
+        </div>
+        <div id="custOnly"><button id="custBtn" class="btn ghost" type="button" aria-pressed="false">Customise &amp; try on</button></div>
+        <div class="set col" id="skinRow"><span>Choose your Hand</span><div id="skinPicker" class="skin-picker hrow"></div></div>
+        <div id="cCat" hidden></div>
+        <div id="profileLayers" class="chips hrow" aria-label="Item type" hidden></div>
+      </div>
       <p id="styleNote" class="fine"></p>
       <div id="custArea" class="cust-area" hidden>
-        <div id="profileLayers" class="chips" aria-label="Item type"></div>
-        <div id="profileGrid" class="store-grid"></div>
-        <div id="cCat"></div>
+        <div id="profileGrid" class="hrow items-row"></div>
         <div id="cWearList"></div>
       </div>
     </div></div>

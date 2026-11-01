@@ -1,5 +1,19 @@
 # Finger Fight: progress
 
+## 2026-11-01 (6) — Customise UI overhaul: one-line colour picker, no gradient / skin tone, sticky top block, double-preview fix (NEEDS SCREENSHOT REVIEW)
+- Changed (rig, connection, match flow, network validation unchanged apart from old-field compatibility):
+  1. Name label + input on one row.
+  2. GRADIENT removed everywhere; saved gradients keep stop A. Old `d`/`bd` from phones on the previous version still validate and are ignored.
+  3. SKIN TONE category removed. The Hand chip's colour picker recolours the selected hand (cartoon, neon, dragon; per-hand colour `ff-hcolors`); robot/paw/premade say they keep their colours. Old skin tone migrates to the cartoon hand. Rings and gloves got tints so each chip has a picker.
+  4. ONE colour picker above the item grid that switches with the chip: native full-spectrum button + 11 basic presets + Original, on one line.
+  5. Every item group and Choose your Hand is a horizontal scrolling row.
+  6. Whole top block sticky: preview, Choose your Hand, colour picker, chips; only the item cards scroll (preview capped at 24vh).
+  7. Done (camera off) is a small button in the preview's top-right corner.
+  8. DOUBLE-PREVIEW BUG fixed: exactly one preview per selected view and camera state (no leftover puppet pane next to the skeleton).
+- Verified: 253/253 tests (gradient / skin-tone tests replaced; new: picker switching, hand recolour, horizontal rows, sticky order, Done placement, name row, migration, single preview). SW restamped (ff-97c63966). NOT seen on a phone.
+- Needs screenshot review: sticky block height on a short phone, the one-line colour row (does it fit or scroll), horizontal rows, Done placement, cartoon hand recolour look, hands that cannot be recoloured.
+- Open: nothing blocking.
+
 ## 2026-11-01 (5) — Preview follows the selected view, colour picker overhaul, sticky preview (NEEDS SCREENSHOT REVIEW)
 - Changed (cosmetics logic, rig, connection, match flow, network validation untouched):
   1. PREVIEW = SELECTED VIEW. Customise mode: the TOP window is the live camera showing the selected view itself (Skeleton: the skeleton in the chosen colour; Photo + skeleton: my live picture with the skeleton over it; Puppet / Photo + puppet: the puppet). When the camera is not on, the top window is the static opponent-view picture. The puppet FITTING (the swaying puppet wearing everything) is its own pane: beside the top window when the view is a skeleton view or the camera is off, hidden when the view is a puppet on the live camera (the items already show there). The Store's own try-on keeps the old puppet-only behaviour.
