@@ -196,3 +196,8 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - **App-wide scene = the existing #stage.** Match screens (lobby, game, result) keep their own background/music; every other screen uses the favourites. The page-focus pause works on the whole audio context, so it covers menu music too.
 - **Scroll reset after the rebuild** (and snap off for a moment): setting scrollLeft before replacing the cards was re-snapped by the browser.
 
+## 2026-11-02 (10) — in-app colour picker, editable looks
+- **Hand-built picker instead of the native input.** The native input always pops the browser's own dialog (unstyleable, and an extra step). A hue slider + saturation/brightness square is ~60 lines of maths (colorpick.js) and no dependency. Chosen over a wheel: two simple controls are easier to use with a thumb and need no trigonometry on touch. The panel floats (absolute) so the sticky block keeps its height; Done is optional because dragging already applies live, and an untouched Done changes nothing so opening the picker can never silently set a colour.
+- **No change to what is stored or sent**: the picker only ever produces `hsvToHex` output, which then goes through the same `cleanColor` / validators as every other colour.
+- **Looks: one ✎ per look, actions in a strip** rather than three buttons on every chip, to keep the pinned row compact. Update keeps id, name and position so a look is tweaked in place.
+

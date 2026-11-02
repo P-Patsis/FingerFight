@@ -3,6 +3,7 @@
 import test from 'node:test';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { openPicker, panelOf } from './pickerhelp.js';
 import { installBrowser, until } from './harness.js';
 
 const b = installBrowser('?sim=1');
@@ -46,11 +47,12 @@ test('Profile: the Skeleton category\'s colour picker saves a clean colour and i
   assert.equal(row().dataset.layer, 'skeleton', 'the skeleton view opens the Skeleton category');
   row().children.find(x => x.dataset.color === '#25e46a').onclick();
   assert.equal(globalThis.localStorage.getItem('ff-skel'), '#25e46a');
-  const any = row().children.flatMap(c => [c, ...c.children]).find(x => x.type === 'color');
-  any.value = 'javascript:1'; any.oninput();
-  assert.equal(globalThis.localStorage.getItem('ff-skel'), '', 'junk clears to the default, never stored as is');
-  any.value = '#00ff88'; any.oninput();
-  assert.equal(globalThis.localStorage.getItem('ff-skel'), '#00ff88');
+  const pk = openPicker($('catColor'));
+  pk.setHue(120); pk.drag(240, 0);
+  assert.equal(globalThis.localStorage.getItem('ff-skel'), '#00ff00', 'the custom picker colours the skeleton');
+  pk.drag(9999, 9999);
+  assert.equal(globalThis.localStorage.getItem('ff-skel'), '#000000', 'clamped to the square, still a plain #rrggbb');
+  pk.done();
   $('profileBack').onclick();
 });
 
@@ -324,14 +326,15 @@ test('ONE colour picker above the grid that switches with the category chip: pre
   assert.equal($('catColor').children.filter(c => c.classList.contains('cprow')).length, 1, 'exactly one picker row');
   const row = $('catColor').children.find(c => c.classList.contains('cprow'));
   assert.equal(row.dataset.layer, 'nails', 'the picker belongs to the chip');
-  assert.ok(row.children.flatMap(c => [c, ...c.children]).some(x => x.type === 'color'), 'a full colour picker'); assert.ok(row.children.some(x => x.dataset.act === 'default'), 'Original');
+  assert.ok(row.children.some(x => x.dataset.act === 'any'), 'a full colour picker button'); assert.ok(row.children.some(x => x.dataset.act === 'default'), 'Original');
   assert.equal(row.children.filter(x => x.dataset.color).length, L.BASIC_PALETTE.length);
   assert.ok(!all().some(x => x.dataset?.act === 'gradient'), 'no gradient');
-  const input = row.children.flatMap(c => [c, ...c.children]).find(x => x.type === 'color');
-  input.value = '#ff0000'; input.oninput();
+  const pk = openPicker($('catColor'));
+  pk.setHue(0); pk.drag(240, 0);
   assert.equal(stackOf('nailpolish').c, '#ff0000');
-  input.value = 'javascript:alert(1)'; input.oninput();
-  assert.equal(stackOf('nailpolish').c, '#ff0000', 'junk is refused');
+  chip('tattoo').onclick();
+  assert.equal(panelOf($('catColor')), undefined, 'the panel belongs to one category and closes with it');
+  chip('nails').onclick();
   // SCROLL RESET: the row is put back at the start AFTER its cards were replaced (resetting before is what the browser undid on the phone)
   const g = $('profileGrid'), log = []; let sl = 240;
   const rc = g.replaceChildren.bind(g); g.replaceChildren = (...a) => { log.push('replace'); return rc(...a); };

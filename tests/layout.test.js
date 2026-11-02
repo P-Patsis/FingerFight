@@ -39,12 +39,13 @@ test('the item cards are a horizontally scrolling row (no vertical wall of cards
   assert.match(css, /\.hrow[^}]*overflow-x:\s*auto/s); assert.match(css, /\.hrow[^}]*flex-wrap:\s*nowrap/s);
 });
 
-test('the colour picker has roomy targets and no "Choose colour" caption; the full-colour button is the native input itself (one tap)', () => {
+test('the colour picker has roomy targets and no "Choose colour" caption; the full-colour button is a plain button that opens OUR panel', () => {
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
   assert.match(css, /\.cprow button\.sw\s*\{[^}]*width:\s*34px/s);
   const js = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
   assert.ok(!js.includes("'Choose colour'"), 'caption removed'); assert.ok(!js.includes('Only drawn data is sent'), 'the redundant drawn-data line is gone');
-  assert.match(css, /\.any-color input\[type=color\][^}]*opacity:\s*0/s, 'the native input is laid over the rainbow button: no menu of ours in between');
+  assert.ok(!/input\[type=color\]/.test(js.replace(/\/\/.*$/gm, '')) && !js.includes("type = 'color'"), 'no native colour input is created: the OS dialog cannot appear');
+  assert.match(css, /\.cp-panel\s*\{[^}]*position:\s*absolute/s, 'the panel floats over the cards instead of growing the pinned block');
 });
 
 test('name box and country block share one baseline: equal label-line heights and equal input heights', () => {
@@ -62,8 +63,8 @@ test('every view\'s preview is the same size (4:3, same width rule as the puppet
   assert.match(css, /\.cat-color input\[type=range\]\s*\{[^}]*padding:\s*0;[^}]*border:\s*0/s);
 });
 
-test('no colour dialog is built by the app: the full-colour button is just the native input (Select colour / Set belong to the phone\'s browser)', () => {
+test('the colour picker is built by the app: hue slider + saturation/brightness square, no native colour input anywhere', () => {
   const js = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
-  for (const t of ['Select colour', 'Chosen colour', 'Customised', 'showPicker']) assert.ok(!js.includes(t) && !html.includes(t), t);
-  assert.match(js, /inp\.type = 'color'/);
+  assert.ok(!/\.type = 'color'/.test(js), 'no <input type=color>');
+  assert.match(js, /cp-sv/); assert.match(js, /cp-hue/); assert.ok(!html.includes('type="color"'));
 });

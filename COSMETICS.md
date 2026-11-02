@@ -217,3 +217,7 @@ on, shows the type chips (Hand ... Effect), the owned items of that type, the ca
 * **Saved looks** (`js/looks.js`): `ff-looks` = up to 12 `{id, name, base, bc?, lay[{id,c?,k?}], cat?, sk?, ss?}`, `ff-look` = the last applied id. `Inventory.getup()` / `applyGetup()` snapshot and wear a getup, re-validating owned items, colours and the stack limit.
 * **Favourites**: `ff-favbg` (0-4), `ff-favsong` (-1 none, 0-4). Not sent over the network; a new room's settings start from them.
 
+## Colour picker and editing looks (2026-11-02)
+* The full-colour control is **our own picker** (`js/colorpick.js` + `colorPanel` in main.js), not `<input type=color>`: hue slider + saturation/brightness square, live while dragging, Done to close. It only produces lower-case `#rrggbb` (`hsvToHex`), applied through `Inventory.setCategoryColor` / the skeleton colour (`sk`), so storage and the wire format (`c`, `bc`, `sk`) are unchanged.
+* `Looks.rename(id, name)` and `Looks.update(id, getup)` (overwrite the outfit, keep id / name / position); both re-clean everything with `cleanLook`.
+

@@ -68,7 +68,7 @@ test('RESTART-PROOF: saved looks and the applied one come back after a reload', 
   assert.equal(new Looks(st).remove('nothere'), false);
 });
 
-test('UI: the saved-looks row is inside the pinned block under the preview; Save look prompts for a name, tapping a look applies it, ✕ deletes it, and it survives a reload', async () => {
+test('UI: the saved-looks row is inside the pinned block under the preview; Save look prompts for a name, tapping a look applies it, ✎ opens rename / update / delete, and it survives a reload', async () => {
   const html = (await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const at = id => html.indexOf('id="' + id + '"');
   assert.ok(at('stickyTop') < at('previewZone') && at('previewZone') < at('looksRow') && at('looksRow') < at('profileLayers'), 'under the preview, inside the sticky block');
@@ -96,8 +96,60 @@ test('UI: the saved-looks row is inside the pinned block under the preview; Save
   // a cancelled prompt saves nothing
   globalThis.prompt = () => null; $('looksRow').children.find(x => x.dataset.act === 'save').onclick(); assert.equal(row().length, 1);
   // delete
-  row()[0].children.find(x => x.dataset.act === 'delete').onclick();
-  assert.equal(row().length, 0); assert.deepEqual(JSON.parse(globalThis.localStorage.getItem('ff-looks')), []);
+  const strip = () => $('lookEdit').children.filter(c => c.dataset?.act);
+  assert.equal($('lookEdit').hidden, true, 'the edit strip stays out of the way until asked');
+  row()[0].children.find(x => x.dataset.act === 'edit').onclick();
+  assert.equal($('lookEdit').hidden, false); assert.deepEqual(strip().map(x => x.dataset.act), ['rename', 'update', 'delete', 'close']);
+  strip().find(x => x.dataset.act === 'delete').onclick();
+  assert.equal(row().length, 0); assert.equal($('lookEdit').hidden, true, 'the strip closes with its look'); assert.deepEqual(JSON.parse(globalThis.localStorage.getItem('ff-looks')), []);
   delete globalThis.prompt;
+  $('custDone').onclick(); $('profileBack').onclick();
+});
+
+test('RENAME and UPDATE a saved look: same id and place, cleaned, validated, persisted; apply / delete still work', () => {
+  const st = mem(), lk = new Looks(st);
+  const a = lk.add('One', { base: 'neon', bc: '#ec4899', lay: [{ id: 'goldring' }], sk: '#e42525', ss: 'bold' }), c = lk.add('Two', { base: 'robot', lay: [] });
+  assert.equal(lk.rename(a.id, '  <i>Fresh</i>  name '), true);
+  assert.equal(lk.get(a.id).name, 'iFresh/i name'); assert.equal(lk.rename(a.id, '<>'), false, 'an empty name changes nothing'); assert.equal(lk.rename('nothere', 'x'), false);
+  assert.equal(lk.rename(a.id, 'z'.repeat(50)), true); assert.equal(lk.get(a.id).name.length, 20);
+  lk.rename(a.id, 'Party');
+  assert.equal(lk.update(a.id, { base: 'cartoon', bc: 'red', lay: [{ id: 'whiteglove', c: '#12ab34' }, { id: 'a'.repeat(20) }], sk: '#12', ss: 'glow', cat: { nails: { c: '#112233' } } }), true);
+  const u = lk.get(a.id);
+  assert.deepEqual([u.id, u.name, u.base, u.bc, u.sk, u.ss], [a.id, 'Party', 'cartoon', undefined, undefined, 'glow'], 'new outfit, same slot and name; bad colours dropped');
+  assert.deepEqual(u.lay, [{ id: 'whiteglove', c: '#12ab34' }]); assert.equal(lk.list[0].id, a.id, 'same place in the row'); assert.equal(lk.list.length, 2);
+  assert.equal(lk.update('nothere', { base: 'neon', lay: [] }), false); assert.equal(lk.update(c.id, { base: '!!', lay: [] }), false, 'an unusable getup leaves the look as it was');
+  assert.equal(lk.get(c.id).base, 'robot');
+  const back = new Looks(st);                                         // restart
+  assert.deepEqual(back.list.map(l => [l.name, l.base]), [['Party', 'cartoon'], ['Two', 'robot']]); assert.equal(back.appliedId, a.id);
+  assert.equal(back.list[0].lay[0].c, '#12ab34');
+});
+
+test('UI: ✎ opens the edit strip; Rename asks for a name, Update replaces the outfit with what is worn now (after asking), both persist', async () => {
+  $('profileBtn').onclick(); $('custBtn').onclick();
+  await until(() => !$('custArea').hidden, 'customise open');
+  const chip = v => $('profileLayers').children.find(x => x.dataset.value === v);
+  const row = () => $('looksRow').children.filter(c => c.classList.contains('look'));
+  const strip = a => $('lookEdit').children.find(x => x.dataset?.act === a);
+  const saved = () => JSON.parse(globalThis.localStorage.getItem('ff-looks'));
+  chip('ring').onclick(); $('profileGrid').children.find(c => c.dataset.id === 'silverring').onclick();
+  globalThis.prompt = () => 'Silver'; $('looksRow').children.find(x => x.dataset.act === 'save').onclick();
+  assert.equal(row().length, 1);
+  row()[0].children.find(x => x.dataset.act === 'edit').onclick();
+  globalThis.prompt = (q, d) => { assert.equal(q, 'Rename this look'); assert.equal(d, 'Silver'); return 'Shiny'; };
+  strip('rename').onclick();
+  assert.equal(row()[0].children[0].textContent, 'Shiny'); assert.equal(saved()[0].name, 'Shiny', 'persisted');
+  globalThis.prompt = () => null; strip('rename').onclick();   // cancelled (the strip stays open)
+  assert.equal(saved()[0].name, 'Shiny');
+  // wear something else, then overwrite the look with it
+  $('profileGrid').children.find(c => c.dataset.id === 'silverring').onclick(); $('profileGrid').children.find(c => c.dataset.id === 'ruby')?.onclick?.();
+  chip('glove').onclick(); $('profileGrid').children.find(c => c.dataset.id === 'whiteglove').onclick();
+  let asked = ''; globalThis.confirm = q => { asked = q; return false; };
+  strip('update').onclick();
+  assert.match(asked, /Replace the look "Shiny"/); assert.ok(!saved()[0].lay.some(e => e.id === 'whiteglove'), 'declined: nothing changes');
+  globalThis.confirm = () => true; strip('update').onclick();
+  assert.ok(saved()[0].lay.some(e => e.id === 'whiteglove') && !saved()[0].lay.some(e => e.id === 'silverring'), 'the look now holds the current outfit');
+  assert.equal(saved()[0].name, 'Shiny', 'the name is kept'); assert.equal(saved().length, 1, 'overwritten, not added');
+  assert.ok(row()[0].classList.contains('sel'), 'and it is the look in use');
+  delete globalThis.prompt; delete globalThis.confirm;
   $('custDone').onclick(); $('profileBack').onclick();
 });

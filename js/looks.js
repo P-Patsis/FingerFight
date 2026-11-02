@@ -76,5 +76,21 @@ export class Looks {
     return true;
   }
   get(id) { return this.list.find(l => l.id === id) || null; }
+  /** Renames a look (the name is cleaned the same way as when saving; an empty result changes nothing). */
+  rename(id, name) {
+    const l = this.get(id), n = cleanName(name);
+    if (!l || !n) return false;
+    l.name = n; this.#save();
+    return true;
+  }
+  /** Overwrites a look's outfit with [getup], keeping its id, its place in the row and its name. */
+  update(id, getup) {
+    const i = this.list.findIndex(l => l.id === id);
+    if (i < 0) return false;
+    const look = cleanLook({ ...getup, id, name: this.list[i].name });
+    if (!look) return false;
+    this.list[i] = look; this.appliedId = id; this.#save();
+    return true;
+  }
   markApplied(id) { this.appliedId = this.get(id) ? id : null; this.#save(); }
 }

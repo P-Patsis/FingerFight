@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openPicker, panelOf } from './pickerhelp.js';
 import { installBrowser, until } from './harness.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -493,11 +494,12 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.ok(pick().children.filter(x => x.dataset.color).length >= 8, 'ONE line of basic preset swatches');
   pick().children.find(x => x.dataset.color === '#25d3e4').onclick();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#25d3e4');
-  const input = pick().children.flatMap(c => [c, ...c.children]).find(x => x.type === 'color');
-  input.value = '#12ab34'; input.oninput();
-  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'any colour, live');
-  input.value = 'javascript:alert(1)'; input.oninput();
-  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#12ab34', 'junk is refused');
+  const pk = openPicker($('catColor'));                              // ONE tap on the rainbow button opens our own picker
+  pk.setHue(120); pk.drag(240, 0);                                   // pure green, full saturation and brightness
+  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#00ff00', 'any colour, live');
+  pk.drag(9999, -500);                                               // a drag outside the square is clamped, never an invalid value
+  assert.match(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, /^#[0-9a-f]{6}$/);
+  pk.done(); assert.equal(panelOf($('catColor')), undefined, 'Done closes the panel');
   chip('storeLayers', 'ring').onclick();
   assert.ok($('catColor').children.some(c => c.classList.contains('cprow')), 'rings have their own colour picker now');
   // EFFECTS: pick them like any item

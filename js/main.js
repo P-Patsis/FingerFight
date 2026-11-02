@@ -16,6 +16,7 @@ import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PAL
 import { Inventory } from './inventory.js';
 import { Stats } from './stats.js';
 import { Looks, sameGetup, MAX_LOOKS } from './looks.js';
+import { hsvToHex, hexToHsv, drawSV, svAt } from './colorpick.js';
 import { unlockItem, unlockLabel } from './unlock.js';
 import { ParticleSystem } from './particles.js';
 import {
@@ -1042,24 +1043,49 @@ function saveLook() {
   $('cMsg').textContent = look ? 'Saved "' + look.name + '".' : 'Could not save this look.';
   renderLooks();
 }
+let editingLook = null;                                            // the look whose edit strip is open (rename / update / delete)
+function renameLook(l) {
+  let name = l.name;
+  if (typeof globalThis.prompt === 'function') { const a = globalThis.prompt('Rename this look', l.name); if (a === null) return; name = a; }
+  $('cMsg').textContent = looks.rename(l.id, name) ? 'Renamed.' : 'That name is empty.';
+  renderLooks();
+}
+function updateLook(l) {
+  if (typeof globalThis.confirm === 'function' && !globalThis.confirm('Replace the look "' + l.name + '" with what you wear now?')) return;
+  $('cMsg').textContent = looks.update(l.id, currentGetup()) ? 'Updated "' + l.name + '".' : 'Could not update this look.';
+  renderLooks();
+}
+function deleteLook(l) {
+  if (typeof globalThis.confirm === 'function' && !globalThis.confirm('Delete the look "' + l.name + '"?')) return;
+  looks.remove(l.id); if (editingLook === l.id) editingLook = null;
+  renderLooks();
+}
 function renderLooks() {
-  const row = $('looksRow');
+  const row = $('looksRow'), strip = $('lookEdit');
   row.replaceChildren();
+  if (editingLook && !looks.get(editingLook)) editingLook = null;
   const add = el('button', 'btn small look-add', '+ Save look'); add.type = 'button'; add.dataset.act = 'save'; add.onclick = saveLook;
   row.append(add);
   const now = currentGetup();
   for (const l of looks.list) {
     const on = looks.appliedId === l.id && sameGetup(l, now);
-    const box = el('div', 'look' + (on ? ' sel' : '')); box.dataset.id = l.id;
+    const box = el('div', 'look' + (on ? ' sel' : '') + (editingLook === l.id ? ' editing' : '')); box.dataset.id = l.id;
     const use = el('button', 'look-use', l.name); use.type = 'button'; use.dataset.act = 'apply'; use.setAttribute('aria-pressed', on ? 'true' : 'false');
     use.onclick = () => applyLook(l);
-    const del = el('button', 'look-x', '✕'); del.type = 'button'; del.dataset.act = 'delete'; del.setAttribute('aria-label', 'Delete look ' + l.name);
-    del.onclick = () => {
-      if (typeof globalThis.confirm === 'function' && !globalThis.confirm('Delete the look "' + l.name + '"?')) return;
-      looks.remove(l.id); renderLooks();
-    };
-    box.append(use, del);
+    const more = el('button', 'look-x', '✎'); more.type = 'button'; more.dataset.act = 'edit'; more.setAttribute('aria-label', 'Edit look ' + l.name); more.setAttribute('aria-expanded', editingLook === l.id ? 'true' : 'false');
+    more.onclick = () => { editingLook = editingLook === l.id ? null : l.id; renderLooks(); };
+    box.append(use, more);
     row.append(box);
+  }
+  strip.replaceChildren();
+  const cur = editingLook && looks.get(editingLook);
+  strip.hidden = !cur;
+  if (cur) {
+    strip.append(el('span', 'le-name', cur.name));
+    for (const [act, label, fn] of [['rename', 'Rename', () => renameLook(cur)], ['update', 'Update to what I wear now', () => updateLook(cur)], ['delete', 'Delete', () => deleteLook(cur)], ['close', 'Close', () => { editingLook = null; renderLooks(); }]]) {
+      const bt = el('button', 'btn tiny' + (act === 'delete' ? ' danger' : ' ghost'), label); bt.type = 'button'; bt.dataset.act = act; bt.onclick = fn;
+      strip.append(bt);
+    }
   }
 }
 
@@ -1143,7 +1169,7 @@ function layoutPreview() {
   $('wearBox').hidden = false;
   $('stickyTop').classList.toggle('stuck', c);
   $('custBtn').hidden = c; $('custDone').hidden = !c;
-  $('profileLayers').hidden = !c; $('cCat').hidden = !c; $('looksRow').hidden = !c;
+  $('profileLayers').hidden = !c; $('cCat').hidden = !c; $('looksRow').hidden = !c; if (!c) { $('lookEdit').hidden = true; picker.layer = null; }
   if (c) renderLooks();
   if (which === 'fit') startStoreAnim();
 }
@@ -1170,17 +1196,17 @@ function categoryDefault(layer) {
 }
 
 /**
- * ONE line: [full-spectrum button][basic presets][Original]. The button IS the native colour input (invisible, laid over a rainbow ring), so ONE tap opens the
- * device's own colour picker: there is no menu of ours in between. [live] runs while the picker is dragged (the row is not rebuilt under it), [apply] on a
- * preset / Original / when the picker closes.
+ * ONE line: [full-colour button][basic presets][Original]. The rainbow button opens OUR picker in one tap (no browser dialog): a panel under the row with a
+ * hue slider, a saturation/brightness square, the colour shown and a Done button. [live] runs while dragging (nothing is rebuilt under the finger), [apply] on a
+ * preset / Original / Done. Every value is a plain #rrggbb made by colorpick.js. Row and panel are appended to [box].
  */
-function colorRow(layer, cur, apply, live) {
+const picker = { layer: null };                                    // which category's picker panel is open (it closes when the category changes)
+function colorRow(box, layer, cur, apply, live) {
   const row = el('div', 'cprow'); row.dataset.picker = 'any'; row.dataset.layer = layer;
-  const any = el('span', 'any-color');
-  const inp = document.createElement('input'); inp.type = 'color'; inp.value = cur || '#ffffff'; inp.dataset.act = 'any'; inp.setAttribute('aria-label', LAYER_LABELS[layer] + ': pick any colour');
-  inp.oninput = () => live(inp.value);
-  inp.onchange = () => apply(cleanColor(inp.value));
-  any.append(inp);
+  const open = picker.layer === layer;
+  const any = el('button', 'any-color' + (open ? ' open' : '')); any.type = 'button'; any.dataset.act = 'any'; any.setAttribute('aria-expanded', open ? 'true' : 'false');
+  any.setAttribute('aria-label', LAYER_LABELS[layer] + ': pick any colour');
+  any.onclick = () => { picker.layer = open ? null : layer; renderCatColor(); };       // opens / closes our panel; what was dragged is already applied
   row.append(any);
   for (const c of BASIC_PALETTE) {
     const b = el('button', 'sw' + (cur && c === cur.toLowerCase() ? ' sel' : '')); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', c);
@@ -1190,12 +1216,40 @@ function colorRow(layer, cur, apply, live) {
   const reset = el('button', 'btn tiny ghost', 'Original'); reset.type = 'button'; reset.dataset.act = 'default';
   reset.onclick = () => apply(null);
   row.append(reset);
-  return row;
+  box.append(row);
+  if (open) box.append(colorPanel(layer, cur, apply, live));
+}
+/** The in-app colour panel: hue slider + saturation/brightness square. Dragging applies live; Done applies for good and closes. */
+function colorPanel(layer, cur, apply, live) {
+  const hsv = hexToHsv(cleanColor(cur) || '#ffffff');
+  const panel = el('div', 'cp-panel'); panel.dataset.act = 'panel';
+  const sv = document.createElement('canvas'); sv.className = 'cp-sv'; sv.width = 240; sv.height = 110; sv.dataset.act = 'sv'; sv.setAttribute('aria-label', 'Saturation and brightness');
+  const hue = document.createElement('input'); hue.type = 'range'; hue.min = '0'; hue.max = '360'; hue.step = '1'; hue.value = String(Math.round(hsv.h)); hue.className = 'cp-hue'; hue.dataset.act = 'hue'; hue.setAttribute('aria-label', 'Hue');
+  const swatch = el('span', 'cp-swatch'), code = el('code', 'cp-hex');
+  const done = el('button', 'btn small', 'Done'); done.type = 'button'; done.dataset.act = 'done';
+  const hex = () => hsvToHex(hsv.h, hsv.s, hsv.v);
+  const paint = () => {
+    const c = hex(); swatch.style.background = c; code.textContent = c;
+    try { const g = sv.getContext('2d'); drawSV(g, sv.width, sv.height, hsv.h); const x = hsv.s * sv.width, y = (1 - hsv.v) * sv.height;
+      g.lineWidth = 2; g.strokeStyle = '#fff'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.stroke(); g.strokeStyle = '#000'; g.beginPath(); g.arc(x, y, 9, 0, 7); g.stroke(); } catch { /* decoration */ }
+  };
+  const emit = () => { touched = true; paint(); live(hex()); };
+  const fromPoint = e => { const r = sv.getBoundingClientRect?.() || { left: 0, top: 0, width: sv.width, height: sv.height }; Object.assign(hsv, svAt(e.clientX - r.left, e.clientY - r.top, r.width, r.height)); emit(); };
+  let dragging = false, touched = false;
+  sv.onpointerdown = e => { dragging = true; try { sv.setPointerCapture?.(e.pointerId); } catch { /* ignore */ } fromPoint(e); };
+  sv.onpointermove = e => { if (dragging) fromPoint(e); };
+  sv.onpointerup = sv.onpointercancel = () => { dragging = false; };
+  hue.oninput = () => { hsv.h = Number(hue.value) || 0; emit(); };
+  done.onclick = () => { picker.layer = null; if (touched) apply(hex()); else renderCatColor(); };       // Done without touching anything changes nothing
+  const foot = el('div', 'cp-foot'); foot.append(swatch, code, done);
+  panel.append(sv, hue, foot);
+  paint();
+  return panel;
 }
 /** The Skeleton category's colour: the colour of the selected skeleton style's lines (plain #rrggbb, `sk`), remembered on this phone. */
 function skeletonColorRow(box) {
   const set = c => { style.skel = cleanColor(c); store.set('ff-skel', style.skel || ''); };
-  box.append(colorRow('skeleton', style.skel || SKELETON_COLOR, c => { set(c); renderStyle(); renderProfileItems(); }, c => { set(c); renderViewPreview(effectiveStyle().mode); applyOverlay(); }));
+  colorRow(box, 'skeleton', style.skel || SKELETON_COLOR, c => { set(c); renderStyle(); renderProfileItems(); }, c => { set(c); renderViewPreview(effectiveStyle().mode); applyOverlay(); });
 }
 
 /**
@@ -1204,6 +1258,7 @@ function skeletonColorRow(box) {
  */
 function renderCatColor() {
   const box = $('catColor'), layer = inProfileCust() ? profileView.layer : storeView.layer;
+  if (picker.layer && picker.layer !== layer) picker.layer = null;        // the panel belongs to one category
   box.replaceChildren();
   box.hidden = layer === 'all';
   if (layer === 'all') return;
@@ -1214,7 +1269,7 @@ function renderCatColor() {
   }
   const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
   const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
-  box.append(colorRow(layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); }));
+  colorRow(box, layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); });
   if (layer === 'effect') {
     const k = st.k || INTENSITY_DEFAULT, ctl = el('div', 'ctl'), val = el('b', '', String(k));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(INTENSITY_MIN); sl.max = String(INTENSITY_MAX); sl.step = '1'; sl.value = String(k); sl.dataset.act = 'intensity'; sl.setAttribute('aria-label', 'Effect intensity');

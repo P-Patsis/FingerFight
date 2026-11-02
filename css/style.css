@@ -480,7 +480,6 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cc-label { display: none; }
 .any-color { position: relative; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #94a3b8; overflow: hidden;
   background: conic-gradient(#e42525, #e4a825, #a8e425, #25e46a, #25d3e4, #2552e4, #7a25e4, #e425a8, #e42525); }
-.any-color input[type=color] { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); opacity: 0; cursor: pointer; border: 0; padding: 0; }
 
 /* name box and country block: the label line is the same height on both sides, so the two inputs sit on one line */
 .idrow { align-items: flex-start; }
@@ -508,3 +507,23 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .preview-zone .view-preview canvas, .view-preview canvas { width: min(100%, calc(24vh * 1.3333)); max-width: 100%; max-height: 24vh; aspect-ratio: 4 / 3; height: auto; }
 /* the global input style (12px padding, border, dark box) shrank the range's travel: the handle stopped short of the right end */
 .cat-color input[type=range] { padding: 0; border: 0; background: none; height: 32px; margin: 0; box-sizing: border-box; accent-color: var(--gold); }
+
+/* ---------- in-app colour picker (replaces the native input): rainbow button + a panel under the row ---------- */
+.any-color { padding: 0; cursor: pointer; }
+.any-color.open { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+.cat-color, #catColor { position: relative; }
+.cp-panel { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 9; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  background: #0f172a; border: 2px solid #475569; border-radius: 12px; box-shadow: 0 8px 24px #000a; }
+.cp-sv { width: 100%; height: 120px; border-radius: 8px; touch-action: none; display: block; border: 1px solid #334155; }
+.cp-hue { width: 100%; height: 28px; padding: 0; border: 0; margin: 0; box-sizing: border-box; accent-color: #fff; touch-action: none;
+  background: linear-gradient(90deg, #f00, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00); border-radius: 14px; }
+.cp-foot { display: flex; align-items: center; gap: 10px; }
+.cp-swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #94a3b8; flex: none; }
+.cp-hex { flex: 1; font-size: 14px; color: var(--ink); }
+
+/* ---------- saved looks: one small edit mark per look; its strip (rename / update / delete) shows only for the look being edited ---------- */
+.look.editing { border-color: #94a3b8; }
+.look-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; padding: 4px 0; }
+.look-edit[hidden] { display: none; }
+.le-name { font-size: 13px; font-weight: 700; margin-right: 4px; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.look-edit .btn.danger { border-color: #b91c1c; color: #fca5a5; background: none; }
