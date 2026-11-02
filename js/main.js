@@ -1063,6 +1063,14 @@ function renderLooks() {
   }
 }
 
+/** The other direction of the view <-> category sync: tapping the Hand / Skeleton chip switches the opponent view to the puppet / skeleton kind (a photo choice stays a photo choice). */
+function viewKind(kind) {
+  const next = (style.mode.startsWith('photo-') ? 'photo-' : '') + kind;
+  if (next === style.mode || !viewsFor(matchTypeNow()).includes(next)) return;
+  style.mode = next; store.set('ff-mode', next);
+  renderStyle();
+}
+
 /** Puts a sideways-scrolling row back at its first item. Done AFTER the cards were replaced, and with scroll-snap off for a moment: otherwise the browser
  *  re-snaps the new content to the old position (or keeps a smooth scroll in flight), which is why setting scrollLeft before the rebuild did nothing on the phone. */
 function scrollRowToStart(row) {
@@ -1106,7 +1114,7 @@ function renderStore() {
 function renderProfileItems() {
   const lays = $('profileLayers');
   lays.replaceChildren();
-  for (const l of PROFILE_LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; profileView.reset = true; }, renderProfileItems);
+  for (const l of PROFILE_LAYERS) chip(lays, l, LAYER_LABELS[l], profileView.layer, v => { profileView.layer = v; profileView.reset = true; if (v === 'base') viewKind('puppet'); else if (v === 'skeleton') viewKind('skeleton'); }, renderProfileItems);
   const grid = $('profileGrid');
   if (profileView.layer === 'skeleton') { grid.replaceChildren(); for (const [id, name] of SKELETON_STYLES) grid.append(skeletonCard(id, name)); }
   else fillGrid(grid, filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));

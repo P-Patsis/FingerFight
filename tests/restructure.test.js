@@ -166,6 +166,9 @@ test('Profile customise: the Effect panel has the intensity slider, and moving i
   $('profileGrid').children.find(c => c.dataset.id === 'bubbles').onclick();
   const slider = $('catColor').children.flatMap(c => [c, ...c.children]).find(x => x.dataset?.act === 'intensity');
   assert.ok(slider, 'intensity slider'); assert.equal(slider.max, '10');
+  assert.equal(slider.min, '1'); assert.equal(slider.step, '1');
+  slider.value = '10'; slider.oninput();
+  assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'bubbles').k, 10, 'the right end of the track is the maximum');
   slider.value = '9'; slider.oninput();
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'bubbles').k, 9);
   chip('nails').onclick();

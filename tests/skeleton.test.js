@@ -78,3 +78,23 @@ test('picking an opponent view opens the matching category: skeleton views -> Sk
   assert.deepEqual($('profileLayers').children.map(x => x.dataset.value), L.PROFILE_LAYERS);
   $('custDone').onclick(); $('profileBack').onclick();
 });
+
+test('view <-> category sync works BOTH ways: the Hand chip switches the view to puppet, the Skeleton chip to skeleton (a photo choice stays a photo choice); other chips leave the view alone', async () => {
+  $('profileBtn').onclick(); $('custBtn').onclick();
+  await until(() => !$('custArea').hidden, 'customise open');
+  const chip = v => $('profileLayers').children.find(x => x.dataset.value === v);
+  const sel = () => $('modePicker').children.filter(x => x.classList.contains('sel')).map(x => x.dataset.mode)[0];
+  const mode = m => $('modePicker').children.find(x => x.dataset.mode === m).onclick();
+  mode('puppet');
+  chip('skeleton').onclick();
+  assert.equal(sel(), 'skeleton'); assert.equal(globalThis.localStorage.getItem('ff-mode'), 'skeleton');
+  assert.equal($('viewPreviewLabel').textContent, 'Preview: skeleton of your hand', 'the preview follows');
+  chip('base').onclick();
+  assert.equal(sel(), 'puppet'); assert.match($('viewPreviewLabel').textContent, /your puppet/);
+  chip('tattoo').onclick(); assert.equal(sel(), 'puppet', 'Tattoo does not change the view');
+  mode('photo-puppet'); chip('skeleton').onclick(); assert.equal(sel(), 'photo-skeleton', 'photo + puppet -> photo + skeleton');
+  chip('base').onclick(); assert.equal(sel(), 'photo-puppet');
+  chip('ring').onclick(); assert.equal(sel(), 'photo-puppet');
+  mode('skeleton'); assert.equal($('profileLayers').children.filter(x => x.classList.contains('sel')).map(x => x.dataset.value)[0], 'skeleton', 'and the view still picks the category');
+  mode('puppet'); $('custDone').onclick(); $('profileBack').onclick();
+});

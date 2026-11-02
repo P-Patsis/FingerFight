@@ -52,3 +52,18 @@ test('name box and country block share one baseline: equal label-line heights an
   assert.match(css, /\.namerow > \.lab, \.flaghead\s*\{[^}]*height:\s*26px/s); assert.match(css, /\.namerow input, \.flagrow input\s*\{[^}]*height:\s*38px/s);
   assert.match(css, /\.idrow\s*\{[^}]*align-items:\s*flex-start/s);
 });
+
+test('every view\'s preview is the same size (4:3, same width rule as the puppet window); the intensity slider has no padding that shortens its travel', () => {
+  const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  const last = css.lastIndexOf('.preview-zone .view-preview canvas');
+  assert.match(css.slice(last), /width:\s*min\(100%, calc\(24vh \* 1\.3333\)\)[^}]*aspect-ratio:\s*4 \/ 3/s, 'same width and 4:3 as .wear-box');
+  assert.match(css, /\.preview-zone \.wear-box\s*\{[^}]*width:\s*min\(100%, calc\(24vh \* 1\.3333\)\)/s);
+  assert.match(html, /id="viewPreview" width="240" height="180"/, 'the canvas itself is 4:3, so nothing is stretched');
+  assert.match(css, /\.cat-color input\[type=range\]\s*\{[^}]*padding:\s*0;[^}]*border:\s*0/s);
+});
+
+test('no colour dialog is built by the app: the full-colour button is just the native input (Select colour / Set belong to the phone\'s browser)', () => {
+  const js = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  for (const t of ['Select colour', 'Chosen colour', 'Customised', 'showPicker']) assert.ok(!js.includes(t) && !html.includes(t), t);
+  assert.match(js, /inp\.type = 'color'/);
+});

@@ -1,5 +1,14 @@
 # Finger Fight: progress
 
+## 2026-11-02 (9) — Quick fixes: two-way view/category sync, equal preview sizes, full-range slider (NEEDS SCREENSHOT REVIEW)
+- Changed (layout/UX only; cosmetics logic, rig, connection, match flow, validation untouched):
+  1. VIEW <-> CATEGORY SYNC BOTH WAYS: the Hand chip switches the opponent view to Puppet, the Skeleton chip to Skeleton (a photo choice stays a photo choice: Photo + puppet <-> Photo + skeleton); the preview follows. Other chips leave the view alone. Picking a view still opens its category.
+  2. COLOUR PANEL: there is NO app-built "Select colour / Customised / Chosen colour / Set" panel in the code (searched html/js/css; the full-colour button is just the native `<input type=color>` laid over a rainbow ring, nothing in front of it). That dialog is the phone browser's own colour picker, so I could not remove it; only a custom in-app picker would avoid it (not done, as asked). A test now guards that the app builds no such dialog.
+  3. SKELETON PREVIEW SIZE: the preview canvas is now 4:3 (240x180) with the same width rule as the puppet window (`min(100%, 24vh x 4/3)`), so every view has the same size.
+  4. SLIDER: the global input style (12px padding, border, dark box) shortened the range's travel; the intensity slider now has no padding/border, so the handle reaches the right end (10). Test sets 10 and reads it back.
+- Verified: 271/271 tests (two-way sync, preview size rule, slider range/CSS, no app-built colour dialog). SW restamped. NOT seen on a phone.
+- Needs screenshot review: skeleton preview height vs puppet on a short phone, the slider end, and whether the colour dialog you saw is the phone's own (it should look the same in other apps' colour inputs).
+
 ## 2026-11-01 (8) — Skeleton styles, Hand category, saved looks, favourite background + song (NEEDS SCREENSHOT + PHONE REVIEW)
 - Changed (rig, connection, match flow unchanged; new network field `ss` validated):
   PART 1. SKELETON category (chips: Hand, Skeleton, Tattoo, Nail polish, Ring, Glove, Effect). Six styles drawn by `drawBones` (avatars.js): Classic, Thin, Bold, Dashed, Glow (wide faint under-stroke, no shadow blur), Joints (big round joints). One skeleton colour (the category's picker) applies to the selected style; `ss` = style id travels with the picture, validated like an item id (an id a phone does not know is drawn as Classic). Both the live camera overlay and the received picture use the style. "Choose your Hand" is gone: the owned hands are cards in the Hand category (colour picker recolours the selected hand, unchanged). The standalone skeleton-colour row is gone. Picking Skeleton / Photo + skeleton opens the Skeleton category; Puppet / Photo + puppet opens Hand (chips still tappable). (The lobby no longer has a hand/skeleton-colour row either: hands and styles are chosen in the Profile.)

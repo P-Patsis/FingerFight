@@ -503,3 +503,8 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .fav-row button[class*="thumb-"] { width: 74px; height: 92px; padding: 0 2px; display: flex; align-items: flex-end; justify-content: center; }
 .fav-row button.song { border: 2px solid #475569; background: #1e293b; color: var(--ink); text-shadow: none; padding: 10px 14px; font-size: 13px; border-radius: 999px; white-space: nowrap; }
 .fav-row button.sel { border-color: var(--gold); }
+
+/* ---------- quick fixes: one preview size for every view, a slider that travels the whole track ---------- */
+.preview-zone .view-preview canvas, .view-preview canvas { width: min(100%, calc(24vh * 1.3333)); max-width: 100%; max-height: 24vh; aspect-ratio: 4 / 3; height: auto; }
+/* the global input style (12px padding, border, dark box) shrank the range's travel: the handle stopped short of the right end */
+.cat-color input[type=range] { padding: 0; border: 0; background: none; height: 32px; margin: 0; box-sizing: border-box; accent-color: var(--gold); }
