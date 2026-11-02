@@ -201,3 +201,10 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - **No change to what is stored or sent**: the picker only ever produces `hsvToHex` output, which then goes through the same `cleanColor` / validators as every other colour.
 - **Looks: one ✎ per look, actions in a strip** rather than three buttons on every chip, to keep the pinned row compact. Update keeps id, name and position so a look is tweaked in place.
 
+
+## 2026-11-02 (13) — generated hands, hue-shift, webbing
+- **Hands drawn by a program (`js/generated.js`)**: Geometric (`gc`) and Painting (`sd`). The program only emits an ordinary skin that goes through the same `parseSkin` checks, so the wire carries just a validated integer that picks the shapes, never shape data. Same number = same hand on every phone. Chosen over sending skins or images: tiny, safe, deterministic.
+- **Painting seed**: each phone makes its own at match start and sends it with every picture, so no extra message or agreement step is needed; the opponent draws my painting from my seed.
+- **Hue-shift instead of "no picker" for fixed-colour hands**: rotate hues relative to the hand's dominant hue and gently tint greys, so the design stays but the colour is the player's. Per-hand memory reuses `ff-hcolors`.
+- **Webbing as side fins on finger segments**: parts can only draw in their own space, so a true membrane between two parts is impossible in the format. Fins ride the fingers and meet when fingers are close; wide spread leaves gaps. A real membrane needs a rig extension.
+- **Hotdog fingers**: width and overshoot are the only levers the format gives; length stays bound to the landmarks.

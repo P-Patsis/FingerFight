@@ -132,3 +132,5 @@ Skins are now the **base-hand layer** of a stack of cosmetics (tone, tattoos, na
 effects), with a Store, a local inventory and a stubbed unlock path: see **COSMETICS.md**. A skin file may carry the extra optional
 metadata described there (`category`, `free`, `unlock`, `whole`, `particles`); the rig and everything above are unchanged.
 Real ads and payments are NOT built: the unlock path is a marked stub (`js/unlock.js`) for the future native app.
+
+**Built-in hands added since:** `lowpoly` (Geometric, generated from a detail level 1-5), `frog`, `duck` (web fins on finger segments), `toybrick`, `mechanical`, `cyberpunk`, `flaming`, `floppy` (hotdog fingers), `gridmesh` (wireframe), `painting` (generated from a seed), `bone`, `chrome`, `burnbone`, `sand`, `eyes`, `inksketch`.

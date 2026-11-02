@@ -1,5 +1,22 @@
 # Finger Fight: progress
 
+## 2026-11-02 (13) — BIG BUILD Parts A-E: UI fixes, hue-shift all hands, generated hands, webbing/hotdog, 12 new items (ALL VISUALS NEED SCREENSHOT REVIEW: drawn blind)
+- Changed (one git commit per part: A feaabbb, B 7a56c01, C a32e26f, D 07be3dd, E dfca0ce):
+  A. Customise + Try on (camera) on one row; Customise (no camera) keeps the photo + puppet placeholder; Ring and Tattoo chips swapped, labels no longer truncate.
+  B. HAND COLOUR NOW WORKS ON EVERY HAND: hands with a tint recolour as before; robot, gauntlet, golden, paw (and every other untinted hand) get a HUE-SHIFT (design kept, greys tinted gently). Each hand remembers its own colour (`ff-hcolors`); older saves migrate. GEOMETRIC DETAIL slider (1 chunky - 5 fine facets) in the Hand category, saved `ff-polylevel`, sent as validated `gc` (1-5 integer).
+  C. FROG + DUCK: the tiny fixed triangles are gone. Web FINS now sit on the sides of each finger's base and middle segments (not the thumb, not the outer sides of index/pinky), so they rotate and stretch with the fingers and meet their neighbour's fin. FLOPPY is now GIANT HOTDOG FINGERS (very fat sausage segments, tips overshoot the landmark and droop, grill marks; recolourable). GEOMETRIC is now generated (`js/generated.js`, angular facets with chamfered tips).
+  D. GRIDMESH (`gridmesh`, free): see-through wireframe triangles, lines + faint fill. PAINTING (`painting`, locked, ad): abstract painted hand from a seed. Each phone makes a NEW seed at every match start (`startGame`); it is sent with each picture as `sd` (0-999999 integer, validated) and the opponent draws the same painting; the Profile gets a fresh random each time it is opened.
+  E. HANDS: Bone `bone` (free), Sand `sand` (free), Ink sketch `inksketch` (free), Chrome skeleton `chrome` (locked ad), Burning bone `burnbone` (locked purchase 0.99; embers + glow through the existing emitters, 3 of 6), Eyes in palm `eyes` (locked ad). FINGERS (nails layer): Pirate hook `hook` (free), Scissor fingers `scissors` (locked ad). GLOVES: Boxing `boxing` (free), Rubber `rubber` (free, recolourable), Formal `formal` (locked ad). RING: Ornate `ornate` (locked purchase 0.99, glowing gem: glow + glint emitters).
+- Simplified / rough (be honest):
+  * WEBBING is fins, not one true membrane: fins ride each finger so they follow the landmarks and meet when fingers are together, but with a WIDE spread there will be gaps (a skin cannot draw between two parts). Check on a real hand.
+  * HOTDOG fingers are fat and overshoot the tip, but the rig still cannot make them longer than the landmarks; they overlap neighbours when closed.
+  * HOOK and SCISSORS draw over the existing finger tip (they cannot hide the finger underneath): rough. The hook is on the index finger only.
+  * Chrome "endoskeleton" is a plated skeleton look, not a see-through one. Eyes are flat painted eyes (they do not look around).
+  * Everything above was drawn by code with no image renderer: expect to adjust proportions after screenshots.
+- Verified: 298/298 tests (new: hue-shift maths, geometric levels/validation/determinism, painting seed deterministic + shared + validated, gridmesh/painting registered, frog/duck fins, hotdog widths, all 12 new items load/validate/stay in caps; hand lists updated). SW restamped (js/generated.js and all new files precached). NOT seen on a phone.
+- Needs screenshot review: ALL of it. Especially frog/duck fins on a spread hand, hotdog fingers, Geometric at levels 1-5, gridmesh line weight, painting palette, every Part E item in puppet view, the Detail slider.
+- Open: owned vs locked above; true webbing and longer fingers need a rig extension (your call).
+
 ## 2026-11-02 (12) — Hue rainbow, tighter picker panel, Customise / Try-on split (NEEDS SCREENSHOT REVIEW)
 - Changed (UX/styling only; no cosmetics logic, rig, connection, match, validation):
   1. HUE SLIDER: it was gold because the earlier `.cat-color input[type=range]` rule (more specific) overrode the gradient. Now `.cat-color input[type=range].cp-hue` has appearance none, a red-orange-yellow-green-cyan-blue-magenta-red gradient and a white handle with a dark edge (webkit + moz thumb styles). Scoped to the picker; the volume / intensity sliders are untouched.

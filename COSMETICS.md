@@ -241,3 +241,6 @@ Drawn by `tools/make_batch1.py` (uses the helpers of `make_skins.py`, appends to
 * The three nail items are in the existing **nails layer** (Nail polish chip), so they get the category colour picker, stack with polish, and are drawn on the nail side only.
 * **Not built (rig limit):** *longer fingers*. The rig stretches every segment so its end lands exactly on the next landmark, so a skin cannot make a finger longer, and an item that only extends the tip cannot match the hand's colour. It needs a rig extension (a per-finger extension past the tip landmark, drawn in the base hand's own colours). *Floppy fingers* was possible because width is part of the skin, so it is a **base hand**, not an item.
 
+
+## Part E content (2026-11-02): twelve more generic items (`tools/make_batch3.py`)
+Hands (skins): `bone` `sand` `inksketch` free; `chrome` `eyes` locked (ad); `burnbone` locked (0.99, embers + glow emitters). Nails layer: `hook` free (index finger), `scissors` locked (ad; index + middle). Gloves: `boxing` `rubber` free, `formal` locked (ad); all recolourable. Ring: `ornate` locked (0.99, glow + glint emitters). Generated hands (`js/generated.js`): Geometric (`gc` 1-5) and Painting (`sd` seed, locked) travel as validated integers; see DECISIONS.md. Gridmesh is a normal skin file (`gridmesh`, free).
