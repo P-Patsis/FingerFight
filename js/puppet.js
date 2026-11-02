@@ -23,6 +23,36 @@ const PATH = /^[MmLlHhVvCcSsQqTtAaZz0-9eE.,\s+-]{1,4000}$/;      // path data on
 const num = v => typeof v === 'number' && Number.isFinite(v);
 const pt = v => Array.isArray(v) && v.length === 2 && v.every(num);
 
+/** Idle animation of one shape (all optional, all numbers; see animState): pulse [speed Hz, amount 0-1, phase], drift [ax, ay, speed Hz, phase],
+ *  spin [cx, cy, radians/s] about a point in the part's space, blink [cy, period s, phase]. Only these keys, only numbers in range. */
+const ANIM = { pulse: [[0.05, 8], [0, 1], [-7, 7]], drift: [[-30, 30], [-30, 30], [0.05, 4], [-7, 7]], spin: [[-500, 500], [-500, 500], [-10, 10]], blink: [[-500, 500], [1, 12], [0, 12]] };
+export function parseAnim(a, where = 'shape') {
+  if (a === undefined || a === null) return null;
+  if (typeof a !== 'object' || Array.isArray(a)) throw new Error(where + ': anim must be an object');
+  const out = {};
+  for (const [k, v] of Object.entries(a)) {
+    const spec = ANIM[k];
+    if (!spec) throw new Error(where + ': anim.' + k + ' is not an animation (' + Object.keys(ANIM).join(', ') + ')');
+    if (!Array.isArray(v) || v.length !== spec.length || v.some((x, i) => !(num(x) && x >= spec[i][0] && x <= spec[i][1]))) throw new Error(where + ': anim.' + k + ' needs ' + spec.length + ' numbers in range');
+    out[k] = v.slice();
+  }
+  return Object.keys(out).length ? out : null;
+}
+/** A "dynamic" setting for an item or overlay: it follows how stretched the finger is. true or {pivot, min, hide, only}; missing = static = null.
+ *  pivot: where (a share of the part's length up from its pivot) the shape shrinks toward; min: its size when the finger is curled (0-1);
+ *  hide: not drawn at all once the finger is curled; only: 'tip' (just the *_tip parts follow the finger) or 'all'. */
+export function parseDynamic(d, id = 'item') {
+  if (d === undefined || d === null || d === false) return null;
+  if (d === true) d = {};
+  if (typeof d !== 'object' || Array.isArray(d)) throw new Error(id + ': dynamic must be true or an object');
+  const pivot = d.pivot === undefined ? 0.75 : d.pivot, min = d.min === undefined ? 0.2 : d.min;
+  if (!inRange(pivot, 0, 1.5)) throw new Error(id + ': dynamic.pivot must be 0-1.5');
+  if (!inRange(min, 0, 1)) throw new Error(id + ': dynamic.min must be 0-1');
+  if (d.hide !== undefined && typeof d.hide !== 'boolean') throw new Error(id + ': dynamic.hide must be true or false');
+  if (d.only !== undefined && !['tip', 'all'].includes(d.only)) throw new Error(id + ': dynamic.only must be tip or all');
+  return { pivot, min, hide: d.hide !== false, only: d.only || 'tip' };
+}
+
 export function parseShapes(list, where) {
   if (!Array.isArray(list) || !list.length || list.length > 12) throw new Error(where + ': shapes must be a list of 1-12 shapes');
   return list.map((s, i) => {
@@ -31,7 +61,7 @@ export function parseShapes(list, where) {
     for (const k of ['fill', 'stroke']) if (s[k] !== undefined && !(typeof s[k] === 'string' && COLOR.test(s[k]))) throw new Error(at + ': ' + k + ' must be a #colour or "none"');
     if (s.strokeWidth !== undefined && !(num(s.strokeWidth) && s.strokeWidth >= 0 && s.strokeWidth <= 40)) throw new Error(at + ': strokeWidth must be 0-40');
     if (s.opacity !== undefined && !(num(s.opacity) && s.opacity >= 0 && s.opacity <= 1)) throw new Error(at + ': opacity must be 0-1');
-    return { d: s.d, fill: s.fill ?? 'none', stroke: s.stroke ?? 'none', strokeWidth: s.strokeWidth ?? 0, opacity: s.opacity ?? 1 };
+    return { d: s.d, fill: s.fill ?? 'none', stroke: s.stroke ?? 'none', strokeWidth: s.strokeWidth ?? 0, opacity: s.opacity ?? 1, anim: parseAnim(s.anim, at) };
   });
 }
 
@@ -71,7 +101,8 @@ export function parseExtend(e, id = 'skin') {
   if (!inRange(droop, 0, 2)) throw new Error(id + ': extend.droop must be 0-2 (radians)');
   const fingers = e.fingers === undefined ? FINGER_NAMES.slice() : e.fingers;
   if (!Array.isArray(fingers) || !fingers.length || fingers.some((f, i) => !FINGER_NAMES.includes(f) || fingers.indexOf(f) !== i)) throw new Error(id + ': extend.fingers must list finger names once each');
-  return { len: e.len, pieces, droop, fingers: fingers.slice() };
+  if (e.physics !== undefined && typeof e.physics !== 'boolean') throw new Error(id + ': extend.physics must be true or false');
+  return { len: e.len, pieces, droop, fingers: fingers.slice(), physics: e.physics === true };
 }
 /** Checks a skin's "sand" (the grains of a sand hand; see js/sand.js). Missing = not a sand hand = null. */
 export function parseSand(s, id = 'skin') {
@@ -110,7 +141,7 @@ export function parseSkin(json) {
   }
   const overlays = (json.overlays || []).map((o, i) => {
     if (!o || !PART_NAMES.includes(o.part)) throw new Error('skin ' + json.id + ': overlay ' + i + ' names an unknown part');
-    return { part: o.part, shapes: parseShapes(o.shapes, 'overlay ' + i) };
+    return { part: o.part, shapes: parseShapes(o.shapes, 'overlay ' + i), dynamic: parseDynamic(o.dynamic, 'overlay ' + i) };
   });
   const order = json.order === undefined ? DEFAULT_ORDER : json.order;
   if (!Array.isArray(order) || order.some(p => !PART_NAMES.includes(p))) throw new Error('skin ' + json.id + ': order must list known part names');
@@ -145,7 +176,7 @@ export function segmentMatrix(A, B, length, sx) {
  * [back]: true = the back of this hand faces the camera (nails show), false = the palm faces it (nails hidden), undefined = not known
  * (simulator poses, old pictures): everything is drawn, as before.
  */
-export function sideOf(L) { return L.layer === 'nails' ? 'back' : L.side || 'both'; }
+export function sideOf(L) { return L.side || (L.layer === 'nails' ? 'back' : 'both'); }
 export function sideShown(L, back) {
   const side = sideOf(L);
   if (side === 'both' || back === undefined || back === null) return true;
@@ -175,9 +206,9 @@ const f1 = v => Math.round(v * 10) / 10;
 const at = p => f1(p.x) + ' ' + f1(p.y);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 
-/** The part of a finger's landmark chain between fractions [s0] and [s1] of its length, as points (the joints in between are kept, so it follows a curled finger). */
-export function chainSlice(lm, finger, s0, s1) {
-  const pts = CHAIN[finger].map(i => lm[i]), seg = [];
+/** The part of a polyline between fractions [s0] and [s1] of its length, as points (the vertices in between are kept, so it follows a bent finger). */
+export function polySlice(pts, s0, s1) {
+  const seg = [];
   let total = 0;
   for (let k = 0; k < pts.length - 1; k++) { seg.push(dist2(pts[k], pts[k + 1])); total += seg[k]; }
   const pointAt = s => {
@@ -193,16 +224,42 @@ export function chainSlice(lm, finger, s0, s1) {
   out.push(pointAt(s1));
   return out;
 }
+/** The part of a finger's landmark chain between fractions [s0] and [s1] of its length. */
+export function chainSlice(lm, finger, s0, s1) { return polySlice(CHAIN[finger].map(i => lm[i]), s0, s1); }
+
+/**
+ * How stretched out a finger is, 0 (curled) .. 1 (straight), from the landmarks only: the straight-line distance knuckle -> tip over the length
+ * of the chain. A straight finger is ~1, a curled one ~0.2-0.5. Drawing aids (dynamic nails / claws / hooks) use it; counting does not.
+ */
+export const EXT_CURLED = 0.55, EXT_STRAIGHT = 0.85;
+const THUMB_CURLED = 0.72, THUMB_STRAIGHT = 0.92;      // a thumb never folds as far as a finger, so its ratio is higher at both ends
+export function fingerExtension(lm, finger) {
+  const pts = CHAIN[finger].map(i => lm[i]);
+  if (pts.some(p => !p || !num(p.x) || !num(p.y))) return 1;
+  let chain = 0;
+  for (let k = 0; k < 3; k++) chain += dist2(pts[k], pts[k + 1]);
+  if (!(chain > 0)) return 1;
+  const lo = finger === 'thumb' ? THUMB_CURLED : EXT_CURLED, hi = finger === 'thumb' ? THUMB_STRAIGHT : EXT_STRAIGHT;
+  const x = clamp01((dist2(pts[0], pts[3]) / chain - lo) / (hi - lo));
+  return x * x * (3 - 2 * x);
+}
+
+/** The finger's centre line for drawing: its landmark chain, then the ends of its extension links (so a web or a dynamic item follows the LONG finger). */
+function fingerPolyline(lm, finger, ext, ends) {
+  const pts = CHAIN[finger].map(i => lm[i]);
+  if (ext && ext.fingers.includes(finger)) for (const p of extensionPieces(lm, finger, ext, ends?.[finger])) pts.push(p.b);
+  return pts;
+}
 
 /**
  * The web membranes of one hand (pure geometry, pixel points in and out): one per gap between neighbouring fingers. Each is a polygon whose
- * two long sides are slices of the neighbouring fingers' own landmark chains (so it is pinned to both fingers and stretches / contracts as they
- * spread or close) and whose free edge is a scallop curve dipping back toward the knuckles. Returns [{pair, fill, edge}] as path data in pixel space.
+ * two long sides are slices of the neighbouring fingers' own centre lines (landmark chain + extension, so it is pinned to both fingers, follows
+ * the spread and the length) and whose free edge is a scallop curve dipping back toward the knuckles. Returns [{pair, fill, edge}] as path data in pixel space.
  */
-export function webGeometry(lm, web) {
+export function webGeometry(lm, web, ext = null, ends = null) {
   const out = [];
   for (const [fa, fb] of WEB_GAPS) {
-    const A = chainSlice(lm, fa, WEB_ROOT, web.reach), B = chainSlice(lm, fb, WEB_ROOT, web.reach);
+    const A = polySlice(fingerPolyline(lm, fa, ext, ends), WEB_ROOT, web.reach), B = polySlice(fingerPolyline(lm, fb, ext, ends), WEB_ROOT, web.reach);
     const a0 = A[0], a1 = A[A.length - 1], b0 = B[0], b1 = B[B.length - 1];
     const m1 = { x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 }, m0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 };
     const k = web.scallop * 2;                           // the curve's middle ends up `scallop` of the way from the free edge to the knuckles
@@ -219,8 +276,9 @@ export function webGeometry(lm, web) {
  * The first link starts ON the tip landmark and runs along the finger's direction (dip -> tip); each following link turns toward screen-down
  * (gravity) a little more, `droop` radians in all, so a floppy finger sags. A finger that is folded over shortens its extension (a fist does not
  * sprout long fingers). Returns [] for a finger that cannot be posed. The landmarks are only read.
+ * [ends]: link end points from the physics (js/dynamics.js) to use instead of the ideal ones (the finger lags and wobbles); same count as the links.
  */
-export function extensionPieces(lm, finger, ext) {
+export function extensionPieces(lm, finger, ext, ends = null) {
   const ids = CHAIN[finger], pts = ids.map(i => lm[i]);
   if (pts.some(p => !p || !num(p.x) || !num(p.y))) return [];
   let chain = 0;
@@ -239,8 +297,10 @@ export function extensionPieces(lm, finger, ext) {
     const turn = Math.min(want, angle), sgn = dx >= 0 ? 1 : -1, cos = Math.cos(turn * sgn), sin = Math.sin(turn * sgn);
     [dx, dy] = [dx * cos - dy * sin, dx * sin + dy * cos];
     const nx = x + dx * L, ny = y + dy * L;
-    out.push({ a: { x, y }, b: { x: nx, y: ny }, last: k === n - 1 });
+    const b = ends && ends.length === n && ends[k] && num(ends[k].x) && num(ends[k].y) ? ends[k] : { x: nx, y: ny };
+    out.push({ a: { x, y }, b, last: k === n - 1, ideal: { x: nx, y: ny }, len: L });
     x = nx; y = ny;
+    if (ends && ends.length === n && ends[k]) { x = ends[k].x; y = ends[k].y; }
   }
   return out;
 }
@@ -258,23 +318,27 @@ export function extensionEnds(lm, skin, layers = []) {
   return out;
 }
 const IDENTITY = [1, 0, 0, 1, 0, 0];
-/** Plan steps for one hand's extension of [fingers]: each link is the hand's own mid (inner links) or tip (last link) shape for that finger. */
-function extensionSteps(lm, skin, ext, sx, finger, tag) {
-  const steps = [];
-  for (const p of extensionPieces(lm, finger, ext)) {
-    const part = skin.parts[finger + (p.last ? '_tip' : '_mid')];
-    const m = segmentMatrix(p.a, p.b, part.length, sx);
-    if (m) steps.push({ part: finger + '_ext' + tag, m, shapes: part.shapes });
-  }
-  return steps;
+const DYN_HIDE = 0.1;                                    // below this stretch a dynamic shape is not drawn at all
+
+/** Matrix [m] with the shape squashed along the finger about the point [pivot x length] up its own part: how a nail / claw / hook retracts. Null = hidden. */
+export function dynamicMatrix(m, cfg, length, e, shown) {
+  if (cfg.hide && (shown === undefined ? e < DYN_HIDE : !shown)) return null;
+  const k = cfg.min + (1 - cfg.min) * e, y0 = -cfg.pivot * length;
+  return [m[0], m[1], m[2] * k, m[3] * k, m[4] + m[2] * y0 * (1 - k), m[5] + m[3] * y0 * (1 - k)];
 }
+/** Matrix product [m] x [t] (t applied first, in the shape's own space). */
+export const mulM = (m, t) => [m[0] * t[0] + m[2] * t[1], m[1] * t[0] + m[3] * t[1], m[0] * t[2] + m[2] * t[3], m[1] * t[2] + m[3] * t[3], m[0] * t[4] + m[2] * t[5] + m[4], m[1] * t[4] + m[3] * t[5] + m[5]];
 
 /**
  * Where every part of [skin] goes for one hand. [lm]: 21 {x, y} points in PIXELS. Returns [{part, m, shapes}] in draw
  * order, ready for the renderer (overlays follow the part they belong to, in that part's transform). Hands that cannot
  * be posed (collapsed or missing points) give an empty plan.
+ * [dyn]: optional live state of this hand (js/dynamics.js): `ext` {finger: 0..1} smoothed stretch, `shown` {finger: bool} for dynamic items,
+ * `ends` {finger: [points]} physics-driven extension links. Without it everything is computed from [lm] alone (pictures, previews).
+ * LENGTH-AWARE: when a finger is extended (hotdog / longer fingers), the tip shapes of every item and overlay ride the LAST link, the mid shapes
+ * fill the real tip and the inner links, and the web follows the long finger, so nothing floats mid-finger.
  */
-export function rigPlan(lm, skin, layers = [], back) {
+export function rigPlan(lm, skin, layers = [], back, dyn = null) {
   if (!Array.isArray(lm) || lm.length < 21 || lm.slice(0, 21).some(p => !p || !num(p.x) || !num(p.y))) return [];
   const palm = skin.parts.palm;
   const ref = palm.ref;
@@ -285,35 +349,60 @@ export function rigPlan(lm, skin, layers = [], back) {
   const matrices = {};
   matrices.palm = affineFrom3(ref.wrist, ref.index, ref.pinky, lm[0], lm[5], lm[17]);
   for (const [name, [a, b]] of Object.entries(SEGMENTS)) matrices[name] = segmentMatrix(lm[a], lm[b], skin.parts[name].length, sx);
+  const ext = activeExtend(skin, layers);
+  const stretch = f => dyn?.ext?.[f] ?? fingerExtension(lm, f);
+  const links = {};                                     // finger -> [{m, last}] in the order out from the tip
+  if (ext) for (const f of ext.fingers) {
+    links[f] = extensionPieces(lm, f, ext, dyn?.ends?.[f]).map(p => ({ m: segmentMatrix(p.a, p.b, skin.parts[f + (p.last ? '_tip' : '_mid')].length, sx), last: p.last, kind: p.last ? 'tip' : 'mid' })).filter(l => l.m);
+    if (!links[f].length) delete links[f];
+  }
+  /** Where shapes authored for part [name] are drawn: its own matrix, or (a finger with an extension) tip -> last link; mid -> mid, real tip, inner links. */
+  const targets = name => {
+    const [f, kind] = name.split('_');
+    const L = links[f];
+    if (!L || !matrices[name]) return matrices[name] ? [matrices[name]] : [];
+    if (kind === 'base') return [matrices[name]];
+    if (kind === 'mid') return [matrices[name], matrices[f + '_tip'], ...L.filter(l => !l.last).map(l => l.m)].filter(Boolean);
+    return L.filter(l => l.last).map(l => l.m);
+  };
   const plan = [];
-  const itemExt = layers.some(L => L?.extend), skinExt = !itemExt && skin.extend;            // a worn item's extension replaces the hand's own
   let webDone = !skin.web;
   const pushWeb = () => {                                // the membrane sits just over the palm and under every finger
     webDone = true;
-    const shape = (d, fill, stroke, w) => ({ d, fill, stroke, strokeWidth: w * sx, opacity: skin.web.opacity });
-    for (const g of webGeometry(lm, skin.web)) {
+    const shape = (d, fill, stroke, w) => ({ d, fill, stroke, strokeWidth: w * sx, opacity: skin.web.opacity, anim: null });
+    for (const g of webGeometry(lm, skin.web, ext, dyn?.ends)) {
       plan.push({ part: 'web', m: IDENTITY, shapes: [shape(g.fill, skin.web.fill, 'none', 0)] });
       if (skin.web.stroke !== 'none' && skin.web.strokeWidth > 0) plan.push({ part: 'web', m: IDENTITY, shapes: [shape(g.edge, 'none', skin.web.stroke, skin.web.strokeWidth)] });
+    }
+  };
+  /** Pushes [shapes] on each target of part [name], honouring a dynamic setting (retract / hide with the finger). */
+  const place = (name, shapes, tag, cfg, authored = name) => {
+    const f = name.split('_')[0], kind = name.split('_')[1];
+    for (const m0 of targets(authored)) {
+      let m = m0;
+      if (cfg && (cfg.only === 'all' || kind === 'tip')) m = dynamicMatrix(m0, cfg, skin.parts[name].length, stretch(f), dyn?.shown?.[f]);
+      if (m) plan.push({ part: name + tag, m, shapes });
     }
   };
   for (const name of skin.order) {
     if (!matrices[name]) continue;
     if (!webDone && name !== 'palm') pushWeb();
     plan.push({ part: name, m: matrices[name], shapes: skin.parts[name].shapes });
-    for (const o of skin.overlays) if (o.part === name) plan.push({ part: name + '+', m: matrices[name], shapes: o.shapes });
-    if (skinExt && name.endsWith('_tip') && skinExt.fingers.includes(name.slice(0, -4))) plan.push(...extensionSteps(lm, skin, skinExt, sx, name.slice(0, -4), ''));
+    const f = name.split('_')[0];
+    if (name.endsWith('_tip') && links[f]) for (const l of links[f]) plan.push({ part: f + '_ext', m: l.m, shapes: skin.parts[f + '_' + l.kind].shapes });
+    for (const o of skin.overlays) if (o.part === name) place(name, o.shapes, '+', o.dynamic);
   }
   if (!webDone) pushWeb();
   // cosmetic layers (tattoo, nails, ring, glove...): one whole pass each, in z-order, so a glove covers a ring on ANY finger.
-  // Each layer item gives shapes per named part; they ride the same matrices as the base hand's parts.
+  // Each layer item gives shapes per named part; they ride the same matrices as the base hand's parts (or its extension links).
   for (const L of layers) {
-    if (sideShown(L, back)) {
-      for (const name of PART_NAMES) {
-        const shapes = L.parts?.[name];
-        if (shapes && matrices[name]) plan.push({ part: name + '@' + L.id, m: matrices[name], shapes });
-      }
+    if (!sideShown(L, back)) continue;
+    for (const name of PART_NAMES) {
+      const shapes = L.parts?.[name];
+      if (!shapes) continue;
+      if (name === 'palm') { if (matrices.palm) plan.push({ part: 'palm@' + L.id, m: matrices.palm, shapes }); continue; }
+      place(name, shapes, '@' + L.id, L.dynamic);
     }
-    if (L.extend && L === layers.findLast(x => x?.extend)) for (const f of L.extend.fingers) plan.push(...extensionSteps(lm, skin, L.extend, sx, f, '@' + L.id));   // fingers longer than the tracked tip, in the hand's own colours
   }
   return plan;
 }
@@ -327,8 +416,22 @@ function pathOf(shape) {
   return p;
 }
 
-/** Draws a plan made by rigPlan. Needs Path2D (every browser); where it is missing nothing is drawn. */
-export function drawPlan(ctx, plan, alpha = 1) {
+/** The matrix and opacity factor of an animated shape at [time] seconds (idle animation: pulse, drift, spin, blink); pure, so it is testable. */
+export function animState(anim, m, time) {
+  let k = 1, t = IDENTITY;
+  if (anim.drift) { const [ax, ay, sp, ph] = anim.drift, a = time * sp * 2 * Math.PI + ph; t = mulM(t, [1, 0, 0, 1, ax * Math.sin(a), ay * Math.cos(a)]); }
+  if (anim.spin) { const [cx, cy, sp] = anim.spin, a = time * sp, c = Math.cos(a), s = Math.sin(a); t = mulM(t, [c, s, -s, c, cx - c * cx + s * cy, cy - s * cx - c * cy]); }
+  if (anim.blink) {                                     // the shape squashes flat for 0.16 s every `period` seconds
+    const [cy, period, ph] = anim.blink, x = (time + ph) % period;
+    if (x < 0.16) { const q = 1 - Math.sin(Math.PI * x / 0.16) * 0.92; t = mulM(t, [1, 0, 0, q, 0, cy * (1 - q)]); }
+  }
+  if (anim.pulse) { const [sp, amt, ph] = anim.pulse; k = 1 - amt + amt * (0.5 + 0.5 * Math.sin(time * sp * 2 * Math.PI + ph)); }
+  return { m: mulM(m, t), k };
+}
+
+/** Draws a plan made by rigPlan. Needs Path2D (every browser); where it is missing nothing is drawn.
+ *  [time]: seconds for the idle animations (null / undefined = still: reduced motion, pictures, a phone that is too slow). */
+export function drawPlan(ctx, plan, alpha = 1, time = null) {
   if (typeof Path2D === 'undefined' || !(alpha > 0.01)) return;
   ctx.save();
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -336,17 +439,24 @@ export function drawPlan(ctx, plan, alpha = 1) {
     ctx.setTransform(...step.m);
     for (const s of step.shapes) {
       const p = pathOf(s);
-      ctx.globalAlpha = s.opacity * alpha;
+      let k = 1;
+      if (s.anim && time !== null && time !== undefined) { const a = animState(s.anim, step.m, time); k = a.k; ctx.setTransform(...a.m); }
+      ctx.globalAlpha = s.opacity * alpha * k;
       if (s.fill !== 'none') { ctx.fillStyle = s.fill; ctx.fill(p); }
       if (s.stroke !== 'none' && s.strokeWidth > 0) { ctx.lineWidth = s.strokeWidth; ctx.strokeStyle = s.stroke; ctx.stroke(p); }
+      if (s.anim && time !== null && time !== undefined) ctx.setTransform(...step.m);
     }
   }
   ctx.restore();                                         // restores the caller's transform and alpha
 }
 
-/** One call: pose [skin] on each hand ([hands]: lists of 21 {x, y} pixel points) and draw it. */
-export function drawPuppet(ctx, hands, skin, layers = [], backs = [], alphas = null) {
-  hands.forEach((lm, i) => drawPlan(ctx, rigPlan(lm, skin, layers, backs?.[i]), alphas?.[i] ?? 1));   // alphas: a sand hand that is crumbling fades as its grains take over
+/** One call: pose [skin] on each hand ([hands]: lists of 21 {x, y} pixel points) and draw it.
+ *  [dyns]: per-hand live state (js/dynamics.js: stretch, physics, idle time); [alphas]: a crumbling sand hand fades as its grains take over. */
+export function drawPuppet(ctx, hands, skin, layers = [], backs = [], alphas = null, dyns = null) {
+  hands.forEach((lm, i) => {
+    const d = dyns?.[i] || null;
+    drawPlan(ctx, rigPlan(lm, skin, layers, d?.back !== undefined && d?.back !== null ? d.back : backs?.[i], d), alphas?.[i] ?? 1, d ? d.animTime : null);
+  });
 }
 
 // ---- a pose for finger states (when there are no landmarks: simulator, filtered pictures, old clients) -----------------

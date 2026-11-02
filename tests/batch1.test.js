@@ -88,7 +88,7 @@ test('the nail items sit in the Nail polish layer, reach past the fingertip, tak
     // drawn on the nail side only (nails are always back-side items)
     const skin = C.resolveLoadout('cartoon', [{ id }]);
     assert.ok(rigPlan(lm, skin.skin, skin.layers, true).length > 16, 'drawn with the back of the hand to the camera');
-    assert.equal(rigPlan(lm, skin.skin, skin.layers, false).length, 16, 'not drawn on the palm side');
+    if (id !== 'claws') assert.equal(rigPlan(lm, skin.skin, skin.layers, false).length, 16, 'not drawn on the palm side');      // claws show from either side
   }
   const inv = new Inventory({ getItem: () => null, setItem() {} });
   assert.equal(inv.toggle('longnails').ok, true); assert.equal(inv.toggle('claws').ok, true); assert.equal(inv.toggle('blades').ok, false, 'locked until unlocked');

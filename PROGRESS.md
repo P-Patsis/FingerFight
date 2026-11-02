@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-02 (15) — Big build in parts A-C (all visuals need screenshot / phone review)
+### PART A — flicker fix, dynamic nails/claws, glove cards, length-aware items + webbing
+- FLICKER: cause was the "which side faces the camera" flag (tracker left/right label + knuckle geometry flip frame to frame, so back-only nails appeared and vanished). `HandDynamics.stableBack` (js/dynamics.js) now holds the side until the other one is seen 6 frames in a row; the dynamic "shown" flag has hysteresis (on above 0.22, off below 0.08) and the stretch is smoothed (70 ms). Claws now show from either side; Long nails stay back-side.
+- DYNAMIC: `dynamic` on an item (or skin overlay) = {pivot, min, hide, only}. `fingerExtension` (0 curled .. 1 straight, from the landmarks only; thumb has its own range) scales the shape toward its pivot and hides it when the finger is curled, per finger. Long nails and Claws use it.
+- GLOVE CARDS: item cards showed the item stacked on whatever was worn (so White changed when Leather was worn). A card now shows that item alone on the worn hand (`loadoutWith`).
+- LENGTH-AWARE: with an extension (hotdog / longer fingers) the tip shapes of every item and overlay ride the LAST link, mid shapes fill the real tip and inner links, so hook/claws/nails/gloves no longer float mid-finger. The web follows the long finger (polyline = landmarks + link ends) and is bigger (frog/duck reach 0.93, was 0.72).
+- Simplified: rings sit on base segments so are unchanged; tip-space item parts that extend past the authored length are not part of the picture-fitting bounds.
+
 ## 2026-11-02 (14) — Ad-locks only, real web membrane, fingers past the tip, Sand shed + shake-collapse (ALL VISUALS NEED SCREENSHOT / PHONE REVIEW: drawn blind, no renderer on this device)
 - Changed:
   1. MONETISATION: NO MONEY ANYWHERE. Every price unlock is gone. Burning bone, Ornate ring and also Cyberpunk, Golden hand, Ruby ring and Knight glove (they were 0.99 / 0.49 too) are now ad-locks. `purchase` is no longer a valid unlock method (a file asking for it is refused), the skin/item data carries no `price`, the Store label is always "Watch ad to unlock (demo)". The unlock stub (`js/unlock.js`, STUB BOUNDARY) is still the single replaceable provider for a future ad SDK; there is no payment path at all. Confirmed by a test that scans every js/json/html file and the whole catalogue.

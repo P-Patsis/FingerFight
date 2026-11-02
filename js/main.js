@@ -971,7 +971,7 @@ $('startBtn').onclick = () => {
 // ---------------------------------------------------------------------------------------------
 const storeView = { category: 'all', layer: 'all' };
 const profileView = { category: 'all', layer: 'base', reset: false };
-let storeAnim = { raf: 0, ps: null, last: 0, rec: null };
+let storeAnim = { raf: 0, ps: null, last: 0, rec: null, hd: [] };
 const wearVisible = () => !$('store').hidden || !$('profile').hidden;
 const storeMsg = t => { $('storeMsg').textContent = t; };
 
@@ -1330,11 +1330,10 @@ function refreshPreview() {
   startStoreAnim();
 }
 /** The still preview has no real hand to shake, so a sand hand is jolted for a moment every few seconds to show its collapse (decoration only). */
-function demoShake(hands, now) {
+function demoJolt(rec, now) {
+  if (!rec.skin.sand && !rec.skin.extend?.physics) return null;
   const phase = (now / 1000) % 6;
-  if (phase > 1.2) return hands;
-  const dx = Math.sin(now / 26) * 26;
-  return hands.map(lm => lm.map(p => ({ x: p.x + dx, y: p.y })));
+  return phase > 1.2 ? null : { x: Math.sin(now / 26) * 26, y: 0 };
 }
 function startStoreAnim() {
   const c = $('storePreview'), ctx = c.getContext?.('2d');
@@ -1348,9 +1347,10 @@ function startStoreAnim() {
       ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, c.width, c.height);
       ctx.save();
       ctx.translate(c.width / 2, 0); ctx.scale(sw.scale, 1); ctx.translate(-c.width / 2, 0);        // turn about the hand's vertical axis
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [sw.back], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas() });
+      const jolt = demoJolt(rec, now);
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [sw.back], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), hd: storeAnim.hd, dt, jolt });
       ctx.restore();
-      storeAnim.ps.update(dt, rec.skin.sand ? demoShake(hands, now) : hands); storeAnim.ps.draw(ctx);
+      storeAnim.ps.update(dt, jolt ? hands.map(lm => lm.map(p => ({ x: p.x + jolt.x, y: p.y + jolt.y }))) : hands); storeAnim.ps.draw(ctx);
     } catch { /* decoration */ }
   };
   const frame = now => {

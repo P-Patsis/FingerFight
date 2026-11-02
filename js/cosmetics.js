@@ -4,7 +4,7 @@
 //   tattoo / nails / ring / glove - shapes on the named parts, drawn over the base in the ORDER THEY WERE EQUIPPED (the stack)
 //   effect     - a particle effect (no shapes)
 // Colour pickers: an item with a `tint` is drawn in the colour the player picked (see layers.js). Only plain #rrggbb is ever kept.
-import { parseShapes, PART_NAMES, parseSkin, parseExtend } from './puppet.js';
+import { parseShapes, PART_NAMES, parseSkin, parseExtend, parseDynamic } from './puppet.js';
 import { GENERATED, paramsKey, cleanGc, cleanSd, GC_DEFAULT } from './generated.js';
 import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor, cleanIntensity, INTENSITY_DEFAULT, shiftColor, dominantHue } from './layers.js';
 import { loadSkins, skinIds, getSkin, skinIdOf, hasSkin } from './skins.js';
@@ -20,11 +20,12 @@ export function parseItem(json) {
   const name = typeof json.name === 'string' && json.name.trim() ? json.name.trim().slice(0, 24) : json.id;
   const meta = parseMeta(json, json.layer);
   if (json.side !== undefined && !['back', 'palm', 'both'].includes(json.side)) throw new Error(json.id + ': side must be back, palm or both');
-  const item = { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', kind: 'layer', ...meta, side: json.layer === 'nails' ? 'back' : json.side || 'both', parts: {} };
+  const item = { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', kind: 'layer', ...meta, side: json.side || (json.layer === 'nails' ? 'back' : 'both'), parts: {} };
   if (json.layer === 'effect') {                     // an effect is only particles
     if (!item.particles.length) throw new Error(json.id + ': an effect needs "particles"');
     return item;
   }
+  item.dynamic = parseDynamic(json.dynamic, json.id);   // nails / claws that stretch out with the finger and retract when it curls
   item.extend = parseExtend(json.extend, json.id);   // fingers drawn past the tip, in the base hand's own shapes (see puppet.js)
   const parts = json.parts ?? (item.extend ? {} : undefined);
   if (!parts || typeof parts !== 'object' || (!Object.keys(parts).length && !item.extend)) throw new Error(json.id + ': needs "parts" (shapes per named part) or an "extend"');

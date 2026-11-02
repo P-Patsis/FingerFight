@@ -2,13 +2,13 @@
 //  - this site's files: network first (so an update arrives at once), the cached copy when offline
 //  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
 // Match traffic is WebRTC, which a service worker never sees.
-const VERSION = 'ff-d1fc9b6c';
+const VERSION = 'ff-6bc41a40';
 const HEAVY_CACHE = 'ff-heavy';           // the 17 MB hand model lives in its own cache, so a site update never makes it download again
 const SHELL = ['./', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
   'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js',
   'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js', 'js/names.js',
   'js/wake.js', 'js/stats.js', 'js/looks.js', 'js/colorpick.js', 'js/generated.js', 'js/puppet.js', 'js/skins.js', 'js/layers.js', 'js/particles.js', 'js/cosmetics.js',
-  'js/inventory.js', 'js/unlock.js', 'js/sand.js', 'assets/skins/manifest.json', 'assets/skins/cartoon.json', 'assets/skins/robot.json', 'assets/skins/neon.json',
+  'js/inventory.js', 'js/unlock.js', 'js/sand.js', 'js/dynamics.js', 'assets/skins/manifest.json', 'assets/skins/cartoon.json', 'assets/skins/robot.json', 'assets/skins/neon.json',
   'assets/skins/paw.json', 'assets/skins/dragon.json', 'assets/skins/gauntlet.json', 'assets/skins/goldhand.json', 'assets/items/manifest.json', 'assets/items/bubbles.json', 'assets/items/electric.json', 'assets/items/embers.json', 'assets/items/fingerless.json', 'assets/items/glow.json', 'assets/items/goldring.json', 'assets/items/knight.json', 'assets/items/leather.json', 'assets/items/nailpolish.json', 'assets/items/ruby.json', 'assets/items/runes.json', 'assets/items/scar.json', 'assets/items/silverring.json', 'assets/items/sparkles.json', 'assets/items/tribal.json', 'assets/items/whiteglove.json', 'assets/skins/lowpoly.json', 'assets/skins/frog.json', 'assets/skins/duck.json', 'assets/skins/toybrick.json', 'assets/skins/mechanical.json', 'assets/skins/cyberpunk.json', 'assets/skins/flaming.json', 'assets/skins/floppy.json', 'assets/skins/gridmesh.json', 'assets/skins/painting.json', 'assets/skins/bone.json', 'assets/skins/chrome.json', 'assets/skins/burnbone.json', 'assets/skins/sand.json', 'assets/skins/eyes.json', 'assets/skins/inksketch.json', 'assets/items/longnails.json', 'assets/items/claws.json', 'assets/items/blades.json', 'assets/items/scissors.json', 'assets/items/hook.json', 'assets/items/boxing.json', 'assets/items/rubber.json', 'assets/items/formal.json', 'assets/items/ornate.json', 'assets/items/longfingers.json'];
 const HEAVY = ['https://cdn.jsdelivr.net/npm/@mediapipe/', 'https://storage.googleapis.com/mediapipe-models/'];
 

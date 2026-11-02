@@ -150,9 +150,9 @@ FLOPPY_T = tint('#d9573b', {'#d9573b': 'main', '#f8a58f': 'light', '#7f1d1d': 'd
 def skins():
     A = 'Finger Fight'
     return [build('frog', 'Frog', A, frog_palm(), frog_seg, category='animal', tint=FROG_T,
-                web={'fill': '#4f9a3b', 'stroke': '#2f6b36', 'strokeWidth': 1.6, 'opacity': 0.95, 'reach': 0.72, 'scallop': 0.28}),
+                web={'fill': '#4f9a3b', 'stroke': '#2f6b36', 'strokeWidth': 1.6, 'opacity': 0.95, 'reach': 0.93, 'scallop': 0.3}),
             build('duck', 'Duck', A, duck_palm(), duck_seg, category='animal',
-                web={'fill': '#f97316', 'stroke': '#9a3412', 'strokeWidth': 1.6, 'opacity': 0.95, 'reach': 0.72, 'scallop': 0.28}),
+                web={'fill': '#f97316', 'stroke': '#9a3412', 'strokeWidth': 1.6, 'opacity': 0.95, 'reach': 0.93, 'scallop': 0.3}),
             build('toybrick', 'Toy brick', A, brick_palm(), brick_seg, category='fantasy', tint=BRICK_T),
             build('mechanical', 'Mechanical', A, mech_palm(), mech_seg, category='scifi', free=False, unlock={'method': 'ad'},
                   particles=[{'effect': 'sparks', 'color': '#fde68a', 'where': 'knuckles', 'rate': 3}]),
@@ -165,10 +165,12 @@ def skins():
                   extend={'len': 0.95, 'pieces': 3, 'droop': 1.35})]
 
 # ---- nail items: shapes in the fingertip's space, reaching past the tip
-def nail_item(id_, name, shape, category, tint_, free=True, unlock=None):
+def nail_item(id_, name, shape, category, tint_, free=True, unlock=None, dynamic=None, side=None):
     parts = {f'{f}_tip': shape(f, HALF[f][2], LEN[f][2]) for f in FINGERS}
     out = {'format': 1, 'id': id_, 'name': name, 'author': 'Finger Fight', 'license': 'CC0 (made for Finger Fight)', 'layer': 'nails', 'category': category, 'tint': tint_, 'parts': parts}
     if not free: out['free'] = False; out['unlock'] = unlock
+    if dynamic: out['dynamic'] = dynamic          # stretches out with the finger, retracts when it curls (rig: dynamicMatrix)
+    if side: out['side'] = side
     return out
 def long_nail(f, w, L):
     b = -(L - 5); sh = -(L + 1); tip = -(L + 19)
@@ -186,8 +188,8 @@ def blade(f, w, L):
 
 NAIL_SW = ['#dc2626', '#f97316', '#facc15', '#22c55e', '#22d3ee', '#3b82f6', '#a855f7', '#ec4899', '#f8fafc', '#111827']
 def items():
-    return [nail_item('longnails', 'Long nails', long_nail, 'human', tint('#dc2626', {'#dc2626': 'main', '#7f1d1d': 'dark', '#fca5a5': 'light'}, NAIL_SW)),
-            nail_item('claws', 'Claws', claw, 'animal', tint('#f1e6d0', {'#f1e6d0': 'main', '#6b4423': 'dark', '#fffbeb': 'light'}, ['#f1e6d0'] + NAIL_SW[:-1])),
+    return [nail_item('longnails', 'Long nails', long_nail, 'human', tint('#dc2626', {'#dc2626': 'main', '#7f1d1d': 'dark', '#fca5a5': 'light'}, NAIL_SW), dynamic={'pivot': 0.65, 'min': 0.25}),
+            nail_item('claws', 'Claws', claw, 'animal', tint('#f1e6d0', {'#f1e6d0': 'main', '#6b4423': 'dark', '#fffbeb': 'light'}, ['#f1e6d0'] + NAIL_SW[:-1]), dynamic={'pivot': 0.85, 'min': 0.25}, side='both'),
             nail_item('blades', 'Blade fingers', blade, 'scifi', tint('#cbd5e1', {'#cbd5e1': 'main', '#334155': 'dark', '#475569': 'mid', '#f8fafc': 'light'}, ['#cbd5e1', '#fbbf24', '#ef4444', '#22d3ee', '#a855f7', '#22c55e']),
                       free=False, unlock={'method': 'ad'})]
 

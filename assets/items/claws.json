@@ -92,5 +92,10 @@
     "strokeWidth": 0.9
    }
   ]
- }
+ },
+ "dynamic": {
+  "pivot": 0.85,
+  "min": 0.25
+ },
+ "side": "both"
 }

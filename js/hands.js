@@ -4,6 +4,7 @@ import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './
 import { statesFromCount, annotate, FINGERS, TIP_ID, drawBones } from './avatars.js';
 import { viewOf } from './logic.js';
 import { drawPuppet, handBack } from './puppet.js';
+import { HandDynamics } from './dynamics.js';
 import { skinIdOf } from './skins.js';
 import { resolveLoadout, stackToWire, genWire } from './cosmetics.js';
 import { cleanColor, cleanSkelStyle } from './layers.js';
@@ -38,6 +39,7 @@ export class HandCam {
     this.video = video; this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.facing = 'user';
     this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', []) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
+    this.hd = [];                                        // live per-hand state: steady side, finger stretch, floppy-finger physics, idle animation clock (js/dynamics.js)
     this.particles = new ParticleSystem();               // item effects; driven by the tracking loop below, no timers of their own
     this.lastPts = null; this.lastDraw = 0;
     this.deviceId = null; this.exact = false; this.flipping = false;
@@ -222,10 +224,12 @@ export class HandCam {
       try {
         const pts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
         const rec = this.overlay.rec;
-        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hands.map((lm, i) => handBack(lm, scores[i]?.side)), this.particles.bodyAlphas());   // nails only when the back of that hand faces the camera; a crumbling sand hand fades
+        const now = performance.now(), dt = this.lastDraw ? (now - this.lastDraw) / 1000 : 0;
+        this.lastDraw = now; this.lastPts = pts;
+        this.hd.length = hands.length;
+        const hs = hands.map((lm, i) => (this.hd[i] ??= new HandDynamics()).update(pts[i], dt, rec.skin, rec.layers, handBack(lm, scores[i]?.side)));
+        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hs.map(h => h.back), this.particles.bodyAlphas(), hs);   // nails only when the back of that hand faces the camera (held steady); a crumbling sand hand fades
         if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
-          const now = performance.now(), dt = this.lastDraw ? (now - this.lastDraw) / 1000 : 0;
-          this.lastDraw = now; this.lastPts = pts;
           this.particles.update(dt, pts); this.particles.draw(this.ctx);
         }
         return;
@@ -281,7 +285,7 @@ export class HandCam {
     const best = noHand ? null : ([...seen].reverse().find(s => s.count === count) || seen[seen.length - 1]);
     const hands = best ? best.hands.slice(0, 2) : [];
     const states = hands.map(lm => fingerStates(lm, ar));
-    const backs = hands.map((lm, i) => handBack(lm, best?.scores?.[i]?.side));       // from the raw landmarks, before any mirroring
+    const backs = hands.map((lm, i) => this.hd[i]?.back ?? handBack(lm, best?.scores?.[i]?.side));       // from the raw landmarks, before any mirroring
     const mirror = this.facing === 'user';
     const q = x => Math.max(0, Math.min(1000, Math.round(x * 1000)));
     const lm = hands.length ? hands.map(h => h.map(p => [q(mirror ? 1 - p.x : p.x), q(p.y)])) : null;

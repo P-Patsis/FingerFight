@@ -248,7 +248,7 @@ export class Inventory {
     const e = entryOf(id), out = this.loadout();
     if (!e) return out;
     if (e.layer === 'base') { out.base = id; out.baseColor = this.handColors[id] || null; }
-    else if (!out.stack.some(s => s.id === id)) out.stack.push({ id, color: null });
+    else out.stack = [this.stack.find(s => s.id === id) ? { ...this.stack.find(s => s.id === id) } : { id, color: null }];   // an item card shows THAT item alone on the worn hand: it must not change when another item is worn
     return out;
   }
 }
