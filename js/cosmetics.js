@@ -130,6 +130,7 @@ export const stackFromWire = lay => cleanStack(lay);
 export const LEGACY_ITEMS = Object.freeze({
   pale: ['skintone', '#fbe3cf'], tan: ['skintone', '#e3ad7c'], brown: ['skintone', '#b97a4b'], deep: ['skintone', '#7a4a2b'],
   orc: ['skintone', '#86b35a'], frost: ['skintone', '#bfe3f5'],
+  blades: ['longclaws', null],                       // the blade-fingers item became Long claws
   rednails: ['nailpolish', '#dc2626'], blacknails: ['nailpolish', '#111827'], neonnails: ['nailpolish', '#22d3ee'],
 });
 /** The first versions kept one item per layer: {tone, tattoo, nails, ring, glove} -> a stack in that order (the old default z-order). */

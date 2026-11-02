@@ -15,6 +15,7 @@ export const EFFECTS = Object.freeze({
   embers: { kind: 'ember', life: [0.7, 1.4], speed: [0.4, 1], size: 2.2, gravity: -1.2 },  // little dots that float up
   glint: { kind: 'glint', life: [0.3, 0.6], speed: [0, 0], size: 5, gravity: 0 },          // a twinkling star
   bubbles: { kind: 'bubble', life: [1, 1.8], speed: [0.1, 0.3], size: 4.5, gravity: -0.5 }, // rings that drift up
+  flame: { kind: 'flame', life: [0.55, 1], speed: [0.05, 0.3], size: 8, gravity: -2.4, jitter: 0.08 },      // a licking teardrop of fire that rises and shrinks
   grain: { kind: 'grain', life: [1, 1.8], speed: [0.04, 0.2], size: 1.5, gravity: 0.35, jitter: 0.1 },   // sand shed from the edge of the hand, drifting down
 });
 export const WHERE = ['tips', 'knuckles', 'palm', 'hand'];
@@ -155,6 +156,12 @@ export function drawParticles(ctx, list) {
     } else if (p.kind === 'bubble') {
       ctx.strokeStyle = p.color; ctx.lineWidth = Math.max(1, p.size * 0.22);
       ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2, p.size * (0.8 + 0.5 * t)), 0, 7); ctx.stroke();
+    } else if (p.kind === 'flame') {
+      const r = Math.max(2, p.size * (1 - 0.65 * t)), wob = Math.sin(p.age * 16 + p.rot) * r * 0.22;
+      ctx.globalAlpha = Math.max(0, 0.9 * (1 - t * t));
+      ctx.fillStyle = p.color; ctx.beginPath();
+      ctx.moveTo(p.x + wob, p.y - r * 1.7); ctx.quadraticCurveTo(p.x + r * 1.1, p.y - r * 0.2, p.x, p.y + r * 0.7);
+      ctx.quadraticCurveTo(p.x - r * 1.1, p.y - r * 0.2, p.x + wob, p.y - r * 1.7); ctx.fill();
     } else if (p.kind === 'grain') {
       ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     } else {                                                                              // ember

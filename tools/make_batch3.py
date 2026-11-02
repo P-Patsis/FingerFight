@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Part E: twelve more GENERIC items (no characters, brands or likenesses), same formats as before.
-Hands: bone chrome burnbone sand eyes inksketch. Fingers (nails layer): scissors hook. Gloves: boxing rubber formal. Ring: ornate.
+Hands: bone burnbone sand eyes inksketch. Fingers: scissors (long blades, nails layer); the hook is a HAND now (make_batch5.py). Gloves: boxing rubber formal. Ring: ornate.
 Run: python3 tools/make_batch3.py"""
 import json, os, sys
 sys.path.insert(0, os.path.dirname(__file__))
@@ -24,18 +24,6 @@ def bone_seg(f, i, w, L):
     if i == 2: s.append({'d': circle(0, -L - 1, w * 0.9), 'fill': '#f1ead8', 'stroke': '#8a7a58', 'strokeWidth': 1.6})
     return s
 BONE_T = tint('#f1ead8', {'#f1ead8': 'main', '#8a7a58': 'dark', '#e6dcc0': 'mid', '#c9bb96': 'light'})
-
-def chrome_palm():
-    return [{'d': PALM_D, 'fill': '#9aa5b1', 'stroke': '#1f2937', 'strokeWidth': 2.5},
-            {'d': 'M 24 44 L 76 50 M 22 70 L 78 74 M 40 36 L 38 100 M 62 40 L 62 98', 'stroke': '#e5e7eb', 'strokeWidth': 2},
-            {'d': circle(50, 70, 9), 'fill': '#1f2937', 'stroke': '#ef4444', 'strokeWidth': 2}, {'d': circle(50, 70, 3.2), 'fill': '#ef4444'}]
-def chrome_seg(f, i, w, L):
-    k = w * 0.55
-    return [{'d': f'M {-k} 0 L {-k} {-L} M {k} 0 L {k} {-L}', 'stroke': '#1f2937', 'strokeWidth': 3},
-            {'d': f'M {-k} {-L * 0.08} L {k} {-L * 0.08} L {k} {-L * 0.92} L {-k} {-L * 0.92} Z', 'fill': '#cbd5e1', 'stroke': '#475569', 'strokeWidth': 1.4},
-            {'d': f'M {-k * 0.3} {-L * 0.15} L {-k * 0.3} {-L * 0.85}', 'stroke': '#f8fafc', 'strokeWidth': 1.6},
-            {'d': circle(0, -L, w * 0.75), 'fill': '#64748b', 'stroke': '#1f2937', 'strokeWidth': 1.6}]
-CHROME_T = tint('#cbd5e1', {'#cbd5e1': 'main', '#9aa5b1': 'mid', '#475569': 'dark', '#f8fafc': 'light'}, ['#cbd5e1', '#fbbf24', '#b45309', '#22d3ee', '#a855f7', '#f8fafc'])
 
 def burn_palm():
     p = bone_palm()
@@ -93,8 +81,6 @@ INK_T = tint('#faf7ee', {'#faf7ee': 'main', '#111827': 'dark'}, ['#faf7ee', '#fd
 
 def skins():
     return [build('bone', 'Bone', A, bone_palm(), bone_seg, category='scifi', tint=BONE_T),
-            build('chrome', 'Chrome skeleton', A, chrome_palm(), chrome_seg, category='scifi', free=False, unlock={'method': 'ad'}, tint=CHROME_T,
-                  particles=[{'effect': 'glint', 'color': '#f8fafc', 'where': 'knuckles', 'rate': 3}]),
             build('burnbone', 'Burning bone', A, burn_palm(), burn_seg, category='fantasy', free=False, unlock={'method': 'ad'},
                   particles=[{'effect': 'embers', 'color': '#f97316', 'where': 'tips', 'rate': 14}, {'effect': 'glow', 'color': '#dc2626', 'where': 'tips', 'rate': 2},
                              {'effect': 'embers', 'color': '#fde047', 'where': 'hand', 'rate': 6}]),
@@ -105,21 +91,25 @@ def skins():
             build('inksketch', 'Ink sketch', A, ink_palm(), ink_seg, category='human', tint=INK_T)]
 
 # ---------------- fingers (nails layer): shapes in the fingertip space, reaching past the tip
-def nails(id_, name, parts, category, tint_, free=True, unlock=None):
+def nails(id_, name, parts, category, tint_, free=True, unlock=None, dynamic=None, side=None):
     out = {'format': 1, 'id': id_, 'name': name, 'author': A, 'license': 'CC0 (made for Finger Fight)', 'layer': 'nails', 'category': category, 'tint': tint_, 'parts': parts}
     if not free: out['free'] = False; out['unlock'] = unlock
+    if dynamic: out['dynamic'] = dynamic
+    if side: out['side'] = side
     return out
-def scissors_tip(w, L):
-    b = -(L - 2)
-    blade = lambda s: {'d': f'M {s * w * 0.1} {b} L {s * w * 1.0} {-(L + 26)} L {s * w * 0.35} {-(L + 26)} L {-s * w * 0.4} {b} Z', 'fill': '#cbd5e1', 'stroke': '#334155', 'strokeWidth': 1.1}
-    return [blade(-1), blade(1), {'d': circle(0, b - 1, 2.2), 'fill': '#f59e0b', 'stroke': '#334155', 'strokeWidth': 1}]
-def hook_tip(w, L):
-    b = -(L - 3)
-    return [{'d': f'M {-w * 0.9} {b} L {w * 0.9} {b} L {w * 0.9} {b - 8} L {-w * 0.9} {b - 8} Z', 'fill': '#6b7280', 'stroke': '#111827', 'strokeWidth': 1.2},
-            {'d': f'M {-w * 0.35} {b - 8} L {-w * 0.35} {-(L + 18)} C {-w * 0.35} {-(L + 36)} {w * 2.6} {-(L + 36)} {w * 2.4} {-(L + 16)} L {w * 1.9} {-(L + 20)} C {w * 2} {-(L + 28)} {w * 0.35} {-(L + 28)} {w * 0.35} {-(L + 18)} L {w * 0.35} {b - 8} Z', 'fill': '#d1d5db', 'stroke': '#374151', 'strokeWidth': 1.3},
-            {'d': f'M 0 {b - 8} L 0 {-(L + 20)}', 'stroke': '#f9fafb', 'strokeWidth': 0.9}]
+# Scissor fingers: each of the four fingers is replaced by a LONG steel blade (a plate over the middle segment, a long tapering blade from the tip);
+# index and middle blades lean toward each other like open scissors. Dynamic: the blade retracts / hides when its finger curls; length-aware via the rig.
+LEAN = {'index': 1, 'middle': -1}
+def scissors_mid(f, w, L):
+    W = w * 1.1
+    return [{'d': f'M {-W} 0 L {-W} {-L} L {W} {-L} L {W} 0 Z', 'fill': '#94a3b8', 'stroke': '#475569', 'strokeWidth': 1.4},
+            {'d': circle(0, -L * 0.5, 1.9), 'fill': '#f59e0b', 'stroke': '#334155', 'strokeWidth': 1}]
+def scissors_tip(f, w, L):
+    b = -(L - 4); W = w * 1.1; tx = LEAN.get(f, 0) * w * 1.1
+    return [{'d': poly([(-W, b), (-W, -(L + 8)), (tx - w * 0.18, -(L + 66)), (tx + w * 0.18, -(L + 70)), (W, -(L + 8)), (W, b)]), 'fill': '#cbd5e1', 'stroke': '#334155', 'strokeWidth': 1.2},
+            {'d': f'M {-W * 0.25} {b} L {tx * 0.9} {-(L + 62)}', 'stroke': '#f8fafc', 'strokeWidth': 1},
+            {'d': f'M {-W} {b} L {W} {b}', 'stroke': '#334155', 'strokeWidth': 1.6}]
 SCISS_T = tint('#cbd5e1', {'#cbd5e1': 'main', '#334155': 'dark', '#f59e0b': 'mid'}, ['#cbd5e1', '#fbbf24', '#ef4444', '#22d3ee', '#a855f7'])
-HOOK_T = tint('#d1d5db', {'#d1d5db': 'main', '#374151': 'dark', '#6b7280': 'mid', '#f9fafb': 'light'}, ['#d1d5db', '#fbbf24', '#b45309', '#22d3ee'])
 
 # ---------------- gloves: every part
 def glove(id_, name, palm, seg, tint_, free=True, unlock=None):
@@ -163,9 +153,12 @@ def ornate():
                 {'d': circle(-w * 1.2, y - 2, 1.6) + circle(w * 1.2, y - 2, 1.6), 'fill': '#fde68a'}]}}
 
 def items():
-    sc = nails('scissors', 'Scissor fingers', {'index_tip': scissors_tip(HALF['index'][2], LEN['index'][2]), 'middle_tip': scissors_tip(HALF['middle'][2], LEN['middle'][2])}, 'scifi', SCISS_T, free=False, unlock={'method': 'ad'})
-    hk = nails('hook', 'Pirate hook', {'index_tip': hook_tip(HALF['index'][2], LEN['index'][2])}, 'fantasy', HOOK_T)
-    return [sc, hk, glove('boxing', 'Boxing gloves', box_palm(), box_seg, BOX_T), glove('rubber', 'Rubber gloves', rub_palm(), rub_seg, RUB_T),
+    parts = {}
+    for f in ('index', 'middle', 'ring', 'pinky'):
+        parts[f + '_mid'] = scissors_mid(f, HALF[f][1], LEN[f][1])
+        parts[f + '_tip'] = scissors_tip(f, HALF[f][2], LEN[f][2])
+    sc = nails('scissors', 'Scissor fingers', parts, 'scifi', SCISS_T, free=False, unlock={'method': 'ad'}, dynamic={'pivot': 0.7, 'min': 0.15, 'only': 'tip'}, side='both')
+    return [sc, glove('boxing', 'Boxing gloves', box_palm(), box_seg, BOX_T), glove('rubber', 'Rubber gloves', rub_palm(), rub_seg, RUB_T),
             glove('formal', 'Formal gloves', formal_palm(), formal_seg, FORMAL_T, free=False, unlock={'method': 'ad'}), ornate()]
 
 def main():

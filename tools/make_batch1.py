@@ -114,16 +114,22 @@ def cyber_seg(f, i, w, L):
     return s
 
 # ---- 7. flaming: a charred, glowing hand; the flames themselves are the particle emitters (embers + glow), with static licks on the tips
-def flame(w, base_y, h):
-    return f'M {-w * 0.9} {base_y} Q {-w * 1.2} {base_y - h * 0.5} {-w * 0.2} {base_y - h * 0.62} Q {-w * 0.3} {base_y - h * 0.85} 0 {base_y - h} Q {w * 0.35} {base_y - h * 0.8} {w * 0.35} {base_y - h * 0.6} Q {w * 1.2} {base_y - h * 0.5} {w * 0.9} {base_y} Z'
+def flame(w, base_y, h, cx=0):
+    return f'M {cx - w * 0.9} {base_y} Q {cx - w * 1.2} {base_y - h * 0.5} {cx - w * 0.2} {base_y - h * 0.62} Q {cx - w * 0.3} {base_y - h * 0.85} {cx} {base_y - h} Q {cx + w * 0.35} {base_y - h * 0.8} {cx + w * 0.35} {base_y - h * 0.6} Q {cx + w * 1.2} {base_y - h * 0.5} {cx + w * 0.9} {base_y} Z'
 def flame_palm():
     return [{'d': PALM_D, 'fill': '#3b1d12', 'stroke': '#7f1d1d', 'strokeWidth': 2.5},
             {'d': 'M 22 50 L 34 60 L 30 72 L 44 80 M 80 54 L 66 64 L 70 78 L 58 90', 'stroke': '#f97316', 'strokeWidth': 2.2},
             {'d': circle(50, 74, 10), 'stroke': '#ef4444', 'strokeWidth': 7, 'opacity': 0.3},
-            {'d': circle(50, 74, 6), 'fill': '#f97316', 'stroke': '#7f1d1d', 'strokeWidth': 1.2}]
+            {'d': circle(50, 74, 6), 'fill': '#f97316', 'stroke': '#7f1d1d', 'strokeWidth': 1.2},
+            # static flames licking up the palm: what a reduced-motion player sees (the live fire is the particle emitters)
+            {'d': flame(7, 100, 30, 24), 'fill': '#f97316', 'stroke': '#b91c1c', 'strokeWidth': 1, 'opacity': 0.9},
+            {'d': flame(8, 104, 36, 50), 'fill': '#f97316', 'stroke': '#b91c1c', 'strokeWidth': 1, 'opacity': 0.9},
+            {'d': flame(7, 100, 30, 74), 'fill': '#f97316', 'stroke': '#b91c1c', 'strokeWidth': 1, 'opacity': 0.9},
+            {'d': flame(4, 100, 18, 50), 'fill': '#fde047'}]
 def flame_seg(f, i, w, L):
     s = [{'d': capsule(w, L), 'fill': '#7f1d1d' if i != 1 else '#6b1a1a', 'stroke': '#3b1d12', 'strokeWidth': 2.4},
          {'d': f'M {-w * 0.6} {-L * 0.35} L {w * 0.6} {-L * 0.45}', 'stroke': '#f97316', 'strokeWidth': 1.6}]
+    if i < 2: s.append({'d': flame(w * 0.8, -L * 0.92, w * 2.4), 'fill': '#f97316', 'opacity': 0.85})
     if i == 2:
         s += [{'d': flame(w, -L, w * 3.4), 'fill': '#f97316', 'stroke': '#b91c1c', 'strokeWidth': 1.2},
               {'d': flame(w * 0.5, -L, w * 2.0), 'fill': '#fde047'}]
@@ -159,8 +165,8 @@ def skins():
             build('cyberpunk', 'Cyberpunk', A, cyber_palm(), cyber_seg, category='scifi', free=False, unlock={'method': 'ad'}, tint=CYBER_T,
                   particles=[{'effect': 'glint', 'color': '#22d3ee', 'where': 'hand', 'rate': 3}]),
             build('flaming', 'Flaming', A, flame_palm(), flame_seg, category='fantasy', free=False, unlock={'method': 'ad'},
-                  particles=[{'effect': 'embers', 'color': '#f97316', 'where': 'tips', 'rate': 16}, {'effect': 'embers', 'color': '#fde047', 'where': 'hand', 'rate': 8},
-                             {'effect': 'glow', 'color': '#dc2626', 'where': 'palm', 'rate': 3}, {'effect': 'glow', 'color': '#fb923c', 'where': 'tips', 'rate': 2}]),
+                  particles=[{'effect': 'flame', 'color': '#dc2626', 'where': 'hand', 'rate': 32}, {'effect': 'flame', 'color': '#f97316', 'where': 'hand', 'rate': 32},
+                             {'effect': 'flame', 'color': '#fde047', 'where': 'tips', 'rate': 26}, {'effect': 'flame', 'color': '#fb923c', 'where': 'palm', 'rate': 22}]),
             build('floppy', 'Hotdog fingers', A, floppy_palm(), floppy_seg, category='human', tint=FLOPPY_T,
                   extend={'len': 0.95, 'pieces': 3, 'droop': 1.35})]
 
@@ -180,18 +186,19 @@ def claw(f, w, L):
     b = -(L - 2)
     return [{'d': f'M {-w * 0.75} {b} Q {-w * 0.75} {b - 9} {w * 1.7} {b - 15} Q {w * 0.6} {b - 5} {w * 0.75} {b} Q 0 {b + 3} {-w * 0.75} {b} Z', 'fill': '#f1e6d0', 'stroke': '#6b4423', 'strokeWidth': 1.2},
             {'d': f'M {-w * 0.3} {b - 2} Q {w * 0.1} {b - 8} {w * 1.1} {b - 12}', 'stroke': '#fffbeb', 'strokeWidth': 0.9}]
-def blade(f, w, L):
-    b = -(L - 1)
-    return [{'d': f'M {-w * 1.05} {-(L - 7)} L {w * 1.05} {-(L - 7)} L {w * 1.05} {b} L {-w * 1.05} {b} Z', 'fill': '#475569', 'stroke': '#0f172a', 'strokeWidth': 1},
-            {'d': f'M {-w * 0.6} {b} L {-w * 0.5} {-(L + 20)} L 0 {-(L + 28)} L {w * 0.5} {-(L + 20)} L {w * 0.6} {b} Z', 'fill': '#cbd5e1', 'stroke': '#334155', 'strokeWidth': 1.1},
-            {'d': f'M 0 {b} L 0 {-(L + 24)}', 'stroke': '#f8fafc', 'strokeWidth': 1}]
+def long_claw(f, w, L):
+    """Wolverine-style: a long thin steel spike out of every fingertip (generic), with a bevel line and a dark collar where it leaves the finger."""
+    b = -(L - 2); W = w * 0.55
+    return [{'d': poly([(-W * 1.6, b), (-W * 0.6, -(L + 66)), (0, -(L + 78)), (W * 0.6, -(L + 66)), (W * 1.6, b)]), 'fill': '#cbd5e1', 'stroke': '#334155', 'strokeWidth': 1},
+            {'d': f'M 0 {b} L 0 {-(L + 70)}', 'stroke': '#f8fafc', 'strokeWidth': 0.9},
+            {'d': poly([(-W * 2.4, b + 4), (W * 2.4, b + 4), (W * 2.4, b - 3), (-W * 2.4, b - 3)]), 'fill': '#475569', 'stroke': '#0f172a', 'strokeWidth': 1}]
 
 NAIL_SW = ['#dc2626', '#f97316', '#facc15', '#22c55e', '#22d3ee', '#3b82f6', '#a855f7', '#ec4899', '#f8fafc', '#111827']
 def items():
     return [nail_item('longnails', 'Long nails', long_nail, 'human', tint('#dc2626', {'#dc2626': 'main', '#7f1d1d': 'dark', '#fca5a5': 'light'}, NAIL_SW), dynamic={'pivot': 0.65, 'min': 0.25}),
             nail_item('claws', 'Claws', claw, 'animal', tint('#f1e6d0', {'#f1e6d0': 'main', '#6b4423': 'dark', '#fffbeb': 'light'}, ['#f1e6d0'] + NAIL_SW[:-1]), dynamic={'pivot': 0.85, 'min': 0.25}, side='both'),
-            nail_item('blades', 'Blade fingers', blade, 'scifi', tint('#cbd5e1', {'#cbd5e1': 'main', '#334155': 'dark', '#475569': 'mid', '#f8fafc': 'light'}, ['#cbd5e1', '#fbbf24', '#ef4444', '#22d3ee', '#a855f7', '#22c55e']),
-                      free=False, unlock={'method': 'ad'})]
+            nail_item('longclaws', 'Long claws', long_claw, 'scifi', tint('#cbd5e1', {'#cbd5e1': 'main', '#334155': 'dark', '#475569': 'mid', '#f8fafc': 'light'}, ['#cbd5e1', '#fbbf24', '#ef4444', '#22d3ee', '#a855f7', '#22c55e']),
+                      free=False, unlock={'method': 'ad'}, dynamic={'pivot': 0.8, 'min': 0.2}, side='both')]
 
 def write(path, data):
     with open(path, 'w') as fh:

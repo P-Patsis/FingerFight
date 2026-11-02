@@ -7,6 +7,13 @@
 - GLOVE CARDS: item cards showed the item stacked on whatever was worn (so White changed when Leather was worn). A card now shows that item alone on the worn hand (`loadoutWith`).
 - LENGTH-AWARE: with an extension (hotdog / longer fingers) the tip shapes of every item and overlay ride the LAST link, mid shapes fill the real tip and inner links, so hook/claws/nails/gloves no longer float mid-finger. The web follows the long finger (polyline = landmarks + link ends) and is bigger (frog/duck reach 0.93, was 0.72).
 - Simplified: rings sit on base segments so are unchanged; tip-space item parts that extend past the authored length are not part of the picture-fitting bounds.
+### PART B — redesigns
+- SCISSOR FINGERS (`scissors`, locked ad): long steel blades (about 4x the old size) on index, middle, ring, pinky: a steel sleeve over the middle segment + a long tapering blade from the tip; index/middle lean toward each other. Dynamic (blade hides when its finger curls), shows from either side, length-aware.
+- HOOK (`hook`, free, HAND category): a whole-hand replacement: thin steel rods for fingers, leather cuff palm, and a dynamic hook overlay on every finger tip. Hooks drawn = raised fingers (tests: 0-5 for several poses; counting never reads the rig). The old nails-item hook is removed.
+- LONG CLAWS (`longclaws`, locked ad): the old Blade fingers item repurposed: a long thin steel spike out of every fingertip, dynamic + length-aware. `claws` (short) and `longnails` stay separate. A saved/received `blades` id reads as `longclaws`.
+- CHROME SKELETON removed: file, manifest, service worker, generator, tests lists. A saved or received `chrome` falls back to the default hand.
+- FLAME HAND (`flaming`): new `flame` particle (rising teardrop, shrinks, wobbles) on 4 emitters (hand x2, tips, palm; ~112 flames/s, so the live count sits at the 90 cap; the cap refuses extra spawns). Static flames on the palm and fingers are what reduced motion (and the opponent's still) shows.
+- Simplified: the hook's rods are plain; a hooked finger that is half curled shows a half-size hook (scaled, not bent).
 
 ## 2026-11-02 (14) — Ad-locks only, real web membrane, fingers past the tip, Sand shed + shake-collapse (ALL VISUALS NEED SCREENSHOT / PHONE REVIEW: drawn blind, no renderer on this device)
 - Changed:

@@ -1,0 +1,132 @@
+{
+ "format": 1,
+ "id": "longclaws",
+ "name": "Long claws",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "layer": "nails",
+ "category": "scifi",
+ "tint": {
+  "default": "#cbd5e1",
+  "map": {
+   "#cbd5e1": "main",
+   "#334155": "dark",
+   "#475569": "mid",
+   "#f8fafc": "light"
+  },
+  "swatches": [
+   "#cbd5e1",
+   "#fbbf24",
+   "#ef4444",
+   "#22d3ee",
+   "#a855f7",
+   "#22c55e"
+  ]
+ },
+ "parts": {
+  "thumb_tip": [
+   {
+    "d": "M -6.51 -14.5 L -2.44 -82.5 L 0 -94.5 L 2.44 -82.5 L 6.51 -14.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M 0 -14.5 L 0 -86.5",
+    "stroke": "#f8fafc",
+    "strokeWidth": 0.9
+   },
+   {
+    "d": "M -9.77 -10.5 L 9.77 -10.5 L 9.77 -17.5 L -9.77 -17.5 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   }
+  ],
+  "index_tip": [
+   {
+    "d": "M -5.46 -13 L -2.05 -81 L 0 -93 L 2.05 -81 L 5.46 -13 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M 0 -13 L 0 -85",
+    "stroke": "#f8fafc",
+    "strokeWidth": 0.9
+   },
+   {
+    "d": "M -8.18 -9 L 8.18 -9 L 8.18 -16 L -8.18 -16 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   }
+  ],
+  "middle_tip": [
+   {
+    "d": "M -5.72 -14.5 L -2.15 -82.5 L 0 -94.5 L 2.15 -82.5 L 5.72 -14.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M 0 -14.5 L 0 -86.5",
+    "stroke": "#f8fafc",
+    "strokeWidth": 0.9
+   },
+   {
+    "d": "M -8.58 -10.5 L 8.58 -10.5 L 8.58 -17.5 L -8.58 -17.5 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   }
+  ],
+  "ring_tip": [
+   {
+    "d": "M -5.37 -13 L -2.01 -81 L 0 -93 L 2.01 -81 L 5.37 -13 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M 0 -13 L 0 -85",
+    "stroke": "#f8fafc",
+    "strokeWidth": 0.9
+   },
+   {
+    "d": "M -8.05 -9 L 8.05 -9 L 8.05 -16 L -8.05 -16 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   }
+  ],
+  "pinky_tip": [
+   {
+    "d": "M -4.58 -9.5 L -1.72 -77.5 L 0 -89.5 L 1.72 -77.5 L 4.58 -9.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M 0 -9.5 L 0 -81.5",
+    "stroke": "#f8fafc",
+    "strokeWidth": 0.9
+   },
+   {
+    "d": "M -6.86 -5.5 L 6.86 -5.5 L 6.86 -12.5 L -6.86 -12.5 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   }
+  ]
+ },
+ "free": false,
+ "unlock": {
+  "method": "ad"
+ },
+ "dynamic": {
+  "pivot": 0.8,
+  "min": 0.2
+ },
+ "side": "both"
+}

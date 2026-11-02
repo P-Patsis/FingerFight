@@ -16,7 +16,7 @@ const { roleColor } = await import('../js/layers.js');
 await C.loadCatalog();
 
 const HANDS = { lowpoly: true, frog: true, duck: true, toybrick: true, mechanical: false, cyberpunk: false, flaming: false, floppy: true };   // id -> free
-const NAILS = { longnails: true, claws: true, blades: false };
+const NAILS = { longnails: true, claws: true, longclaws: false };
 const read = p => JSON.parse(fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8'));
 const lm = statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true }).map(([x, y]) => ({ x: x / 1000, y: y / 1000 }));
 const ctx = () => new Proxy({ calls: 0 }, { get: (t, k) => (k in t ? t[k] : () => { t.calls++; }), set: (t, k, v) => { t[k] = v; return true; } });
@@ -59,7 +59,7 @@ test('the flaming hand is animated by the existing emitters (embers + glow), ins
   const skin = read('assets/skins/flaming.json');
   const em = P.parseParticles(skin.particles);
   assert.ok(em.length >= 2 && em.length <= 4 && em.length < P.MAX_EMITTERS);
-  assert.ok(em.some(e => e.effect === 'embers') && em.some(e => e.effect === 'glow'), 'flame = rising embers + a glow');
+  assert.ok(em.filter(e => e.effect === 'flame').length >= 3, 'a full flame: several flame emitters across the hand, tips and palm');
   const sys = new P.ParticleSystem({ reduced: () => false });
   sys.setEmitters(C.resolveLoadout('flaming', []).emitters);
   const hands = [lm.map(p => ({ x: p.x * 200, y: p.y * 200 }))];
@@ -88,10 +88,10 @@ test('the nail items sit in the Nail polish layer, reach past the fingertip, tak
     // drawn on the nail side only (nails are always back-side items)
     const skin = C.resolveLoadout('cartoon', [{ id }]);
     assert.ok(rigPlan(lm, skin.skin, skin.layers, true).length > 16, 'drawn with the back of the hand to the camera');
-    if (id !== 'claws') assert.equal(rigPlan(lm, skin.skin, skin.layers, false).length, 16, 'not drawn on the palm side');      // claws show from either side
+    if (!['claws', 'longclaws'].includes(id)) assert.equal(rigPlan(lm, skin.skin, skin.layers, false).length, 16, 'not drawn on the palm side');      // claws show from either side
   }
   const inv = new Inventory({ getItem: () => null, setItem() {} });
-  assert.equal(inv.toggle('longnails').ok, true); assert.equal(inv.toggle('claws').ok, true); assert.equal(inv.toggle('blades').ok, false, 'locked until unlocked');
+  assert.equal(inv.toggle('longnails').ok, true); assert.equal(inv.toggle('claws').ok, true); assert.equal(inv.toggle('longclaws').ok, false, 'locked until unlocked');
 });
 
 test('hands with a tint recolour; the ones without are hue-shifted (design intact)', () => {
