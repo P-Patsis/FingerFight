@@ -426,7 +426,7 @@ export function animState(anim, m, time) {
     if (x < 0.16) { const q = 1 - Math.sin(Math.PI * x / 0.16) * 0.92; t = mulM(t, [1, 0, 0, q, 0, cy * (1 - q)]); }
   }
   if (anim.pulse) { const [sp, amt, ph] = anim.pulse; k = 1 - amt + amt * (0.5 + 0.5 * Math.sin(time * sp * 2 * Math.PI + ph)); }
-  return { m: mulM(m, t), k };
+  return { m: t === IDENTITY ? m : mulM(m, t), k, moved: t !== IDENTITY };
 }
 
 /** Draws a plan made by rigPlan. Needs Path2D (every browser); where it is missing nothing is drawn.
@@ -440,11 +440,12 @@ export function drawPlan(ctx, plan, alpha = 1, time = null) {
     for (const s of step.shapes) {
       const p = pathOf(s);
       let k = 1;
-      if (s.anim && time !== null && time !== undefined) { const a = animState(s.anim, step.m, time); k = a.k; ctx.setTransform(...a.m); }
+      let moved = false;
+      if (s.anim && time !== null && time !== undefined) { const a = animState(s.anim, step.m, time); k = a.k; if (a.moved) { moved = true; ctx.setTransform(...a.m); } }
       ctx.globalAlpha = s.opacity * alpha * k;
       if (s.fill !== 'none') { ctx.fillStyle = s.fill; ctx.fill(p); }
       if (s.stroke !== 'none' && s.strokeWidth > 0) { ctx.lineWidth = s.strokeWidth; ctx.strokeStyle = s.stroke; ctx.stroke(p); }
-      if (s.anim && time !== null && time !== undefined) ctx.setTransform(...step.m);
+      if (moved) ctx.setTransform(...step.m);
     }
   }
   ctx.restore();                                         // restores the caller's transform and alpha

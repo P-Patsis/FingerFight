@@ -374,6 +374,7 @@
  "extend": {
   "len": 0.95,
   "pieces": 3,
-  "droop": 1.35
+  "droop": 1.35,
+  "physics": true
  }
 }

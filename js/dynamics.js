@@ -81,13 +81,13 @@ export class HandDynamics {
       for (let s = 0; s < steps; s++) {
         let prev = ideal[0].a;
         ideal.forEach((q, k) => {
-          const p = st.p[k], v = st.v[k], ox = p.x, oy = p.y;
+          const p = st.p[k], v = st.v[k];
           v.x += (DYN.SPRING_K * (q.ideal.x - p.x) - DYN.SPRING_C * v.x) * h;
           v.y += (DYN.SPRING_K * (q.ideal.y - p.y) - DYN.SPRING_C * v.y) * h;
           p.x += v.x * h; p.y += v.y * h;
-          const dx = p.x - prev.x, dy = p.y - prev.y, d = Math.hypot(dx, dy) || 1e-9;     // a link keeps its length
-          p.x = prev.x + (dx / d) * q.len; p.y = prev.y + (dy / d) * q.len;
-          v.x = (p.x - ox) / h; v.y = (p.y - oy) / h;
+          const dx = p.x - prev.x, dy = p.y - prev.y, d = Math.hypot(dx, dy) || 1e-9, ux = dx / d, uy = dy / d;
+          p.x = prev.x + ux * q.len; p.y = prev.y + uy * q.len;                           // a link keeps its length ...
+          const along = v.x * ux + v.y * uy; v.x -= along * ux; v.y -= along * uy;       // ... and a rigid link has no speed along itself: only the swing is kept (this is what keeps a sudden jump of the hand from flinging the finger)
           prev = p;
         });
       }

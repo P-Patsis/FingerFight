@@ -133,7 +133,9 @@ effects), with a Store, a local inventory and a stubbed unlock path: see **COSME
 metadata described there (`category`, `free`, `unlock`, `whole`, `particles`); the rig and everything above are unchanged.
 Real ads and payments are NOT built: the unlock path is a marked stub (`js/unlock.js`) for the future native app.
 
-**Built-in hands added since:** `lowpoly` (Geometric, generated from a detail level 1-5), `frog`, `duck` (web membrane between the fingers), `toybrick`, `mechanical`, `cyberpunk`, `flaming`, `floppy` (hotdog fingers), `gridmesh` (wireframe), `painting` (generated from a seed), `bone`, `chrome`, `burnbone`, `sand`, `eyes`, `inksketch`.
+**Built-in hands added since:** `lowpoly` (Geometric, generated from a detail level 1-5), `frog`, `duck` (web membrane between the fingers), `toybrick`, `mechanical`, `cyberpunk`, `flaming`, `floppy` (hotdog fingers), `gridmesh` (wireframe), `painting` (generated from a seed), `bone`, `chrome`, `burnbone`, `sand`, `eyes`, `inksketch`, `hook`.
 
 ## Optional rig fields (2026-11-02)
 A skin may also carry `web` (a membrane between neighbouring fingers), `extend` (fingers drawn past the tip) and `sand` (a crumbling sand hand). They are validated like everything else (`parseWeb`, `parseExtend`, `parseSand` in js/puppet.js) and described in COSMETICS.md ("Rig extensions"). The 16 parts and the neutral pose are unchanged; the old per-finger web "fins" are gone.
+
+Also optional (Part A-C): `extend.physics`, overlay `dynamic`, shape `anim`; see COSMETICS.md "Parts A-C". The `chrome` hand was removed.

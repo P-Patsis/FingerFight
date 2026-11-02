@@ -168,7 +168,7 @@ def skins():
                   particles=[{'effect': 'flame', 'color': '#dc2626', 'where': 'hand', 'rate': 32}, {'effect': 'flame', 'color': '#f97316', 'where': 'hand', 'rate': 32},
                              {'effect': 'flame', 'color': '#fde047', 'where': 'tips', 'rate': 26}, {'effect': 'flame', 'color': '#fb923c', 'where': 'palm', 'rate': 22}]),
             build('floppy', 'Hotdog fingers', A, floppy_palm(), floppy_seg, category='human', tint=FLOPPY_T,
-                  extend={'len': 0.95, 'pieces': 3, 'droop': 1.35})]
+                  extend={'len': 0.95, 'pieces': 3, 'droop': 1.35, 'physics': True})]
 
 # ---- nail items: shapes in the fingertip's space, reaching past the tip
 def nail_item(id_, name, shape, category, tint_, free=True, unlock=None, dynamic=None, side=None):

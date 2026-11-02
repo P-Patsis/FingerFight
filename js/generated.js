@@ -27,7 +27,7 @@ const CELLS = { 1: [1, 1], 2: [1, 2], 3: [1, 3], 4: [2, 2], 5: [2, 3] };        
 const PALM_FAN = { 1: 6, 2: 8, 3: 9, 4: 10, 5: 12 };                                      // triangles in the palm
 const PALM_PTS = [[30, 106], [18, 94], [10, 76], [8, 56], [14, 38], [24, 31], [50, 34], [76, 38], [86, 46], [88, 62], [80, 86], [70, 106]];
 const TONES = ['#7dd3fc', '#38bdf8', '#0ea5e9'], EDGE = '#0369a1';
-const facet = (pts, tone, k) => ({ d: poly(pts), fill: TONES[Math.floor(k * 3) % 3], stroke: EDGE, strokeWidth: 1.5 });
+const facet = (pts, tone, k) => ({ d: poly(pts), fill: TONES[Math.floor(k * 3) % 3], stroke: EDGE, strokeWidth: 1.5, anim: { drift: [0.9, 0.9, 0.22, (Math.abs(k) * 6.28) % 6.28] } });   // idle: facets shift a little (phase from k, no random numbers used)
 
 function polySegment(f, i, level) {
   const w = HALF[f][i], L = LEN[f][i], [R, C] = CELLS[level], pt = [];
@@ -79,7 +79,7 @@ function brush(r, pal, x0, y0, x1, y1, wmin, wmax, n) {
     else if (kind < 0.85) { const bx = x0 + r() * (x1 - x0), by = y0 + r() * (y1 - y0); out.push({ d: `M ${f2(ax)} ${f2(ay)} Q ${f2((ax + bx) / 2 + (r() - 0.5) * 12)} ${f2((ay + by) / 2 + (r() - 0.5) * 12)} ${f2(bx)} ${f2(by)}`, stroke: col, strokeWidth: +f2(wmin + r() * wmax * 0.8), opacity: 0.7 + r() * 0.3 }); }
     else out.push({ d: blob(ax, ay, 1 + r() * 1.5, 1 + r() * 1.5), fill: col });
   }
-  return out;
+  return out.map((s, k) => ({ ...s, anim: { drift: [2, 1.6, 0.05 + (k % 3) * 0.02, (k * 1.3) % 6.28] } }));       // idle: the paint drifts slowly (phase from the index: no extra random numbers, so the same seed is the same painting)
 }
 const cap = (w, L) => `M ${-w} 0 L ${-w} ${-L} A ${w} ${w} 0 0 1 ${w} ${-L} L ${w} 0 A ${w} ${w} 0 0 1 ${-w} 0 Z`;
 function paintSegment(f, i, r, pal) {
