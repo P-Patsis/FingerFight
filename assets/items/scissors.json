@@ -1,0 +1,70 @@
+{
+ "format": 1,
+ "id": "scissors",
+ "name": "Scissor fingers",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "layer": "nails",
+ "category": "scifi",
+ "tint": {
+  "default": "#cbd5e1",
+  "map": {
+   "#cbd5e1": "main",
+   "#334155": "dark",
+   "#f59e0b": "mid"
+  },
+  "swatches": [
+   "#cbd5e1",
+   "#fbbf24",
+   "#ef4444",
+   "#22d3ee",
+   "#a855f7"
+  ]
+ },
+ "parts": {
+  "index_tip": [
+   {
+    "d": "M -0.6200000000000001 -13 L -6.2 -41 L -2.17 -41 L 2.4800000000000004 -13 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M 0.6200000000000001 -13 L 6.2 -41 L 2.17 -41 L -2.4800000000000004 -13 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M -2.2 -14 A 2.2 2.2 0 1 0 2.2 -14 A 2.2 2.2 0 1 0 -2.2 -14 Z",
+    "fill": "#f59e0b",
+    "stroke": "#334155",
+    "strokeWidth": 1
+   }
+  ],
+  "middle_tip": [
+   {
+    "d": "M -0.65 -14.5 L -6.5 -42.5 L -2.275 -42.5 L 2.6 -14.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M 0.65 -14.5 L 6.5 -42.5 L 2.275 -42.5 L -2.6 -14.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M -2.2 -15.5 A 2.2 2.2 0 1 0 2.2 -15.5 A 2.2 2.2 0 1 0 -2.2 -15.5 Z",
+    "fill": "#f59e0b",
+    "stroke": "#334155",
+    "strokeWidth": 1
+   }
+  ]
+ },
+ "free": false,
+ "unlock": {
+  "method": "ad"
+ }
+}

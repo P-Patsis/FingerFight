@@ -1,0 +1,68 @@
+{
+ "format": 1,
+ "id": "ornate",
+ "name": "Ornate ring",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "layer": "ring",
+ "category": "fantasy",
+ "tint": {
+  "default": "#a855f7",
+  "map": {
+   "#a855f7": "main",
+   "#e9d5ff": "light",
+   "#6b21a8": "dark"
+  },
+  "swatches": [
+   "#a855f7",
+   "#22d3ee",
+   "#ef4444",
+   "#22c55e",
+   "#facc15"
+  ]
+ },
+ "free": false,
+ "unlock": {
+  "method": "purchase",
+  "price": "0.99"
+ },
+ "particles": [
+  {
+   "effect": "glow",
+   "color": "#c084fc",
+   "where": "tips",
+   "rate": 2
+  },
+  {
+   "effect": "glint",
+   "color": "#f5f3ff",
+   "where": "knuckles",
+   "rate": 3
+  }
+ ],
+ "parts": {
+  "ring_base": [
+   {
+    "d": "M -7.3500000000000005 -11.850000000000001 L 7.3500000000000005 -11.850000000000001 L 7.3500000000000005 -17.85 L -7.3500000000000005 -17.85 Z",
+    "fill": "#fbbf24",
+    "stroke": "#92400e",
+    "strokeWidth": 1.2
+   },
+   {
+    "d": "M 0 -28.85 L 6.3 -20.85 L 0 -12.85 L -6.3 -20.85 Z",
+    "fill": "#a855f7",
+    "stroke": "#6b21a8",
+    "strokeWidth": 1.2
+   },
+   {
+    "d": "M -2.8000000000000003 -22.85 L 0 -26.85 L 2.1 -22.85",
+    "stroke": "#e9d5ff",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M -10.0 -16.85 A 1.6 1.6 0 1 0 -6.800000000000001 -16.85 A 1.6 1.6 0 1 0 -10.0 -16.85 ZM 6.800000000000001 -16.85 A 1.6 1.6 0 1 0 10.0 -16.85 A 1.6 1.6 0 1 0 6.800000000000001 -16.85 Z",
+    "fill": "#fde68a"
+   }
+  ]
+ }
+}

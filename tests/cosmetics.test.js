@@ -143,7 +143,7 @@ test('category and layer filters', () => {
   const rings = filterCatalog(all, { layer: 'ring' });
   assert.ok(rings.length >= 2 && rings.every(e => e.layer === 'ring'));
   const both = filterCatalog(all, { category: 'fantasy', layer: 'ring' });
-  assert.deepEqual(both.map(e => e.id), ['ruby']);
+  assert.deepEqual(both.map(e => e.id), ['ruby', 'ornate']);
   assert.deepEqual(filterCatalog(all, { layer: 'effect' }).map(e => e.id), ['sparkles', 'bubbles', 'glow', 'embers', 'electric'], 'effects are a category of their own');
   assert.deepEqual(filterCatalog(all, { category: 'animal', layer: 'glove' }), []);
   assert.equal(filterCatalog(all, { category: 'premade', layer: 'base' }).length, 2);
@@ -464,7 +464,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   chip('storeCats', 'animal').onclick();
   assert.deepEqual(cards().map(c => c.dataset.id), filterCatalog(catalog(), { category: 'animal' }).map(e => e.id));
   chip('storeCats', 'all').onclick(); chip('storeLayers', 'ring').onclick();
-  assert.deepEqual(cards().map(c => c.dataset.id), ['goldring', 'silverring', 'ruby']);
+  assert.deepEqual(cards().map(c => c.dataset.id), ['goldring', 'silverring', 'ruby', 'ornate']);
   // TAP: wear, in tap order; the second ring stacks too; tapping again takes that one off
   card('goldring').onclick(); card('silverring').onclick();
   assert.deepEqual(stackIds(), ['goldring', 'silverring']);
@@ -524,7 +524,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(b.visible(), ['profile']);
   assert.equal($('wearTop').parentElement, $('cWearTop'), 'the preview moved to the Profile customise area');
   const pcards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
-  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet', 'lowpoly', 'frog', 'duck', 'toybrick', 'floppy', 'gridmesh']), 'the Hand category holds the hands you own (there is no separate hand row)');
+  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet', 'lowpoly', 'frog', 'duck', 'toybrick', 'floppy', 'gridmesh', 'bone', 'sand', 'inksketch']), 'the Hand category holds the hands you own (there is no separate hand row)');
   $('profileLayers').children.find(x => x.dataset.value === 'glove').onclick();
   pcards().find(c => c.dataset.id === 'whiteglove').onclick();
   assert.equal(stackIds().at(-1), 'whiteglove');
