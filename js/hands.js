@@ -5,7 +5,7 @@ import { statesFromCount, annotate, FINGERS, TIP_ID, drawBones } from './avatars
 import { viewOf } from './logic.js';
 import { drawPuppet, handBack } from './puppet.js';
 import { skinIdOf } from './skins.js';
-import { resolveLoadout, stackToWire } from './cosmetics.js';
+import { resolveLoadout, stackToWire, genWire } from './cosmetics.js';
 import { cleanColor, cleanSkelStyle } from './layers.js';
 import { ParticleSystem } from './particles.js';
 
@@ -288,7 +288,7 @@ export class HandCam {
     const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.skel, backs, style.skelStyle) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
     if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), ...genWire(skinIdOf(style.skin)), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
   }
 
   #photo(hands, states, mode, ar, skinId, stack, baseColor, skel = null, backs = [], skelStyle = null) {

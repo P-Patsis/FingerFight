@@ -70,8 +70,8 @@ test('colour per CATEGORY: one colour for everything worn of that type (and for 
   assert.equal(inv.setCategoryColor('tone', '#e3ad7c'), false, 'there is no skin tone category');
   inv.toggle('neon'); assert.equal(inv.setCategoryColor('base', '#ff8800'), true);
   assert.equal(inv.baseColor, '#ff8800', 'the Hand category colour recolours the worn hand');
-  inv.toggle('robot'); assert.equal(inv.setCategoryColor('base', '#ff8800'), false, 'a hand that cannot be recoloured refuses it');
-  inv.toggle('neon'); assert.equal(inv.baseColor, '#ff8800', 'each hand remembers its own colour');
+  inv.toggle('robot'); assert.equal(inv.baseColor, null, 'the robot starts in its own colours, not the neon one'); assert.equal(inv.setCategoryColor('base', '#00ff88'), true, 'every hand takes a colour now (hue-shift)');
+  inv.toggle('neon'); assert.equal(inv.baseColor, '#ff8800', 'each hand remembers its own colour'); inv.toggle('robot'); assert.equal(inv.baseColor, '#00ff88');
   inv.setCategoryColor('tattoo', null);
   assert.ok(inv.stack.filter(s => ['tribal', 'scar', 'runes'].includes(s.id)).every(s => s.color === null), 'Original colours');
 });

@@ -11,7 +11,8 @@ import { createWakeLock } from './wake.js';
 import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPicture, statesFromCount, previewHandPx, SKELETON_COLOR, swayOf } from './avatars.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
-import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout } from './cosmetics.js';
+import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, setGen } from './cosmetics.js';
+import { cleanGc, GC_MIN, GC_MAX } from './generated.js';
 import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
 import { Stats } from './stats.js';
@@ -83,6 +84,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
+setGen({ gc: Number(store_get('ff-polylevel')) });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), skelStyle: cleanSkelStyle(store_get('ff-skelstyle')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
 const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
@@ -1273,6 +1275,13 @@ function renderCatColor() {
   const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
   const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
   colorRow(box, layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); });
+  if (layer === 'base' && inv.baseId === 'lowpoly') {
+    const ctl = el('div', 'ctl'), val = el('b', '', String(gen.gc));
+    const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(GC_MIN); sl.max = String(GC_MAX); sl.step = '1'; sl.value = String(gen.gc); sl.dataset.act = 'polylevel'; sl.setAttribute('aria-label', 'Geometric detail: few big blocks to many small facets');
+    sl.oninput = () => { setGen({ gc: Number(sl.value) }); val.textContent = sl.value; liveColor(); };
+    sl.onchange = () => { try { localStorage.setItem('ff-polylevel', String(cleanGc(Number(sl.value)) || gen.gc)); } catch { /* a setting */ } syncStyle(); };
+    ctl.append(el('span', 'fine', 'Detail'), sl, val); box.append(ctl);
+  }
   if (layer === 'effect') {
     const k = st.k || INTENSITY_DEFAULT, ctl = el('div', 'ctl'), val = el('b', '', String(k));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(INTENSITY_MIN); sl.max = String(INTENSITY_MAX); sl.step = '1'; sl.value = String(k); sl.dataset.act = 'intensity'; sl.setAttribute('aria-label', 'Effect intensity');

@@ -68,6 +68,38 @@ export function roleColor(hex, role) {
   if (role === 'light') return rgbToHex(c.map(v => v + (255 - v) * 0.3));
   return hex.toLowerCase();
 }
+// ---- hue shift: the Hand colour for hands that have no tint (robot, paw, gauntlet, golden, ...). The design stays; its colours move to the picked hue.
+const clamp01 = n => Math.min(1, Math.max(0, n));
+export function hexToHsl(hex) {
+  const [r, g, b] = hexToRgb(hex).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+  let h = 0;
+  if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: (h * 60 + 360) % 360, s: d ? d / (1 - Math.abs(2 * l - 1)) : 0, l };
+}
+export function hslToHex(h, s, l) {
+  const H = ((h % 360) + 360) % 360, S = clamp01(s), L = clamp01(l), c = (1 - Math.abs(2 * L - 1)) * S, x = c * (1 - Math.abs(((H / 60) % 2) - 1)), m = L - c / 2;
+  const [r, g, b] = H < 60 ? [c, x, 0] : H < 120 ? [x, c, 0] : H < 180 ? [0, c, x] : H < 240 ? [0, x, c] : H < 300 ? [x, 0, c] : [c, 0, x];
+  return rgbToHex([(r + m) * 255, (g + m) * 255, (b + m) * 255]);
+}
+/** The dominant hue of a set of colours ({hex: weight}): the circular mean of the chromatic ones, weighted by saturation. 0 when there are none. */
+export function dominantHue(weights) {
+  let x = 0, y = 0;
+  for (const [hex, w] of Object.entries(weights)) { const c = hexToHsl(hex); if (c.s >= 0.2) { x += Math.cos(c.h * Math.PI / 180) * c.s * w; y += Math.sin(c.h * Math.PI / 180) * c.s * w; } }
+  return x || y ? ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360 : 0;
+}
+/**
+ * One colour of a design moved to the picked colour [picked]: chromatic colours keep their distance from the design's main hue [ref] and rotate with the pick;
+ * grey metal gets a gentle tint of the pick; lightness stays (the design's shading survives). A white / grey / black pick desaturates and darkens or lightens instead.
+ * Only plain #rrggbb in and out; anything else is returned unchanged.
+ */
+export function shiftColor(hex, picked, ref) {
+  if (typeof hex !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(hex) || !picked) return hex;
+  const c = hexToHsl(hex), p = hexToHsl(picked), V = Math.max(...hexToRgb(picked)) / 255;
+  if (p.s < 0.12) return hslToHex(c.h, c.s * 0.12, c.l * (0.4 + 0.8 * V));
+  if (c.s >= 0.2) return hslToHex(p.h + (c.h - ref), Math.min(1, c.s * (0.55 + 0.45 * p.s)), c.l);
+  return hslToHex(p.h, Math.min(0.55, 0.45 * p.s + c.s), c.l);
+}
+
 /** The quick colours of the category colour picker: a handful of well-spread hues (45 degrees apart) + white, grey, black, kept to ONE line.
  *  Any other colour comes from the full colour picker. */
 /** The skeleton STYLES the player can choose for the skeleton views (drawn by avatars.js `drawBones`; the id travels as `ss`, 1-12 lower-case letters). */

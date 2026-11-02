@@ -4,8 +4,9 @@
 //   tattoo / nails / ring / glove - shapes on the named parts, drawn over the base in the ORDER THEY WERE EQUIPPED (the stack)
 //   effect     - a particle effect (no shapes)
 // Colour pickers: an item with a `tint` is drawn in the colour the player picked (see layers.js). Only plain #rrggbb is ever kept.
-import { parseShapes, PART_NAMES } from './puppet.js';
-import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor, cleanIntensity, INTENSITY_DEFAULT } from './layers.js';
+import { parseShapes, PART_NAMES, parseSkin } from './puppet.js';
+import { GENERATED, paramsKey, cleanGc, cleanSd, GC_DEFAULT } from './generated.js';
+import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor, cleanIntensity, INTENSITY_DEFAULT, shiftColor, dominantHue } from './layers.js';
 import { loadSkins, skinIds, getSkin, skinIdOf, hasSkin } from './skins.js';
 
 const BASE = 'assets/items/';
@@ -173,6 +174,21 @@ function tintedSkin(skin, tint, picked) {
     return out;
   });
 }
+/** A hand without a tint, moved to the picked colour by hue-shift (see shiftColor): every colour of its shapes and particles, the design intact. */
+function shiftedSkin(skin, picked) {
+  return recolor('h', skin, picked, () => {
+    const w = {};
+    const note = c => { if (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) w[c.toLowerCase()] = (w[c.toLowerCase()] || 0) + 1; };
+    for (const def of Object.values(skin.parts)) for (const s of def.shapes) { note(s.fill); note(s.stroke); }
+    for (const o of skin.overlays) for (const s of o.shapes) { note(s.fill); note(s.stroke); }
+    const ref = dominantHue(w), f = c => (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? shiftColor(c.toLowerCase(), picked, ref) : c);
+    const out = { ...skin, parts: {} };
+    for (const [name, def] of Object.entries(skin.parts)) out.parts[name] = { ...def, shapes: mapShapes(def.shapes, f) };
+    out.overlays = skin.overlays.map(o => ({ ...o, shapes: mapShapes(o.shapes, f) }));
+    out.particles = mapParticles(skin.particles, f);
+    return out;
+  });
+}
 function tintedItem(item, picked) {
   return recolor('i', item, picked, () => {
     const f = mapper(item.tint, picked), out = { ...item, parts: {} };
@@ -202,13 +218,35 @@ export const colorOf = (id, picked) => { const e = entryOf(id); return e && e.ti
  * [stack] may also be an old {layer: id} object (a phone that still sends that). Unknown ids are ignored (another phone may have items
  * this one lacks); nothing here can throw on bad input.
  */
-export function resolveLoadout(baseId, stack, baseColor = null) {
-  let baseSkin = getSkin(skinIdOf(baseId));
+/** The numbers the generated hands (Geometric detail `gc`, Painting seed `sd`) are drawn from on THIS phone; a received picture passes its own via [extra]. */
+export const gen = { gc: GC_DEFAULT, sd: 1 };
+export const setGen = (o = {}) => { const g = cleanGc(o.gc), s = cleanSd(o.sd); if (g) gen.gc = g; if (s !== null) gen.sd = s; };
+/** What a picture of base hand [id] must carry so the opponent draws the same hand: {gc} or {sd} (empty for fixed hands). */
+export const genWire = (id, p = gen) => (id === 'lowpoly' ? { gc: cleanGc(p.gc) || GC_DEFAULT } : id === 'painting' ? { sd: cleanSd(p.sd) ?? 1 } : {});
+const genCache = new Map();
+function generatedSkin(id, p) {
+  const key = id + ':' + paramsKey(id, p);
+  let s = genCache.get(key);
+  if (!s) {
+    try { s = parseSkin(GENERATED[id](p)); } catch { s = null; }
+    if (genCache.size > 24) genCache.delete(genCache.keys().next().value);
+    if (s) genCache.set(key, s);
+  }
+  return s;
+}
+
+export function resolveLoadout(baseId, stack, baseColor = null, extra = null) {
+  const sid = skinIdOf(baseId);
+  let baseSkin = (GENERATED[sid] && hasSkin(sid) && generatedSkin(sid, { ...gen, ...(extra || {}) })) || getSkin(sid);
+  if (baseSkin.id !== sid && GENERATED[sid]) baseSkin = getSkin(sid);
   let bc = cleanColor(baseColor);
   const list = stackOf(stack);
   // an older phone sent the skin colour as a worn "skintone" item: that colour is now the hand's colour
   if (!bc) bc = cleanColor(list.find(e => e.id === 'skintone')?.color);
-  if (baseSkin.tint && bc && bc !== baseSkin.tint.default) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc);
+  if (bc && baseSkin.id !== 'plain') {
+    if (baseSkin.tint) { if (bc !== baseSkin.tint.default) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc); }
+    else baseSkin = shiftedSkin(baseSkin, bc);                 // every other hand: a hue-shift, so the design stays
+  }
   const layers = [], emitters = [...baseSkin.particles];
   for (const e of list) {
     const it = items.get(e.id);

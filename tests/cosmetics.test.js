@@ -109,8 +109,15 @@ test('the HAND recolours: the Hand category colour tints the worn hand (cartoon,
   assert.equal(fill(deep), '#7a4a2b', 'the picked colour is the skin');
   assert.notEqual(deep.skin.parts.palm.shapes[0].stroke, '#9a5b2e', 'the outline follows (darker)');
   assert.notEqual(fill(resolveLoadout('cartoon', [], '#86b35a')), fill(deep), 'any colour');
-  assert.equal(fill(resolveLoadout('robot', [], '#7a4a2b')), fill(resolveLoadout('robot', [])), 'robot has no colour to change');
-  assert.equal(fill(resolveLoadout('gauntlet', [], '#86b35a')), fill(resolveLoadout('gauntlet', [])), 'a premade whole hand is finished');
+  // every other hand is HUE-SHIFTED by the same picker: the design stays, its colours move
+  for (const id of ['robot', 'gauntlet', 'paw', 'goldhand']) {
+    const plain = resolveLoadout(id, []).skin, shifted = resolveLoadout(id, [], '#e42525').skin;
+    assert.notEqual(JSON.stringify(shifted.parts), JSON.stringify(plain.parts), id + ' changes colour');
+    assert.deepEqual(Object.keys(shifted.parts), Object.keys(plain.parts)); assert.equal(shifted.parts.palm.shapes.length, plain.parts.palm.shapes.length, id + ': same design');
+    assert.deepEqual(shifted.parts.palm.shapes.map(s => s.d), plain.parts.palm.shapes.map(s => s.d), id + ': shapes untouched, only colours');
+    for (const s of shifted.parts.palm.shapes) for (const c of [s.fill, s.stroke]) assert.ok(c === undefined || c === 'none' || /^#[0-9a-f]{6}$/.test(c), id + ' only plain colours: ' + c);
+  }
+  assert.notEqual(fill(resolveLoadout('gauntlet', [], '#86b35a')), fill(resolveLoadout('gauntlet', [])));
   assert.equal(entryOf('skintone'), null, 'the Skin tone item is gone');
   // a phone still on the previous version sends the skin colour as a worn item: it is the hand colour now
   assert.equal(fill(resolveLoadout('cartoon', [{ id: 'skintone', color: '#7a4a2b' }])), '#7a4a2b');
@@ -212,17 +219,17 @@ test('COLOUR PICKERS: only plain #rrggbb is accepted and stored, only on items t
   inv.toggle('neon'); assert.equal(inv.setColor('neon', '#ec4899'), true); assert.equal(inv.baseColor, '#ec4899'); assert.equal(st.m.get('ff-bcolor'), '#ec4899');
   const neon = resolveLoadout('neon', [], '#ec4899');
   assert.ok(JSON.stringify(neon.skin.parts.palm.shapes).includes('#ec4899') && !JSON.stringify(neon.skin.parts.palm.shapes).includes('#22d3ee'));
-  assert.equal(inv.setColor('robot', '#ec4899'), false, 'the robot has no picker'); assert.equal(inv.setColor('cartoon', '#ec4899'), false, 'only the worn hand');
+  assert.equal(inv.setColor('cartoon', '#ec4899'), false, 'only the worn hand');
   inv.toggle('cartoon'); assert.equal(inv.baseColor, null, 'a hand with no picked colour starts in its own colours');
   assert.ok(JSON.stringify(resolveLoadout('dragon', [], '#3b82f6').skin.parts.palm.shapes).includes('#3b82f6'));
-  assert.equal(resolveLoadout('robot', [], '#3b82f6').skin, getSkin('robot'), 'a hand without a picker ignores a colour');
+  assert.notEqual(resolveLoadout('robot', [], '#3b82f6').skin, getSkin('robot'), 'a hand without a tint is hue-shifted');
 });
 
 test('COLOUR items collapsed: nail polishes and tattoos are one item + a picker; tint data is validated like network input', () => {
   for (const gone of ['pale', 'tan', 'brown', 'deep', 'orc', 'frost', 'rednails', 'blacknails', 'neonnails']) assert.equal(entryOf(gone), null, gone + ' is now a colour of another item');
   for (const id of ['cartoon', 'nailpolish', 'tribal', 'scar', 'runes', 'neon', 'dragon', 'sparkles', 'bubbles', 'glow', 'embers', 'electric']) assert.ok(entryOf(id)?.tint, id + ' has a colour picker');
   for (const id of ['goldring', 'silverring', 'ruby', 'whiteglove', 'leather', 'fingerless', 'knight']) assert.ok(entryOf(id).tint, id + ': every category has a colour picker, so rings and gloves can be recoloured');
-  for (const id of ['robot', 'gauntlet', 'paw']) assert.equal(entryOf(id).tint, null, id + ' keeps its own colours');
+  for (const id of ['robot', 'gauntlet', 'paw']) assert.equal(entryOf(id).tint, null, id + ' has no tint, so the Hand colour hue-shifts it');
   const ok = JSON.parse(read('assets/items/nailpolish.json'));
   assert.throws(() => parseItem({ ...ok, tint: { ...ok.tint, default: 'red' } }), /#rrggbb/);
   assert.throws(() => parseItem({ ...ok, tint: { ...ok.tint, map: { '#dc2626': 'sparkle' } } }), /main/);

@@ -94,8 +94,8 @@ test('the nail items sit in the Nail polish layer, reach past the fingertip, tak
   assert.equal(inv.toggle('longnails').ok, true); assert.equal(inv.toggle('claws').ok, true); assert.equal(inv.toggle('blades').ok, false, 'locked until unlocked');
 });
 
-test('hands tinted with a colour picker recolour; the ones without keep their own look', () => {
+test('hands with a tint recolour; the ones without are hue-shifted (design intact)', () => {
   const fillOf = (id, c) => JSON.stringify(C.resolveLoadout(id, [], c).skin.parts.palm.shapes);
-  for (const id of ['lowpoly', 'frog', 'toybrick', 'cyberpunk', 'floppy']) { assert.ok(C.entryOf(id).tint, id); assert.ok(fillOf(id, '#12ab34').includes('#12ab34') || fillOf(id, '#12ab34') !== fillOf(id, null), id + ' recolours'); }
-  for (const id of ['duck', 'mechanical', 'flaming']) { assert.equal(C.entryOf(id).tint, null, id); assert.equal(fillOf(id, '#12ab34'), fillOf(id, null)); }
+  for (const id of ['lowpoly', 'frog', 'toybrick', 'cyberpunk', 'floppy']) { assert.ok(C.entryOf(id).tint, id); assert.ok(fillOf(id, '#12ab34') !== fillOf(id, null), id + ' recolours'); }
+  for (const id of ['duck', 'mechanical', 'flaming']) { assert.equal(C.entryOf(id).tint, null, id); assert.notEqual(fillOf(id, '#12ab34'), fillOf(id, null), id + ' hue-shifts'); }
 });

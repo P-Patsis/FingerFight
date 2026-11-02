@@ -213,12 +213,15 @@ export const validLay = l => l === undefined || l === null
 export const validBk = b => b === undefined || b === null || (Array.isArray(b) && b.length <= 2 && b.every(x => x === true || x === false || x === null));
 /** The skeleton style `ss`: an id like any cosmetic id; one this version does not know is drawn as the classic skeleton (so a newer phone's style never gets a picture refused). */
 export const validSs = s => s === undefined || s === null || (typeof s === 'string' && /^[a-z]{1,12}$/.test(s));
+/** The generated-hand numbers: `gc` Geometric detail (1-5) and `sd` Painting seed (0-999999), whole numbers only. They only pick which shapes a hand program draws. */
+export const validGc = g => g === undefined || g === null || (Number.isInteger(g) && g >= 1 && g <= 5);
+export const validSd = d => d === undefined || d === null || (Number.isInteger(d) && d >= 0 && d <= 999999);
 export const validBc = c => c === undefined || c === null || (typeof c === 'string' && HEX6.test(c));
 
 export function validPicture(m, allowPhoto) {
   return !!m && normalizeView(m.view) !== null
     && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
-    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc) && validBc(m.bd) && validBc(m.sk) && validSs(m.ss) && validBk(m.bk)
+    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc) && validBc(m.bd) && validBc(m.sk) && validSs(m.ss) && validGc(m.gc) && validSd(m.sd) && validBk(m.bk)
     && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
     && validPhoto(m.photo) && (allowPhoto || m.photo === '')
     && (allowPhoto || isSafeView(m.view));

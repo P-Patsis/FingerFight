@@ -64,7 +64,7 @@ export class Inventory {
     this.cat = rawCat ? cleanCat(rawCat) : null;
     this.#sanitize();
     if (!this.cat) this.#migrateCat();
-    this.baseColor = (catalogReady() ? (entryOf(this.baseId)?.tint ? this.handColors[this.baseId] : null) : this.handColors[this.baseId]) || null;
+    this.baseColor = (catalogReady() ? (isHand(entryOf(this.baseId)) ? this.handColors[this.baseId] : null) : this.handColors[this.baseId]) || null;
     if (migrated) { this.#saveHands(); this.#saveStack(); if (rawCat) this.#saveCat(); }
   }
   /** First run of the per-category colours: whatever colour each worn item already had becomes its category's colour, applied to all of that category. */
@@ -91,7 +91,7 @@ export class Inventory {
     const before = JSON.stringify(this.stack);
     this.stack = this.stack.filter(e => { const x = entryOf(e.id); return !!x && x.layer !== 'base' && this.owns(e.id); });
     this.stack = this.stack.map(e => (entryOf(e.id).tint ? e : { id: e.id, color: null }));
-    for (const id of Object.keys(this.handColors)) if (!entryOf(id)?.tint) delete this.handColors[id];       // only a hand that can be recoloured keeps a colour
+    for (const id of Object.keys(this.handColors)) if (!isHand(entryOf(id))) delete this.handColors[id];       // only a real hand keeps a colour (every hand can be coloured: tinted ones recolour, the others hue-shift)
     if (JSON.stringify(this.stack) !== before) this.#saveStack();
   }
   #saveStack() { this.#write(STACK_KEY, JSON.stringify(stackToWire(this.stack))); }
@@ -124,7 +124,7 @@ export class Inventory {
     if (e.layer === 'base') {
       if (this.baseId !== id) {
         this.base = id; this.#write(BASE_KEY, id);
-        this.baseColor = e.tint ? this.handColors[id] || null : null;       // each hand has its own colour
+        this.baseColor = this.handColors[id] || null;       // each hand has its own colour
         this.#saveHands();
       }
       return { ok: true, on: true };
@@ -158,7 +158,7 @@ export class Inventory {
   /** The picked colour of a worn item (or the base hand), validated: only an item with a colour picker takes one, only #rrggbb. null clears it. */
   setColor(id, color) {
     const e = entryOf(id);
-    if (!e || !e.tint) return false;
+    if (!e || !(e.tint || isHand(e))) return false;
     const c = color === null ? null : cleanColor(color);
     if (color !== null && !c) return false;
     if (e.layer === 'base') { if (this.baseId !== id) return false; this.#setHandColor(c); return true; }
@@ -177,7 +177,7 @@ export class Inventory {
   /** Every category has a colour picker; the Hand's works only on a hand that supports recolouring (see `handTintable`). */
   colorable(layer) { return COLOR_LAYERS.includes(layer); }
   /** Whether the worn hand can be recoloured (cartoon, neon, dragon...; robot, paw and the premade hands keep their own colours). */
-  get handTintable() { return !!entryOf(this.baseId)?.tint; }
+  get handTintable() { return isHand(entryOf(this.baseId)); }
   /** The category's current colour settings {c, k}: what was picked, else null fields. For the Hand: the worn hand's colour. */
   categoryStyle(layer) {
     if (layer === 'base') return { c: this.handTintable ? this.baseColor : null, k: null };
@@ -216,8 +216,8 @@ export class Inventory {
   }
   colorOf(id) {
     const e = entryOf(id);
-    if (!e || !e.tint) return null;
-    if (e.layer === 'base') return this.baseId === id && this.baseColor ? this.baseColor : e.tint.default;
+    if (!e || !(e.tint || isHand(e))) return null;
+    if (e.layer === 'base') return this.baseId === id && this.baseColor ? this.baseColor : e.tint?.default || null;
     return this.stack.find(x => x.id === id)?.color || e.tint.default;
   }
 
@@ -231,7 +231,7 @@ export class Inventory {
     if (!g || typeof g !== 'object') return false;
     const hand = entryOf(g.base);
     if (hand && hand.layer === 'base' && this.owns(g.base)) { this.base = g.base; this.#write(BASE_KEY, g.base); }
-    const bc = this.baseId && entryOf(this.baseId)?.tint ? cleanColor(g.bc) : null;
+    const bc = isHand(entryOf(this.baseId)) ? cleanColor(g.bc) : null;
     if (bc) this.handColors[this.baseId] = bc; else delete this.handColors[this.baseId];
     this.baseColor = bc;
     this.stack = cleanStack(Array.isArray(g.lay) ? g.lay : []).filter(e => { const x = entryOf(e.id); return !!x && x.layer !== 'base' && this.owns(e.id); }).slice(0, MAX_STACK);
@@ -247,11 +247,14 @@ export class Inventory {
   loadoutWith(id) {
     const e = entryOf(id), out = this.loadout();
     if (!e) return out;
-    if (e.layer === 'base') { out.base = id; out.baseColor = e.tint ? this.handColors[id] || null : null; }
+    if (e.layer === 'base') { out.base = id; out.baseColor = this.handColors[id] || null; }
     else if (!out.stack.some(s => s.id === id)) out.stack.push({ id, color: null });
     return out;
   }
 }
+
+/** Every base hand can be coloured: a tinted one recolours, any other is hue-shifted (cosmetics.js). */
+const isHand = e => !!e && e.layer === 'base';
 
 /** Sets an optional entry field, or removes it when [v] is empty (entries only carry what is set). */
 function setOpt(e, key, v) { if (v) e[key] = v; else delete e[key]; }
