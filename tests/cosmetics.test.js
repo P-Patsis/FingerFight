@@ -313,7 +313,7 @@ test('unlock: the stub grants at once and can be replaced; a refusing or throwin
   assert.equal(unlock.unlockProviderName(), 'stub');
   const inv = new Inventory(memStorage()), e = entryOf('dragon');
   assert.equal(inv.owns('dragon'), false);
-  assert.match(unlock.unlockLabel(e), /Watch ad.*demo/); assert.match(unlock.unlockLabel(entryOf('goldhand')), /Buy.*0\.99.*demo/);
+  assert.match(unlock.unlockLabel(e), /Watch ad.*demo/); assert.match(unlock.unlockLabel(entryOf('goldhand')), /Watch ad.*demo/);
   assert.equal((await unlock.unlockItem(inv, e)).granted, true); assert.equal(inv.owns('dragon'), true);
   assert.equal(inv.toggle('dragon').ok, true);
 
@@ -457,7 +457,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   const btn = (id, act) => row(id).children.find(c => c.dataset?.act === act);
   // no Equip / Take off buttons any more; locked items have the unlock button, owned ones are plain tappable cards
   for (const c of cards()) assert.ok(!c.children.some(x => /^(equip|off)$/.test(x.dataset?.act || '')));
-  assert.ok(unlockBtn('ruby') && !unlockBtn('goldring')); assert.match(unlockBtn('ruby').textContent, /Buy.*demo/);
+  assert.ok(unlockBtn('ruby') && !unlockBtn('goldring')); assert.match(unlockBtn('ruby').textContent, /Watch ad.*demo/);
   assert.equal(card('goldring').getAttribute('role'), 'button');
   // filters
   const chip = (box, v) => $(box).children.find(x => x.dataset.value === v);

@@ -1,14 +1,14 @@
 // How a locked cosmetic becomes owned. THIS FILE IS THE STUB BOUNDARY.
 //
-// Today every unlock is a placeholder: "Watch ad" and "Buy" just grant the item at once. No ad network, no payment processor, no
+// Every locked item is an AD-LOCK ("Watch ad to unlock"); there is no payment path and no price anywhere in the app. Today the unlock is a
+// placeholder that grants at once. No ad network, no payment processor, no
 // network request of any kind exists in the web app. The Store (main.js) knows only two things from here:
 //   unlockItem(inventory, entry)  - ask the current provider; grant the item only if the provider says granted
 //   unlockLabel(entry)            - the button text
 //
 // FOR THE NATIVE APP: call setUnlockProvider() once at start-up with a provider that does the real thing, and nothing else changes:
 //   { name: 'admob',  request: async entry => ({ granted: <the rewarded ad was completed>, receipt: <ad reward id> }) }
-//   { name: 'play',   request: async entry => ({ granted: <Google Play purchase verified>, receipt: <purchase token> }) }
-// A real provider must verify the purchase/reward itself (server-side receipt check for payments) before it answers granted: true.
+// A real provider must confirm the rewarded ad was completed before it answers granted: true.
 // The inventory only records "owned"; it does not check anything, by design.
 
 /** The placeholder provider: grants everything instantly. Replace it in the native build. */
@@ -39,11 +39,7 @@ export async function unlockItem(inventory, entry) {
   }
 }
 
-/** The button text for a locked item. While the stub is installed these say "demo" so nobody thinks money or an ad is involved. */
-export function unlockLabel(entry) {
-  const demo = provider === stubProvider ? ' (demo)' : '';
-  const m = entry.unlock?.method;
-  if (m === 'purchase') return 'Buy' + (entry.unlock.price ? ' ' + entry.unlock.price : '') + demo;
-  if (m === 'ad') return 'Watch ad to unlock' + demo;
-  return 'Unlock';
+/** The button text for a locked item: always the ad. While the stub is installed it says "demo" so nobody thinks a real ad is involved. */
+export function unlockLabel() {
+  return 'Watch ad to unlock' + (provider === stubProvider ? ' (demo)' : '');
 }

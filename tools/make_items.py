@@ -67,7 +67,7 @@ def ring_on(f, seg, band, edge, stone=None):
     return shapes
 item('goldring', 'Gold ring', 'ring', 'human', parts={'ring_base': ring_on('ring', 0, '#facc15', '#a16207')})
 item('silverring', 'Silver rings', 'ring', 'human', parts={'index_base': ring_on('index', 0, '#e2e8f0', '#64748b'), 'pinky_base': ring_on('pinky', 0, '#e2e8f0', '#64748b')})
-item('ruby', 'Ruby ring', 'ring', 'fantasy', parts={'ring_base': ring_on('ring', 0, '#facc15', '#a16207', '#e11d48')}, free=False, unlock={'method': 'purchase', 'price': '0.49'},
+item('ruby', 'Ruby ring', 'ring', 'fantasy', parts={'ring_base': ring_on('ring', 0, '#facc15', '#a16207', '#e11d48')}, free=False, unlock={'method': 'ad'},
      particles=[{'effect': 'glint', 'color': '#fecdd3', 'where': 'knuckles', 'rate': 2}])
 
 # ---- gloves: a cover over every part, a little wider than the finger underneath; they sit above rings and nails by default (z 50)
@@ -84,7 +84,7 @@ def glove(id_, name, cat, fill, edge, detail, parts_only=None, cuff=True, **kw):
 glove('whiteglove', 'White glove', 'human', '#f8fafc', '#94a3b8', '#cbd5e1')
 glove('leather', 'Leather glove', 'human', '#8b5a2b', '#3f2a14', '#5a3a1a', free=False, unlock={'method': 'ad'})
 glove('fingerless', 'Fingerless glove', 'human', '#374151', '#111827', '#9ca3af', parts_only=('base',))
-glove('knight', 'Knight glove', 'fantasy', '#cbd5e1', '#475569', '#fbbf24', free=False, unlock={'method': 'purchase', 'price': '0.99'},
+glove('knight', 'Knight glove', 'fantasy', '#cbd5e1', '#475569', '#fbbf24', free=False, unlock={'method': 'ad'},
       particles=[{'effect': 'glint', 'color': '#ffffff', 'where': 'knuckles', 'rate': 2}])
 
 # ---- effects (particles only; each has a colour picker). The ids are the item ids; `effect` is the preset in js/particles.js

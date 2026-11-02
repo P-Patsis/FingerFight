@@ -93,13 +93,6 @@
    "length": 26,
    "shapes": [
     {
-     "d": "M 3.5 -1.04 L 12.5 -2.6 L 12.12 -24.7 L 3.5 -26 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
      "d": "M -7 0 L -7 -26 A 7 7 0 0 1 7 -26 L 7 0 A 7 7 0 0 1 -7 0 Z",
      "fill": "#fcd34d",
      "stroke": "#b45309",
@@ -115,13 +108,6 @@
   "index_mid": {
    "length": 20,
    "shapes": [
-    {
-     "d": "M 3.3 -0.8 L 10.2 -2 L 9.89 -15 L 3.3 -16 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
     {
      "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
      "fill": "#fcd34d",
@@ -156,20 +142,6 @@
    "length": 30,
    "shapes": [
     {
-     "d": "M -3.7 -1.2 L -12.9 -3 L -12.51 -28.5 L -3.7 -30 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
-     "d": "M 3.7 -1.2 L 12.9 -3 L 12.51 -28.5 L 3.7 -30 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
      "d": "M -7.4 0 L -7.4 -30 A 7.4 7.4 0 0 1 7.4 -30 L 7.4 0 A 7.4 7.4 0 0 1 -7.4 0 Z",
      "fill": "#fcd34d",
      "stroke": "#b45309",
@@ -185,20 +157,6 @@
   "middle_mid": {
    "length": 22,
    "shapes": [
-    {
-     "d": "M -3.5 -0.88 L -10.6 -2.2 L -10.28 -16.5 L -3.5 -17.6 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
-     "d": "M 3.5 -0.88 L 10.6 -2.2 L 10.28 -16.5 L 3.5 -17.6 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
     {
      "d": "M -7 0 L -7 -22 A 7 7 0 0 1 7 -22 L 7 0 A 7 7 0 0 1 -7 0 Z",
      "fill": "#fcd34d",
@@ -233,20 +191,6 @@
    "length": 27,
    "shapes": [
     {
-     "d": "M -3.5 -1.08 L -12.5 -2.7 L -12.12 -25.65 L -3.5 -27 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
-     "d": "M 3.5 -1.08 L 12.5 -2.7 L 12.12 -25.65 L 3.5 -27 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
      "d": "M -7 0 L -7 -27 A 7 7 0 0 1 7 -27 L 7 0 A 7 7 0 0 1 -7 0 Z",
      "fill": "#fcd34d",
      "stroke": "#b45309",
@@ -262,20 +206,6 @@
   "ring_mid": {
    "length": 20,
    "shapes": [
-    {
-     "d": "M -3.3 -0.8 L -10.2 -2 L -9.89 -15 L -3.3 -16 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
-     "d": "M 3.3 -0.8 L 10.2 -2 L 9.89 -15 L 3.3 -16 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
     {
      "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
      "fill": "#fcd34d",
@@ -310,13 +240,6 @@
    "length": 21,
    "shapes": [
     {
-     "d": "M -3 -0.84 L -11.5 -2.1 L -11.15 -19.95 L -3 -21 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
-    {
      "d": "M -6 0 L -6 -21 A 6 6 0 0 1 6 -21 L 6 0 A 6 6 0 0 1 -6 0 Z",
      "fill": "#fcd34d",
      "stroke": "#b45309",
@@ -332,13 +255,6 @@
   "pinky_mid": {
    "length": 15,
    "shapes": [
-    {
-     "d": "M -2.8 -0.6 L -9.2 -1.5 L -8.92 -11.25 L -2.8 -12 Z",
-     "fill": "#f97316",
-     "stroke": "#9a3412",
-     "strokeWidth": 1.6,
-     "opacity": 0.95
-    },
     {
      "d": "M -5.6 0 L -5.6 -15 A 5.6 5.6 0 0 1 5.6 -15 L 5.6 0 A 5.6 5.6 0 0 1 -5.6 0 Z",
      "fill": "#fcd34d",
@@ -371,5 +287,13 @@
   }
  },
  "overlays": [],
- "category": "animal"
+ "category": "animal",
+ "web": {
+  "fill": "#f97316",
+  "stroke": "#9a3412",
+  "strokeWidth": 1.6,
+  "opacity": 0.95,
+  "reach": 0.72,
+  "scallop": 0.28
+ }
 }

@@ -45,16 +45,30 @@ def burn_seg(f, i, w, L):
     if i == 2: s.append({'d': f'M {-w * 0.8} {-L - 1} Q {-w} {-L - 10} {-w * 0.3} {-L - 12} Q {-w * 0.2} {-L - 22} 0 {-L - 26} Q {w * 0.3} {-L - 18} {w * 0.5} {-L - 14} Q {w} {-L - 10} {w * 0.8} {-L - 1} Z', 'fill': '#fb923c', 'stroke': '#dc2626', 'strokeWidth': 1.2, 'opacity': 0.92})
     return s
 
+# Sand: a grainy body (dots of three sands, drawn as zero-length round-capped strokes so one shape holds dozens), a rough edge of loose grains,
+# and, from the skin's "sand" field + a `grain` emitter, a hand that sheds sand and crumbles when shaken (js/sand.js).
+import random
+SAND_BODY, SAND_EDGE, SAND_DARK, SAND_MID, SAND_LIGHT = '#e2bf7e', '#b98f4a', '#a8803f', '#cfa65c', '#f7e6b8'
+def dots(pts):
+    return ' '.join(f'M {f2(x)} {f2(y)} h 0.1' for x, y in pts)
+def scatter(rng, n, x0, x1, y0, y1):
+    return [(rng.uniform(x0, x1), rng.uniform(y0, y1)) for _ in range(n)]
 def sand_palm():
-    dots = ''.join(circle(x, y, r) for x, y, r in [(30, 60, 1.4), (44, 52, 1.2), (58, 66, 1.5), (40, 82, 1.3), (66, 84, 1.2), (52, 96, 1.4), (24, 80, 1.1)])
-    return [{'d': PALM_D, 'fill': '#e9c98c', 'stroke': '#a8803f', 'strokeWidth': 2.2},
-            {'d': 'M 14 70 Q 34 60 52 72 T 84 66 M 20 90 Q 40 80 58 90 T 80 84', 'stroke': '#cfa65c', 'strokeWidth': 2.2},
-            {'d': dots, 'fill': '#f6e3b4'}]
+    rng = random.Random(11)
+    return [{'d': PALM_D, 'fill': SAND_BODY, 'stroke': SAND_EDGE, 'strokeWidth': 1.6},
+            {'d': 'M 14 70 Q 34 60 52 72 T 84 66 M 20 90 Q 40 80 58 90 T 80 84', 'stroke': SAND_MID, 'strokeWidth': 2},
+            {'d': dots(scatter(rng, 70, 14, 84, 38, 102)), 'stroke': SAND_DARK, 'strokeWidth': 1.5},
+            {'d': dots(scatter(rng, 70, 14, 84, 38, 102)), 'stroke': SAND_LIGHT, 'strokeWidth': 1.4},
+            {'d': dots([(9, 52), (8, 66), (12, 80), (20, 94), (88, 52), (87, 66), (82, 82), (74, 98), (26, 31), (50, 34), (72, 37)]), 'stroke': SAND_EDGE, 'strokeWidth': 2.2}]
 def sand_seg(f, i, w, L):
-    dots = ''.join(circle(((j * 7 + i * 3) % 9 - 4) * w * 0.15, -L * (0.2 + 0.2 * j), 0.9) for j in range(4))
-    return [{'d': capsule(w, L), 'fill': '#e9c98c', 'stroke': '#a8803f', 'strokeWidth': 2.2},
-            {'d': f'M {-w * 0.7} {-L * 0.35} Q 0 {-L * 0.45} {w * 0.7} {-L * 0.3}', 'stroke': '#cfa65c', 'strokeWidth': 1.6}, {'d': dots, 'fill': '#f6e3b4'}]
-SAND_T = tint('#e9c98c', {'#e9c98c': 'main', '#a8803f': 'dark', '#cfa65c': 'mid', '#f6e3b4': 'light'})
+    rng = random.Random(100 + i * 7 + len(f))
+    edge = [(s * (w + rng.uniform(-0.4, 0.9)), -rng.uniform(0.1, 0.95) * L) for s in (-1, 1) for _ in range(3)]
+    return [{'d': capsule(w, L), 'fill': SAND_BODY, 'stroke': SAND_EDGE, 'strokeWidth': 1.5},
+            {'d': f'M {-w * 0.7} {-L * 0.35} Q 0 {-L * 0.45} {w * 0.7} {-L * 0.3}', 'stroke': SAND_MID, 'strokeWidth': 1.3},
+            {'d': dots(scatter(rng, 16, -w * 0.8, w * 0.8, -L * 0.95, -L * 0.05)), 'stroke': SAND_DARK, 'strokeWidth': 1.2},
+            {'d': dots(scatter(rng, 16, -w * 0.8, w * 0.8, -L * 0.95, -L * 0.05)), 'stroke': SAND_LIGHT, 'strokeWidth': 1.1},
+            {'d': dots(edge), 'stroke': SAND_EDGE, 'strokeWidth': 1.8}]
+SAND_T = tint(SAND_BODY, {SAND_BODY: 'main', SAND_EDGE: 'dark', SAND_DARK: 'dark', SAND_MID: 'mid', SAND_LIGHT: 'light'})
 
 def eye(cx, cy, r):
     return [{'d': f'M {cx - r} {cy} Q {cx} {cy - r * 0.9} {cx + r} {cy} Q {cx} {cy + r * 0.9} {cx - r} {cy} Z', 'fill': '#ffffff', 'stroke': '#1f2937', 'strokeWidth': 1.4},
@@ -81,10 +95,12 @@ def skins():
     return [build('bone', 'Bone', A, bone_palm(), bone_seg, category='scifi', tint=BONE_T),
             build('chrome', 'Chrome skeleton', A, chrome_palm(), chrome_seg, category='scifi', free=False, unlock={'method': 'ad'}, tint=CHROME_T,
                   particles=[{'effect': 'glint', 'color': '#f8fafc', 'where': 'knuckles', 'rate': 3}]),
-            build('burnbone', 'Burning bone', A, burn_palm(), burn_seg, category='fantasy', free=False, unlock={'method': 'purchase', 'price': '0.99'},
+            build('burnbone', 'Burning bone', A, burn_palm(), burn_seg, category='fantasy', free=False, unlock={'method': 'ad'},
                   particles=[{'effect': 'embers', 'color': '#f97316', 'where': 'tips', 'rate': 14}, {'effect': 'glow', 'color': '#dc2626', 'where': 'tips', 'rate': 2},
                              {'effect': 'embers', 'color': '#fde047', 'where': 'hand', 'rate': 6}]),
-            build('sand', 'Sand', A, sand_palm(), sand_seg, category='fantasy', tint=SAND_T),
+            build('sand', 'Sand', A, sand_palm(), sand_seg, category='fantasy', tint=SAND_T,
+                  sand={'color': SAND_BODY, 'color2': SAND_LIGHT},
+                  particles=[{'effect': 'grain', 'color': SAND_BODY, 'where': 'hand', 'rate': 7}]),
             build('eyes', 'Eyes in palm', A, eyes_palm(), eyes_seg, category='fantasy', free=False, unlock={'method': 'ad'}, tint=EYES_T),
             build('inksketch', 'Ink sketch', A, ink_palm(), ink_seg, category='human', tint=INK_T)]
 
@@ -138,7 +154,7 @@ def ornate():
     w = HALF['ring'][0]; L = LEN['ring'][0]; y = -L * 0.55
     return {'format': 1, 'id': 'ornate', 'name': 'Ornate ring', 'author': A, 'license': 'CC0 (made for Finger Fight)', 'layer': 'ring', 'category': 'fantasy',
             'tint': tint('#a855f7', {'#a855f7': 'main', '#e9d5ff': 'light', '#6b21a8': 'dark'}, ['#a855f7', '#22d3ee', '#ef4444', '#22c55e', '#facc15']),
-            'free': False, 'unlock': {'method': 'purchase', 'price': '0.99'},
+            'free': False, 'unlock': {'method': 'ad'},
             'particles': [{'effect': 'glow', 'color': '#c084fc', 'where': 'tips', 'rate': 2}, {'effect': 'glint', 'color': '#f5f3ff', 'where': 'knuckles', 'rate': 3}],
             'parts': {'ring_base': [
                 {'d': f'M {-w * 1.05} {y + 3} L {w * 1.05} {y + 3} L {w * 1.05} {y - 3} L {-w * 1.05} {y - 3} Z', 'fill': '#fbbf24', 'stroke': '#92400e', 'strokeWidth': 1.2},

@@ -13,8 +13,9 @@ export const ROLES = Object.freeze(['main', 'dark', 'mid', 'light']);
 /** Browsing tags (pure metadata: nothing in the game depends on them). */
 export const CATEGORIES = Object.freeze(['human', 'animal', 'scifi', 'fantasy', 'premade']);
 export const CATEGORY_LABELS = Object.freeze({ human: 'Human', animal: 'Animal', scifi: 'Sci-fi', fantasy: 'Fantasy', premade: 'Premade hands' });
-/** How a locked item can be unlocked. Only a label for the Store: what happens is decided by js/unlock.js. */
-export const UNLOCK_METHODS = Object.freeze(['free', 'ad', 'purchase']);
+/** How a locked item can be unlocked. ADS ONLY: there is no paid / price unlock anywhere in the app (a file that asks for one is refused).
+ *  What happens on the tap is decided by js/unlock.js. */
+export const UNLOCK_METHODS = Object.freeze(['free', 'ad']);
 
 export const ITEM_ID = /^[a-z]{1,12}$/;
 
@@ -30,10 +31,9 @@ export function parseMeta(json, layer) {
   const u = json.unlock;
   const method = free ? 'free' : (u && u.method) || 'ad';
   if (!UNLOCK_METHODS.includes(method)) throw new Error(json.id + ': unlock.method must be one of ' + UNLOCK_METHODS.join(', '));
-  const price = !free && u && typeof u.price === 'string' ? u.price.slice(0, 12) : '';
   const whole = json.whole === true;
   if (whole && layer !== 'base') throw new Error(json.id + ': only a base hand can be a premade whole hand');
-  return { layer, category, free, unlock: { method, price }, whole, particles: parseParticles(json.particles), tint: parseTint(json.tint, json.id) };
+  return { layer, category, free, unlock: { method }, whole, particles: parseParticles(json.particles), tint: parseTint(json.tint, json.id) };
 }
 
 // ---- colour pickers -----------------------------------------------------------------------------------------------------------

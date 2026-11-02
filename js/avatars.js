@@ -1,7 +1,7 @@
 // Pictures of a hand that never contain camera pixels: the puppet and the skeleton, drawn from finger data / landmarks.
 // A hand is described by which fingers are up: {thumb, index, middle, ring, pinky} (see gestures.js fingerStates).
 import { normalizeView } from './logic.js';
-import { drawPuppet, statesToLandmarks } from './puppet.js';
+import { drawPuppet, statesToLandmarks, extensionEnds } from './puppet.js';
 import { getSkin } from './skins.js';
 import { resolveLoadout } from './cosmetics.js';
 import { snapshot } from './particles.js';
@@ -76,8 +76,8 @@ export const TIP_ID = { thumb: 4, index: 8, middle: 12, ring: 16, pinky: 20 };
  * bounding box of all points is scaled up to fill the area (aspect kept; [ar] = the frame's width / height, so nothing is
  * stretched). Returns a function from a landmark [x, y] (0..1000 units) to a pixel {x, y}.
  */
-function fitter(lms, w, h, ar, pad) {
-  const xs = lms.flat().map(p => p[0] * ar), ys = lms.flat().map(p => p[1]);
+function fitter(lms, w, h, ar, pad, extra = []) {
+  const xs = [...lms.flat(), ...extra].map(p => p[0] * ar), ys = [...lms.flat(), ...extra].map(p => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
   const bw = Math.max(maxX - minX, 40), bh = Math.max(maxY - minY, 40);       // floor: a single point must not blow up
   const k = Math.min((w * (1 - 2 * pad)) / bw, (h * (1 - 2 * pad)) / bh);
@@ -104,12 +104,19 @@ export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = tru
   return tips;
 }
 
+/** Where fingers drawn past their tips end (as [x, y] landmark units), so the fitted picture leaves room for them. */
+function reachOf(lms, ar, skin, layers) {
+  const out = [];
+  for (const hand of lms) for (const p of extensionEnds(hand.map(([x, y]) => ({ x: x * ar, y })), skin, layers)) out.push([p.x / ar, p.y]);
+  return out;
+}
+
 /** Puppet picture: the skin posed on the landmarks, fitted to the picture like the skeleton (a little more room: it is wider than the bones). */
 export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers = true, rec = null) {
   if (!rec?.noBg) { ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h); }       // noBg: the caller already painted the background (it draws under a transform)
-  const px = fitter(lms, w, h, ar, 0.16);
+  const px = fitter(lms, w, h, ar, 0.16, reachOf(lms, ar, skin, rec?.layers || []));
   const pts = lms.map(hand => hand.map(px));
-  drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs);
+  drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs, rec?.alphas);
   if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead
   const tips = raisedTips(lms, hands, px);
   if (withNumbers) annotate(ctx, tips, Math.max(8, h * 0.07));
@@ -133,7 +140,7 @@ export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELET
   ctx.fillStyle = '#64748b';                                         // a head and shoulders, to read as "a camera picture of you"
   ctx.beginPath(); ctx.arc(w * 0.2, h * 0.32, h * 0.16, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.ellipse(w * 0.2, h * 0.95, w * 0.17, h * 0.34, 0, 0, 7); ctx.fill();
-  const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1);        // the hand sits in the right 60% of the picture
+  const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1, puppet ? reachOf(lms, 1, skin, rec?.layers || []) : []);        // the hand sits in the right 60% of the picture
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
   if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
   else {
@@ -170,9 +177,9 @@ export function drawFromMessage(ctx, w, h, msg) {
 }
 
 /** The sample open hand used by the Profile preview and the Store, as pixel points in a w x h picture: for animating particles on it. */
-export function previewHandPx(w, h) {
+export function previewHandPx(w, h, skin = null, layers = []) {
   const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
-  const px = fitter(lms, w, h, 1, 0.16);
+  const px = fitter(lms, w, h, 1, 0.16, skin ? reachOf(lms, 1, skin, layers) : []);
   return lms.map(hand => hand.map(px));
 }
 

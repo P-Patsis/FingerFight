@@ -4,7 +4,7 @@
 //   tattoo / nails / ring / glove - shapes on the named parts, drawn over the base in the ORDER THEY WERE EQUIPPED (the stack)
 //   effect     - a particle effect (no shapes)
 // Colour pickers: an item with a `tint` is drawn in the colour the player picked (see layers.js). Only plain #rrggbb is ever kept.
-import { parseShapes, PART_NAMES, parseSkin } from './puppet.js';
+import { parseShapes, PART_NAMES, parseSkin, parseExtend } from './puppet.js';
 import { GENERATED, paramsKey, cleanGc, cleanSd, GC_DEFAULT } from './generated.js';
 import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor, cleanIntensity, INTENSITY_DEFAULT, shiftColor, dominantHue } from './layers.js';
 import { loadSkins, skinIds, getSkin, skinIdOf, hasSkin } from './skins.js';
@@ -25,8 +25,9 @@ export function parseItem(json) {
     if (!item.particles.length) throw new Error(json.id + ': an effect needs "particles"');
     return item;
   }
-  const parts = json.parts;
-  if (!parts || typeof parts !== 'object' || !Object.keys(parts).length) throw new Error(json.id + ': needs "parts" (shapes per named part)');
+  item.extend = parseExtend(json.extend, json.id);   // fingers drawn past the tip, in the base hand's own shapes (see puppet.js)
+  const parts = json.parts ?? (item.extend ? {} : undefined);
+  if (!parts || typeof parts !== 'object' || (!Object.keys(parts).length && !item.extend)) throw new Error(json.id + ': needs "parts" (shapes per named part) or an "extend"');
   for (const [name_, shapes] of Object.entries(parts)) {
     if (!PART_NAMES.includes(name_)) throw new Error(json.id + ': unknown part ' + name_);
     item.parts[name_] = parseShapes(shapes, json.id + ' ' + name_);
@@ -163,6 +164,8 @@ const mapper = (tint, picked) => c => {
 };
 const mapShapes = (shapes, f) => shapes.map(s => ({ ...s, fill: f(s.fill), stroke: f(s.stroke) }));
 const mapParticles = (list, f) => list.map(p => ({ ...p, color: f(p.color) }));
+const mapWeb = (w, f) => (w ? { ...w, fill: f(w.fill), stroke: f(w.stroke) } : w);
+const mapSand = (s, f) => (s ? { ...s, color: f(s.color), color2: f(s.color2) } : s);
 
 /** A base hand (or a skin) with its tint applied for [picked]: the colours named in the tint map change, nothing else. */
 function tintedSkin(skin, tint, picked) {
@@ -171,6 +174,7 @@ function tintedSkin(skin, tint, picked) {
     for (const [name, def] of Object.entries(skin.parts)) out.parts[name] = { ...def, shapes: mapShapes(def.shapes, f) };
     out.overlays = skin.overlays.map(o => ({ ...o, shapes: mapShapes(o.shapes, f) }));
     out.particles = mapParticles(skin.particles, f);
+    out.web = mapWeb(skin.web, f); out.sand = mapSand(skin.sand, f);
     return out;
   });
 }
@@ -181,11 +185,13 @@ function shiftedSkin(skin, picked) {
     const note = c => { if (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) w[c.toLowerCase()] = (w[c.toLowerCase()] || 0) + 1; };
     for (const def of Object.values(skin.parts)) for (const s of def.shapes) { note(s.fill); note(s.stroke); }
     for (const o of skin.overlays) for (const s of o.shapes) { note(s.fill); note(s.stroke); }
+    if (skin.web) { note(skin.web.fill); note(skin.web.stroke); }
     const ref = dominantHue(w), f = c => (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? shiftColor(c.toLowerCase(), picked, ref) : c);
     const out = { ...skin, parts: {} };
     for (const [name, def] of Object.entries(skin.parts)) out.parts[name] = { ...def, shapes: mapShapes(def.shapes, f) };
     out.overlays = skin.overlays.map(o => ({ ...o, shapes: mapShapes(o.shapes, f) }));
     out.particles = mapParticles(skin.particles, f);
+    out.web = mapWeb(skin.web, f); out.sand = mapSand(skin.sand, f);
     return out;
   });
 }

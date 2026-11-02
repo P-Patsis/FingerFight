@@ -35,6 +35,52 @@ export function parseShapes(list, where) {
   });
 }
 
+// ---- rig extensions: a web membrane between fingers, and fingers drawn PAST the tip ---------------------------------------
+// Both are optional skin fields, and both are DRAWING ONLY: rigPlan reads the landmarks and never changes them, so finger counting
+// (gestures.js, which reads the tracker's landmarks) cannot be affected.
+//   "web":    { "fill": "#6dbf4b", "stroke": "#2f6b36", "strokeWidth": 1.6, "opacity": 0.95, "reach": 0.7, "scallop": 0.25 }
+//   "extend": { "len": 0.9, "pieces": 3, "droop": 1.2, "fingers": ["index", ...] }   (a skin or a layer item)
+// A web is one membrane per gap (index-middle, middle-ring, ring-pinky), anchored on the landmarks of BOTH neighbouring fingers, so it spans
+// the gap however far the fingers spread. An extension continues each finger beyond its tip landmark along the finger's own direction, in
+// `pieces` links that turn toward screen-down by `droop` radians in total, drawn with the base hand's own mid / tip shapes (so it always
+// matches the hand's colours, shape and recolouring).
+export const WEB_GAPS = Object.freeze([['index', 'middle'], ['middle', 'ring'], ['ring', 'pinky']]);
+const WEB_ROOT = 0.04;                                   // the membrane starts just past the knuckle landmark (a share of the finger length)
+
+const inRange = (v, lo, hi) => num(v) && v >= lo && v <= hi;
+/** Checks a skin's "web" (missing = no web = null). */
+export function parseWeb(w, id = 'skin') {
+  if (w === undefined || w === null) return null;
+  if (typeof w !== 'object' || Array.isArray(w)) throw new Error(id + ': web must be an object');
+  if (typeof w.fill !== 'string' || !/^#[0-9a-fA-F]{3,8}$/.test(w.fill)) throw new Error(id + ': web.fill must be a #colour');
+  if (w.stroke !== undefined && !(typeof w.stroke === 'string' && COLOR.test(w.stroke))) throw new Error(id + ': web.stroke must be a #colour or "none"');
+  if (w.strokeWidth !== undefined && !inRange(w.strokeWidth, 0, 40)) throw new Error(id + ': web.strokeWidth must be 0-40');
+  if (w.opacity !== undefined && !inRange(w.opacity, 0, 1)) throw new Error(id + ': web.opacity must be 0-1');
+  if (w.reach !== undefined && !inRange(w.reach, 0.2, 1)) throw new Error(id + ': web.reach must be 0.2-1');
+  if (w.scallop !== undefined && !inRange(w.scallop, 0, 0.6)) throw new Error(id + ': web.scallop must be 0-0.6');
+  return { fill: w.fill, stroke: w.stroke ?? 'none', strokeWidth: w.strokeWidth ?? 0, opacity: w.opacity ?? 1, reach: w.reach ?? 0.7, scallop: w.scallop ?? 0.25 };
+}
+/** Checks an "extend" (missing = none = null). */
+export function parseExtend(e, id = 'skin') {
+  if (e === undefined || e === null) return null;
+  if (typeof e !== 'object' || Array.isArray(e)) throw new Error(id + ': extend must be an object');
+  if (!inRange(e.len, 0.05, 2)) throw new Error(id + ': extend.len must be 0.05-2 (a share of the finger length)');
+  const pieces = e.pieces === undefined ? 3 : e.pieces;
+  if (!(Number.isInteger(pieces) && pieces >= 1 && pieces <= 4)) throw new Error(id + ': extend.pieces must be a whole number 1-4');
+  const droop = e.droop === undefined ? 0 : e.droop;
+  if (!inRange(droop, 0, 2)) throw new Error(id + ': extend.droop must be 0-2 (radians)');
+  const fingers = e.fingers === undefined ? FINGER_NAMES.slice() : e.fingers;
+  if (!Array.isArray(fingers) || !fingers.length || fingers.some((f, i) => !FINGER_NAMES.includes(f) || fingers.indexOf(f) !== i)) throw new Error(id + ': extend.fingers must list finger names once each');
+  return { len: e.len, pieces, droop, fingers: fingers.slice() };
+}
+/** Checks a skin's "sand" (the grains of a sand hand; see js/sand.js). Missing = not a sand hand = null. */
+export function parseSand(s, id = 'skin') {
+  if (s === undefined || s === null) return null;
+  if (typeof s !== 'object' || Array.isArray(s)) throw new Error(id + ': sand must be an object');
+  for (const k of ['color', 'color2']) if (typeof s[k] !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(s[k])) throw new Error(id + ': sand.' + k + ' must be #rrggbb');
+  return { color: s.color.toLowerCase(), color2: s.color2.toLowerCase() };
+}
+
 /**
  * Checks a skin file's JSON and returns the normalised skin; throws an Error that says what is wrong.
  * A part may be {"use": "other_part"} to share another part's definition (one finger shape for all fingers).
@@ -68,7 +114,7 @@ export function parseSkin(json) {
   });
   const order = json.order === undefined ? DEFAULT_ORDER : json.order;
   if (!Array.isArray(order) || order.some(p => !PART_NAMES.includes(p))) throw new Error('skin ' + json.id + ': order must list known part names');
-  return { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', parts, overlays, order, ...parseMeta(json, 'base') };
+  return { id: json.id, name, author: typeof json.author === 'string' ? json.author.slice(0, 40) : '', parts, overlays, order, web: parseWeb(json.web, json.id), extend: parseExtend(json.extend, json.id), sand: parseSand(json.sand, json.id), ...parseMeta(json, 'base') };
 }
 
 // ---- rig math (pixel space in, canvas matrices out) --------------------------------------------------------------------
@@ -124,6 +170,105 @@ export function handBack(lm, side) {
   return !palm;
 }
 
+const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const f1 = v => Math.round(v * 10) / 10;
+const at = p => f1(p.x) + ' ' + f1(p.y);
+const clamp01 = v => Math.min(1, Math.max(0, v));
+
+/** The part of a finger's landmark chain between fractions [s0] and [s1] of its length, as points (the joints in between are kept, so it follows a curled finger). */
+export function chainSlice(lm, finger, s0, s1) {
+  const pts = CHAIN[finger].map(i => lm[i]), seg = [];
+  let total = 0;
+  for (let k = 0; k < pts.length - 1; k++) { seg.push(dist2(pts[k], pts[k + 1])); total += seg[k]; }
+  const pointAt = s => {
+    let d = clamp01(s) * total;
+    for (let k = 0; k < seg.length; k++) {
+      if (d <= seg[k] || k === seg.length - 1) { const t = seg[k] > 0 ? Math.min(1, d / seg[k]) : 0; return { x: pts[k].x + (pts[k + 1].x - pts[k].x) * t, y: pts[k].y + (pts[k + 1].y - pts[k].y) * t }; }
+      d -= seg[k];
+    }
+  };
+  const out = [pointAt(s0)];
+  let acc = 0;
+  for (let k = 0; k < seg.length - 1; k++) { acc += seg[k]; const s = total > 0 ? acc / total : 0; if (s > s0 + 1e-6 && s < s1 - 1e-6) out.push(pts[k + 1]); }
+  out.push(pointAt(s1));
+  return out;
+}
+
+/**
+ * The web membranes of one hand (pure geometry, pixel points in and out): one per gap between neighbouring fingers. Each is a polygon whose
+ * two long sides are slices of the neighbouring fingers' own landmark chains (so it is pinned to both fingers and stretches / contracts as they
+ * spread or close) and whose free edge is a scallop curve dipping back toward the knuckles. Returns [{pair, fill, edge}] as path data in pixel space.
+ */
+export function webGeometry(lm, web) {
+  const out = [];
+  for (const [fa, fb] of WEB_GAPS) {
+    const A = chainSlice(lm, fa, WEB_ROOT, web.reach), B = chainSlice(lm, fb, WEB_ROOT, web.reach);
+    const a0 = A[0], a1 = A[A.length - 1], b0 = B[0], b1 = B[B.length - 1];
+    const m1 = { x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 }, m0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 };
+    const k = web.scallop * 2;                           // the curve's middle ends up `scallop` of the way from the free edge to the knuckles
+    const c = { x: m1.x + (m0.x - m1.x) * k, y: m1.y + (m0.y - m1.y) * k };
+    const edge = 'M ' + at(a1) + ' Q ' + at(c) + ' ' + at(b1);
+    const fill = 'M ' + A.map(at).join(' L ') + ' Q ' + at(c) + ' ' + at(b1) + ' L ' + B.slice(0, -1).reverse().map(at).join(' L ') + ' Z';
+    out.push({ pair: [fa, fb], fill, edge });
+  }
+  return out;
+}
+
+/**
+ * The links of one finger's extension past its tip landmark (pure geometry): [{a, b, last}], a and b the link's two end points in pixels.
+ * The first link starts ON the tip landmark and runs along the finger's direction (dip -> tip); each following link turns toward screen-down
+ * (gravity) a little more, `droop` radians in all, so a floppy finger sags. A finger that is folded over shortens its extension (a fist does not
+ * sprout long fingers). Returns [] for a finger that cannot be posed. The landmarks are only read.
+ */
+export function extensionPieces(lm, finger, ext) {
+  const ids = CHAIN[finger], pts = ids.map(i => lm[i]);
+  if (pts.some(p => !p || !num(p.x) || !num(p.y))) return [];
+  let chain = 0;
+  for (let k = 0; k < 3; k++) chain += dist2(pts[k], pts[k + 1]);
+  let dx = pts[3].x - pts[2].x, dy = pts[3].y - pts[2].y;
+  const dl = Math.hypot(dx, dy);
+  if (!(dl > 1e-6) || !(chain > 0)) return [];
+  dx /= dl; dy /= dl;
+  const straight = dist2(pts[0], pts[3]) / chain;
+  const total = ext.len * chain * (0.3 + 0.7 * clamp01((straight - 0.4) / 0.5));
+  const n = ext.pieces, L = total / n, out = [];
+  let x = pts[3].x, y = pts[3].y;
+  for (let k = 0; k < n; k++) {
+    const want = ext.droop * 2 * (k + 1) / (n * (n + 1));            // the steps add up to `droop`, growing toward the end
+    const angle = Math.atan2(Math.abs(dx), dy);                      // angle between the direction and screen-down (0 = already hanging)
+    const turn = Math.min(want, angle), sgn = dx >= 0 ? 1 : -1, cos = Math.cos(turn * sgn), sin = Math.sin(turn * sgn);
+    [dx, dy] = [dx * cos - dy * sin, dx * sin + dy * cos];
+    const nx = x + dx * L, ny = y + dy * L;
+    out.push({ a: { x, y }, b: { x: nx, y: ny }, last: k === n - 1 });
+    x = nx; y = ny;
+  }
+  return out;
+}
+
+/** The extension that applies to a hand: the last worn item that has one, else the skin's own. Null = none. */
+export function activeExtend(skin, layers = []) {
+  for (let i = layers.length - 1; i >= 0; i--) if (layers[i]?.extend) return layers[i].extend;
+  return skin?.extend || null;
+}
+/** Where an extension reaches, as pixel points (for fitting a picture so the long fingers are not cut off). */
+export function extensionEnds(lm, skin, layers = []) {
+  const ext = activeExtend(skin, layers), out = [];
+  if (!ext || !Array.isArray(lm) || lm.length < 21 || lm.slice(0, 21).some(p => !p || !num(p.x) || !num(p.y))) return out;
+  for (const f of ext.fingers) for (const p of extensionPieces(lm, f, ext)) out.push(p.b);
+  return out;
+}
+const IDENTITY = [1, 0, 0, 1, 0, 0];
+/** Plan steps for one hand's extension of [fingers]: each link is the hand's own mid (inner links) or tip (last link) shape for that finger. */
+function extensionSteps(lm, skin, ext, sx, finger, tag) {
+  const steps = [];
+  for (const p of extensionPieces(lm, finger, ext)) {
+    const part = skin.parts[finger + (p.last ? '_tip' : '_mid')];
+    const m = segmentMatrix(p.a, p.b, part.length, sx);
+    if (m) steps.push({ part: finger + '_ext' + tag, m, shapes: part.shapes });
+  }
+  return steps;
+}
+
 /**
  * Where every part of [skin] goes for one hand. [lm]: 21 {x, y} points in PIXELS. Returns [{part, m, shapes}] in draw
  * order, ready for the renderer (overlays follow the part they belong to, in that part's transform). Hands that cannot
@@ -141,19 +286,34 @@ export function rigPlan(lm, skin, layers = [], back) {
   matrices.palm = affineFrom3(ref.wrist, ref.index, ref.pinky, lm[0], lm[5], lm[17]);
   for (const [name, [a, b]] of Object.entries(SEGMENTS)) matrices[name] = segmentMatrix(lm[a], lm[b], skin.parts[name].length, sx);
   const plan = [];
+  const itemExt = layers.some(L => L?.extend), skinExt = !itemExt && skin.extend;            // a worn item's extension replaces the hand's own
+  let webDone = !skin.web;
+  const pushWeb = () => {                                // the membrane sits just over the palm and under every finger
+    webDone = true;
+    const shape = (d, fill, stroke, w) => ({ d, fill, stroke, strokeWidth: w * sx, opacity: skin.web.opacity });
+    for (const g of webGeometry(lm, skin.web)) {
+      plan.push({ part: 'web', m: IDENTITY, shapes: [shape(g.fill, skin.web.fill, 'none', 0)] });
+      if (skin.web.stroke !== 'none' && skin.web.strokeWidth > 0) plan.push({ part: 'web', m: IDENTITY, shapes: [shape(g.edge, 'none', skin.web.stroke, skin.web.strokeWidth)] });
+    }
+  };
   for (const name of skin.order) {
     if (!matrices[name]) continue;
+    if (!webDone && name !== 'palm') pushWeb();
     plan.push({ part: name, m: matrices[name], shapes: skin.parts[name].shapes });
     for (const o of skin.overlays) if (o.part === name) plan.push({ part: name + '+', m: matrices[name], shapes: o.shapes });
+    if (skinExt && name.endsWith('_tip') && skinExt.fingers.includes(name.slice(0, -4))) plan.push(...extensionSteps(lm, skin, skinExt, sx, name.slice(0, -4), ''));
   }
+  if (!webDone) pushWeb();
   // cosmetic layers (tattoo, nails, ring, glove...): one whole pass each, in z-order, so a glove covers a ring on ANY finger.
   // Each layer item gives shapes per named part; they ride the same matrices as the base hand's parts.
   for (const L of layers) {
-    if (!sideShown(L, back)) continue;
-    for (const name of PART_NAMES) {
-      const shapes = L.parts?.[name];
-      if (shapes && matrices[name]) plan.push({ part: name + '@' + L.id, m: matrices[name], shapes });
+    if (sideShown(L, back)) {
+      for (const name of PART_NAMES) {
+        const shapes = L.parts?.[name];
+        if (shapes && matrices[name]) plan.push({ part: name + '@' + L.id, m: matrices[name], shapes });
+      }
     }
+    if (L.extend && L === layers.findLast(x => x?.extend)) for (const f of L.extend.fingers) plan.push(...extensionSteps(lm, skin, L.extend, sx, f, '@' + L.id));   // fingers longer than the tracked tip, in the hand's own colours
   }
   return plan;
 }
@@ -168,15 +328,15 @@ function pathOf(shape) {
 }
 
 /** Draws a plan made by rigPlan. Needs Path2D (every browser); where it is missing nothing is drawn. */
-export function drawPlan(ctx, plan) {
-  if (typeof Path2D === 'undefined') return;
+export function drawPlan(ctx, plan, alpha = 1) {
+  if (typeof Path2D === 'undefined' || !(alpha > 0.01)) return;
   ctx.save();
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   for (const step of plan) {
     ctx.setTransform(...step.m);
     for (const s of step.shapes) {
       const p = pathOf(s);
-      ctx.globalAlpha = s.opacity;
+      ctx.globalAlpha = s.opacity * alpha;
       if (s.fill !== 'none') { ctx.fillStyle = s.fill; ctx.fill(p); }
       if (s.stroke !== 'none' && s.strokeWidth > 0) { ctx.lineWidth = s.strokeWidth; ctx.strokeStyle = s.stroke; ctx.stroke(p); }
     }
@@ -185,8 +345,8 @@ export function drawPlan(ctx, plan) {
 }
 
 /** One call: pose [skin] on each hand ([hands]: lists of 21 {x, y} pixel points) and draw it. */
-export function drawPuppet(ctx, hands, skin, layers = [], backs = []) {
-  hands.forEach((lm, i) => drawPlan(ctx, rigPlan(lm, skin, layers, backs?.[i])));
+export function drawPuppet(ctx, hands, skin, layers = [], backs = [], alphas = null) {
+  hands.forEach((lm, i) => drawPlan(ctx, rigPlan(lm, skin, layers, backs?.[i]), alphas?.[i] ?? 1));   // alphas: a sand hand that is crumbling fades as its grains take over
 }
 
 // ---- a pose for finger states (when there are no landmarks: simulator, filtered pictures, old clients) -----------------

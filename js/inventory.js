@@ -5,7 +5,7 @@
 //   ff-bcolor  the picked colour of the worn base hand (when that hand supports recolouring); ff-hcolors keeps one colour per hand: {handId: '#rrggbb'}
 //   ff-catstyle JSON {layer: {c, k?}}  the colour (+ effect intensity) picked PER CATEGORY: tattoo, nails, ring, glove, effect. The Hand's colour is per hand (ff-hcolors).
 //   ff-cos     the OLD format (one item per layer); read once to migrate, never written again
-// Nothing here talks to a network. Ownership is a plain flag on this phone, which is fine for a friendly game; real purchases will
+// Nothing here talks to a network. Ownership is a plain flag on this phone, which is fine for a friendly game; a real ad reward will
 // need a server-side receipt check (see js/unlock.js, where that boundary is marked).
 import { entryOf, cleanStack, legacyStack, catalogReady, stackToWire } from './cosmetics.js';
 import { MAX_STACK, cleanColor, cleanIntensity, COLOR_LAYERS } from './layers.js';
@@ -98,7 +98,7 @@ export class Inventory {
 
   /** Owned = a free item, or one granted by an unlock. An unknown id is never owned. */
   owns(id) { const e = entryOf(id); return !!e && (e.free || this.granted.has(id)); }
-  /** Records that an item is now owned. [source] is for the future ('ad', 'purchase', 'stub'); it is not stored. */
+  /** Records that an item is now owned. [source] is for the future ('ad', 'stub'); it is not stored. */
   grant(id, source = 'stub') {
     const e = entryOf(id);
     if (!e) return false;

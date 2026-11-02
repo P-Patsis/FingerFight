@@ -1,0 +1,14 @@
+{
+ "format": 1,
+ "id": "longfingers",
+ "name": "Longer fingers",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "layer": "nails",
+ "category": "human",
+ "extend": {
+  "len": 0.55,
+  "pieces": 2,
+  "droop": 0.2
+ }
+}

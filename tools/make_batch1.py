@@ -40,18 +40,7 @@ def poly_seg(f, i, w, L):
     return [{'d': poly(outline), 'fill': '#0ea5e9' if i != 1 else '#38bdf8', 'stroke': '#0369a1', 'strokeWidth': 2},
             {'d': poly([(-w, 0), (-w, -L + cut), (-w + cut, -L - cut * 0.4), (0, -L), (0, 0)]), 'fill': '#7dd3fc'}]
 
-def fin(w, L, side, reach, top):
-    """A web fin: a membrane flap on one side of a finger segment, in the segment's own space, so it turns and stretches with the finger.
-    The neighbouring finger's fin meets it, which makes one continuous web between the fingers."""
-    x0, x1 = side * w * 0.5, side * (w + reach)
-    return poly([(x0, -L * 0.04), (x1, -L * 0.1), (x1 * 0.97, -L * top), (x0, -L * (top + 0.05))])
-def webs(f, i, w, L, fill, edge):
-    """Fins on both inner sides of a finger (not the thumb; not the outer side of the index and the pinky) on the base and middle segments."""
-    if f == 'thumb' or i == 2: return []
-    reach = 5.5 if i == 0 else 3.6
-    top = 0.95 if i == 0 else 0.75
-    sides = [s_ for s_ in (-1, 1) if not (f == 'index' and s_ == -1) and not (f == 'pinky' and s_ == 1)]
-    return [{'d': fin(w, L, sd, reach, top), 'fill': fill, 'stroke': edge, 'strokeWidth': 1.6, 'opacity': 0.95} for sd in sides]
+# (The old per-finger web FINS are gone: frog and duck now carry a real membrane between neighbouring fingers, see the skin's "web" field.)
 
 # ---- 2. frog: green, lighter belly, sticky round toe pads, webbing between the fingers
 def frog_palm():
@@ -60,7 +49,7 @@ def frog_palm():
             {'d': circle(34, 74, 5) + circle(62, 66, 4) + circle(52, 88, 3.5), 'fill': '#4f9a3b'},
             {'d': 'M 30 62 C 40 66 54 66 66 60', 'stroke': '#a7e07f', 'strokeWidth': 2}]
 def frog_seg(f, i, w, L):
-    s = webs(f, i, w, L, '#4f9a3b', '#2f6b36') + [{'d': capsule(w, L), 'fill': '#6dbf4b', 'stroke': '#2f6b36', 'strokeWidth': 2.5}]
+    s = [{'d': capsule(w, L), 'fill': '#6dbf4b', 'stroke': '#2f6b36', 'strokeWidth': 2.5}]
     if i == 2: s.append({'d': circle(0, -L - 0.5, w * 1.35), 'fill': '#a7e07f', 'stroke': '#2f6b36', 'strokeWidth': 2.2})
     else: s.append({'d': f'M {-w * 0.5} {-L * 0.5} L {w * 0.5} {-L * 0.5}', 'stroke': '#a7e07f', 'strokeWidth': 1.5})
     return s
@@ -73,7 +62,7 @@ def duck_palm():
             {'d': tufts, 'fill': '#fde68a', 'stroke': '#b45309', 'strokeWidth': 1.8},
             {'d': 'M 28 58 Q 36 52 44 58 M 48 62 Q 56 56 64 62 M 34 80 Q 42 74 50 80', 'stroke': '#f59e0b', 'strokeWidth': 1.6}]
 def duck_seg(f, i, w, L):
-    s = webs(f, i, w, L, '#f97316', '#9a3412') + [{'d': capsule(w, L), 'fill': '#fcd34d', 'stroke': '#b45309', 'strokeWidth': 2.5}]
+    s = [{'d': capsule(w, L), 'fill': '#fcd34d', 'stroke': '#b45309', 'strokeWidth': 2.5}]
     if i == 2:
         k = L * 0.5
         s.append({'d': f'M {-w} {-k} L {-w} {-L} A {w} {w} 0 0 1 {w} {-L} L {w} {-k} Z', 'fill': '#f97316', 'stroke': '#9a3412', 'strokeWidth': 2})
@@ -144,11 +133,9 @@ def flame_seg(f, i, w, L):
 def floppy_palm():
     return [{'d': PALM_D, 'fill': '#f5d0a0', 'stroke': '#a16207', 'strokeWidth': 2.5}, {'d': 'M 30 62 C 40 68 54 68 66 60', 'stroke': '#fde68a', 'strokeWidth': 2.4}]
 def floppy_seg(f, i, w, L):
-    W = w * (2.5 - 0.15 * i)
-    over = L * 0.55 if i == 2 else 0
-    bend = 5 if i == 2 else 0
-    top = L + over
-    d = (f'M {-W} 0 L {-W} {-L} C {-W} {-top - W * 0.9} {bend + W} {-top - W * 0.9} {bend + W} {-L} L {W} 0 A {W} {W} 0 0 1 {-W} 0 Z')
+    """A fat sausage link. The hand's `extend` field repeats the mid / tip links beyond the real fingertip (long and drooping), so the tip itself no longer fakes it."""
+    W = w * (2.1 - 0.1 * i)
+    d = capsule(W, L)
     out = [{'d': d, 'fill': '#d9573b', 'stroke': '#7f1d1d', 'strokeWidth': 2.6},
            {'d': f'M {-W * 0.5} {-L * 0.8} L {-W * 0.5} {-L * 0.2}', 'stroke': '#f8a58f', 'strokeWidth': 3, 'opacity': 0.8}]
     if i != 1: out.append({'d': f'M {-W * 0.8} {-L * 0.5} L {W * 0.8} {-L * 0.4} M {-W * 0.8} {-L * 0.8} L {W * 0.8} {-L * 0.7}', 'stroke': '#7f1d1d', 'strokeWidth': 1.6, 'opacity': 0.55})
@@ -162,17 +149,20 @@ FLOPPY_T = tint('#d9573b', {'#d9573b': 'main', '#f8a58f': 'light', '#7f1d1d': 'd
 
 def skins():
     A = 'Finger Fight'
-    return [build('frog', 'Frog', A, frog_palm(), frog_seg, category='animal', tint=FROG_T),
-            build('duck', 'Duck', A, duck_palm(), duck_seg, category='animal'),
+    return [build('frog', 'Frog', A, frog_palm(), frog_seg, category='animal', tint=FROG_T,
+                web={'fill': '#4f9a3b', 'stroke': '#2f6b36', 'strokeWidth': 1.6, 'opacity': 0.95, 'reach': 0.72, 'scallop': 0.28}),
+            build('duck', 'Duck', A, duck_palm(), duck_seg, category='animal',
+                web={'fill': '#f97316', 'stroke': '#9a3412', 'strokeWidth': 1.6, 'opacity': 0.95, 'reach': 0.72, 'scallop': 0.28}),
             build('toybrick', 'Toy brick', A, brick_palm(), brick_seg, category='fantasy', tint=BRICK_T),
             build('mechanical', 'Mechanical', A, mech_palm(), mech_seg, category='scifi', free=False, unlock={'method': 'ad'},
                   particles=[{'effect': 'sparks', 'color': '#fde68a', 'where': 'knuckles', 'rate': 3}]),
-            build('cyberpunk', 'Cyberpunk', A, cyber_palm(), cyber_seg, category='scifi', free=False, unlock={'method': 'purchase', 'price': '0.99'}, tint=CYBER_T,
+            build('cyberpunk', 'Cyberpunk', A, cyber_palm(), cyber_seg, category='scifi', free=False, unlock={'method': 'ad'}, tint=CYBER_T,
                   particles=[{'effect': 'glint', 'color': '#22d3ee', 'where': 'hand', 'rate': 3}]),
             build('flaming', 'Flaming', A, flame_palm(), flame_seg, category='fantasy', free=False, unlock={'method': 'ad'},
                   particles=[{'effect': 'embers', 'color': '#f97316', 'where': 'tips', 'rate': 16}, {'effect': 'embers', 'color': '#fde047', 'where': 'hand', 'rate': 8},
                              {'effect': 'glow', 'color': '#dc2626', 'where': 'palm', 'rate': 3}, {'effect': 'glow', 'color': '#fb923c', 'where': 'tips', 'rate': 2}]),
-            build('floppy', 'Hotdog fingers', A, floppy_palm(), floppy_seg, category='human', tint=FLOPPY_T)]
+            build('floppy', 'Hotdog fingers', A, floppy_palm(), floppy_seg, category='human', tint=FLOPPY_T,
+                  extend={'len': 0.95, 'pieces': 3, 'droop': 1.35})]
 
 # ---- nail items: shapes in the fingertip's space, reaching past the tip
 def nail_item(id_, name, shape, category, tint_, free=True, unlock=None):

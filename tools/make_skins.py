@@ -108,7 +108,7 @@ def main():
              build('gauntlet', 'Gauntlet', 'Finger Fight', gaunt_palm(), gaunt_seg, category='premade', whole=True,
                    particles=[{'effect': 'glow', 'color': '#f59e0b', 'where': 'palm', 'rate': 2.5},
                               {'effect': 'sparks', 'color': '#fde047', 'where': 'tips', 'trigger': 'snap', 'burst': 14}]),
-             build('goldhand', 'Golden hand', 'Finger Fight', gold_palm(), gold_seg, category='premade', whole=True, free=False, unlock={'method': 'purchase', 'price': '0.99'},
+             build('goldhand', 'Golden hand', 'Finger Fight', gold_palm(), gold_seg, category='premade', whole=True, free=False, unlock={'method': 'ad'},
                    particles=[{'effect': 'glint', 'color': '#fff7ae', 'where': 'hand', 'rate': 4}])]
     os.makedirs(OUT, exist_ok=True)
     for s in skins:

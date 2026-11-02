@@ -172,12 +172,11 @@ variants are now free colours of a free item; the old locked orc / frost / black
 
 ## Unlocking: a STUB (`js/unlock.js`)
 
-**No ad network and no payment code exists in the web app.** Locked items show "Watch ad to unlock (demo)" or "Buy 0.99 (demo)";
-both go through `unlockItem(inventory, entry)`, which asks the installed **provider** and grants the item only if the provider
+**No ad network and no payment code exists in the web app, and NO item can be bought: every locked item is an ad-lock** (`unlock.method` is `free` or `ad`; `purchase` and prices are refused by the parser). Locked items show "Watch ad to unlock (demo)";
+the tap goes through `unlockItem(inventory, entry)`, which asks the installed **provider** and grants the item only if the provider
 answers `{granted: true}`. The default provider is the stub: it grants at once. The boundary is marked in the file
 (`STUB BOUNDARY`). For the native app, call `setUnlockProvider({ name, request: async entry => ({ granted, receipt }) })` once at
-start-up with an AdMob rewarded-ad or Google Play Billing implementation (a real purchase must be verified server-side before it
-answers granted). Nothing else changes: the Store, the inventory and the tests are already written against that interface.
+start-up with an AdMob rewarded-ad implementation (it answers granted only when the rewarded ad was completed). Nothing else changes: the Store, the inventory and the tests are already written against that interface.
 Ownership is a flag on the phone: fine for a friendly game, not a security boundary.
 
 ## Which side an item is on (nails, tattoos)
@@ -244,3 +243,10 @@ Drawn by `tools/make_batch1.py` (uses the helpers of `make_skins.py`, appends to
 
 ## Part E content (2026-11-02): twelve more generic items (`tools/make_batch3.py`)
 Hands (skins): `bone` `sand` `inksketch` free; `chrome` `eyes` locked (ad); `burnbone` locked (0.99, embers + glow emitters). Nails layer: `hook` free (index finger), `scissors` locked (ad; index + middle). Gloves: `boxing` `rubber` free, `formal` locked (ad); all recolourable. Ring: `ornate` locked (0.99, glow + glint emitters). Generated hands (`js/generated.js`): Geometric (`gc` 1-5) and Painting (`sd` seed, locked) travel as validated integers; see DECISIONS.md. Gridmesh is a normal skin file (`gridmesh`, free).
+
+## Rig extensions (2026-11-02): web membrane, fingers past the tip, sand
+Optional skin fields (and `extend` on a layer item). All drawing only: they never change the landmarks, so finger counting is unaffected.
+* `"web": {"fill": "#4f9a3b", "stroke": "#2f6b36", "strokeWidth": 1.6, "opacity": 0.95, "reach": 0.72, "scallop": 0.28}`: a membrane in each gap between neighbouring fingers (index-middle, middle-ring, ring-pinky), pinned to both fingers' landmark chains (so it follows the spread), `reach` = how far up the fingers (0.2-1), `scallop` = how deep the free edge curves back (0-0.6). Used by `frog`, `duck`. Colours are recoloured by the tint / hue-shift.
+* `"extend": {"len": 0.95, "pieces": 3, "droop": 1.35, "fingers": [...]}`: `len` = extra length as a share of the finger's length (0.05-2), `pieces` = links (1-4), `droop` = total sag toward screen-down in radians (0-2), `fingers` optional. Links reuse the hand's own `_mid` (inner) and `_tip` (last) shapes. A skin carries its own (`floppy` = hotdog fingers); a layer item may carry one instead of shapes (`longfingers`, free, Nail polish chip); a worn item's extension replaces the hand's. Shown whichever side faces the camera.
+* `"sand": {"color": "#e2bf7e", "color2": "#f7e6b8"}` marks a sand hand (js/sand.js): it crumbles into a 60-grain swarm when shaken (landmark speed > 4.5 palm widths/s for 0.15 s) and re-forms after 0.4 s under 1.5. Needs a `grain` emitter for the shed grains. The swarm is inside the 90-particle cap; reduced motion = static hand. Nothing extra is sent: the opponent's picture is a still.
+* New particle preset `grain` (jitter, gentle gravity). Tools: `make_batch1.py` (frog/duck/hotdog), `make_batch3.py` (sand), `make_batch4.py` (longfingers).

@@ -405,8 +405,7 @@
  "category": "scifi",
  "free": false,
  "unlock": {
-  "method": "purchase",
-  "price": "0.99"
+  "method": "ad"
  },
  "tint": {
   "default": "#ec4899",

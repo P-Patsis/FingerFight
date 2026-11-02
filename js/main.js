@@ -1326,24 +1326,31 @@ function refreshPreview() {
   storeAnim.rec = rec;
   if (!storeAnim.ps) storeAnim.ps = new ParticleSystem();
   storeAnim.ps.setEmitters(rec.emitters);
+  storeAnim.ps.setSand(rec.skin.sand);
   startStoreAnim();
+}
+/** The still preview has no real hand to shake, so a sand hand is jolted for a moment every few seconds to show its collapse (decoration only). */
+function demoShake(hands, now) {
+  const phase = (now / 1000) % 6;
+  if (phase > 1.2) return hands;
+  const dx = Math.sin(now / 26) * 26;
+  return hands.map(lm => lm.map(p => ({ x: p.x + dx, y: p.y })));
 }
 function startStoreAnim() {
   const c = $('storePreview'), ctx = c.getContext?.('2d');
   if (!ctx || typeof globalThis.requestAnimationFrame !== 'function' || storeAnim.raf || tryOn.on) return;
-  const hands = previewHandPx(c.width, c.height);
   storeAnim.last = 0;
   const paint = now => {
     const dt = storeAnim.last ? (now - storeAnim.last) / 1000 : 0;
     storeAnim.last = now;
     try {
-      const sw = swayOf(now), rec = storeAnim.rec;
+      const sw = swayOf(now), rec = storeAnim.rec, hands = previewHandPx(c.width, c.height, rec.skin, rec.layers);
       ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, c.width, c.height);
       ctx.save();
       ctx.translate(c.width / 2, 0); ctx.scale(sw.scale, 1); ctx.translate(-c.width / 2, 0);        // turn about the hand's vertical axis
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [sw.back], live: true, noBg: true });
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [sw.back], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas() });
       ctx.restore();
-      storeAnim.ps.update(dt, hands); storeAnim.ps.draw(ctx);
+      storeAnim.ps.update(dt, rec.skin.sand ? demoShake(hands, now) : hands); storeAnim.ps.draw(ctx);
     } catch { /* decoration */ }
   };
   const frame = now => {

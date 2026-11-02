@@ -208,3 +208,10 @@ Random queue: the old scan tried the 8 slots one Peer at a time (4-8 s) and then
 - **Hue-shift instead of "no picker" for fixed-colour hands**: rotate hues relative to the hand's dominant hue and gently tint greys, so the design stays but the colour is the player's. Per-hand memory reuses `ff-hcolors`.
 - **Webbing as side fins on finger segments**: parts can only draw in their own space, so a true membrane between two parts is impossible in the format. Fins ride the fingers and meet when fingers are close; wide spread leaves gaps. A real membrane needs a rig extension.
 - **Hotdog fingers**: width and overshoot are the only levers the format gives; length stays bound to the landmarks.
+
+
+## 2026-11-02 (14) — ad-locks only, membrane, extension, sand
+- **No money in the app.** `purchase` is removed from the valid unlock methods and no item data carries a price; every locked item is an ad-lock. Chosen over keeping "Buy" as data that the UI hides, so a future change cannot quietly re-add a paid path. `js/unlock.js` stays the one replaceable provider (ad SDK later).
+- **Web = a skin-level membrane computed from landmarks**, not shapes in a part's space. A part can only draw in its own space, which is why fins gapped; the membrane needs two fingers' landmarks, so the rig builds it (`webGeometry`) and the skin only says colours, `reach`, `scallop`. Gaps: three (no thumb).
+- **Fingers past the tip = repeat the hand's own links, droop in screen space.** The extension re-uses the worn hand's `_mid`/`_tip` shapes, so it matches any hand and any recolour with no extra art, and an item (`longfingers`) needs no shapes. Droop turns toward screen-down (that is what a viewer reads as gravity). It is drawing only; counting reads landmarks and never the rig.
+- **Sand's swarm lives inside the particle system**, so the 90/6 caps are enforced in one place (a swarm of 60 + shed grains <= 90). Shake detection needs a SUSTAINED spike (0.15 s) so one bad tracking frame cannot crumble a hand. No wire change: opponent pictures are stills.

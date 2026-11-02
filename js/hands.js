@@ -212,6 +212,7 @@ export class HandCam {
     const rec = resolveLoadout(skin, stack, baseColor);
     this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec };
     this.particles.setEmitters(v.endsWith('puppet') ? rec.emitters : []);
+    this.particles.setSand(v.endsWith('puppet') ? rec.skin.sand : null);       // a sand hand crumbles when shaken (js/sand.js)
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
   }
 
@@ -221,7 +222,7 @@ export class HandCam {
       try {
         const pts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
         const rec = this.overlay.rec;
-        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hands.map((lm, i) => handBack(lm, scores[i]?.side)));   // nails only when the back of that hand faces the camera
+        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hands.map((lm, i) => handBack(lm, scores[i]?.side)), this.particles.bodyAlphas());   // nails only when the back of that hand faces the camera; a crumbling sand hand fades
         if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
           const now = performance.now(), dt = this.lastDraw ? (now - this.lastDraw) / 1000 : 0;
           this.lastDraw = now; this.lastPts = pts;

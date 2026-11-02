@@ -29,11 +29,11 @@ test('every new base hand loads from the manifest, validates, rigs on all 16 par
     assert.ok(manifest.includes(id), id + ' is in the manifest');
     const skin = parseSkin(read(`assets/skins/${id}.json`));
     assert.equal(skin.id, id);
-    assert.equal(rigPlan(lm, skin).length, 16, id + ' rigs 16 parts');
+    assert.equal(rigPlan(lm, skin).filter(s => !/^(web|\w+_ext)/.test(s.part)).length, 16, id + ' rigs 16 parts (plus its web / extension steps, if it has them)');
     const c = ctx(); drawPuppet(c, [lm.map(p => ({ x: p.x * 200, y: p.y * 200 }))], skin); assert.ok(c.calls >= 16, id + ' draws (' + c.calls + ' calls)');
     const e = C.entryOf(id);
     assert.equal(e.layer, 'base'); assert.equal(e.free, free, id + (free ? ' is owned' : ' is locked'));
-    if (!free) assert.ok(['ad', 'purchase'].includes(e.unlock.method));
+    if (!free) assert.equal(e.unlock.method, 'ad');
     assert.ok(S.skinIds().includes(id));
   }
 });

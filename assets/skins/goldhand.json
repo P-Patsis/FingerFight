@@ -285,8 +285,7 @@
  "whole": true,
  "free": false,
  "unlock": {
-  "method": "purchase",
-  "price": "0.99"
+  "method": "ad"
  },
  "particles": [
   {
