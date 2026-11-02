@@ -72,7 +72,7 @@ test('Camera off in the Store; and the Profile\'s merged panel: Customise turns 
   $('profileBtn').onclick();
   assert.equal($('custArea').hidden, true, 'closed until asked'); assert.equal(events.length, 0, 'opening the Profile does not touch the camera');
   assert.equal($('custOnly').hidden, false);
-  $('custBtn').onclick();
+  $('tryBtn').onclick();                                             // "Try on (camera)" brings the camera
   await until(() => events.includes('run'), 'camera on');
   assert.deepEqual(events, ['start', 'run']);
   assert.equal($('custArea').hidden, false);
@@ -100,7 +100,7 @@ test('Camera off in the Store; and the Profile\'s merged panel: Customise turns 
   assert.equal($('custArea').hidden, true); assert.deepEqual(shown(), { top: true, live: false, fit: false, two: false }, 'camera off: just the one static preview'); assert.equal($('camBox').hidden, true);
   // on again, then leave the screen: the camera goes off and the mode ends
   reset();
-  $('custBtn').onclick();
+  $('tryBtn').onclick();
   await until(() => events.includes('run'), 'camera on again');
   $('profileBack').onclick();
   assert.equal(cam().cameraOn, false, 'leaving the Profile switches it off');
@@ -139,3 +139,27 @@ test('leaving while the camera is still starting switches it off again', async (
 });
 
 import { catalogReady } from '../js/cosmetics.js';
+
+test('TWO BUTTONS: "Customise" opens the customise area with NO camera; the camera starts only through "Try on (camera)" (or the corner Try on while customising); Done / leaving turns it off', async () => {
+  reset();
+  $('profileBtn').onclick();
+  const html = (await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="custBtn"[^>]*>Customise<\/button>/); assert.match(html, /id="tryBtn"[^>]*>Try on \(camera\)<\/button>/);
+  assert.equal($('custBtn').hidden, false); assert.equal($('tryBtn').hidden, false);
+  $('custBtn').onclick();
+  await new Promise(r => setTimeout(r, 60));
+  assert.equal($('custArea').hidden, false, 'the customise controls are open'); assert.deepEqual(events, [], 'Customise alone never touches the camera');
+  assert.equal($('camBox').hidden, true);
+  assert.equal($('custDone').hidden, false); assert.equal($('tryNow').hidden, false, 'the camera can still be started from the preview corner');
+  assert.equal($('custBtn').hidden, true); assert.equal($('tryBtn').hidden, true, 'the two entry buttons give way to Done / Try on');
+  assert.equal($('looksRow').hidden, false); assert.equal($('profileLayers').hidden, false);
+  $('tryNow').onclick();
+  await until(() => events.includes('run'), 'camera on from the corner');
+  assert.deepEqual(events, ['start', 'run']); assert.equal($('camBox').parentElement, $('liveBox')); assert.equal($('tryNow').hidden, true, 'once the camera is on the corner button is gone');
+  $('custDone').onclick();
+  assert.ok(events.includes('stop')); assert.equal(cam().cameraOn, false); assert.equal($('custArea').hidden, true);
+  assert.equal($('custBtn').hidden, false); assert.equal($('tryBtn').hidden, false, 'both entry buttons are back');
+  // Back also turns it off
+  reset(); $('tryBtn').onclick(); await until(() => events.includes('run'), 'camera'); $('profileBack').onclick();
+  assert.equal(cam().cameraOn, false); assert.equal($('custArea').hidden, true);
+});

@@ -68,3 +68,14 @@ test('the colour picker is built by the app: hue slider + saturation/brightness 
   assert.ok(!/\.type = 'color'/.test(js), 'no <input type=color>');
   assert.match(js, /cp-sv/); assert.match(js, /cp-hue/); assert.ok(!html.includes('type="color"'));
 });
+
+test('the hue slider has a rainbow track scoped to the colour picker; the picker panel is compact; other sliders keep the global style', () => {
+  const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  const rule = css.slice(css.lastIndexOf('.cat-color input[type=range].cp-hue {'));
+  assert.match(rule, /linear-gradient\(90deg, #f00[^)]*#ff0[^)]*#0f0[^)]*#0ff[^)]*#00f[^)]*#f0f[^)]*#f00/s, 'red, yellow, green, cyan, blue, magenta, red');
+  assert.match(rule, /appearance:\s*none/); assert.match(css, /\.cp-hue::-webkit-slider-thumb[^}]*background:\s*#fff/s, 'a white handle that shows on any colour');
+  assert.match(css, /\.cp-hue::-moz-range-thumb/);
+  assert.ok(!/(^|\n)input\[type=range\][^{]*\{[^}]*linear-gradient/.test(css), 'no global slider got the gradient');
+  assert.match(css, /\.cp-sv\s*\{\s*height:\s*100px/); assert.match(css, /\.cp-panel\s*\{\s*gap:\s*6px;\s*padding:\s*8px/);
+  assert.match(fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8'), /sv\.width = 240; sv\.height = 100;/, 'the canvas is drawn at its shown size: no stretched, padded square');
+});

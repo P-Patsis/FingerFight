@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-02 (12) — Hue rainbow, tighter picker panel, Customise / Try-on split (NEEDS SCREENSHOT REVIEW)
+- Changed (UX/styling only; no cosmetics logic, rig, connection, match, validation):
+  1. HUE SLIDER: it was gold because the earlier `.cat-color input[type=range]` rule (more specific) overrode the gradient. Now `.cat-color input[type=range].cp-hue` has appearance none, a red-orange-yellow-green-cyan-blue-magenta-red gradient and a white handle with a dark edge (webkit + moz thumb styles). Scoped to the picker; the volume / intensity sliders are untouched.
+  2. PANEL TIGHTENED: the square is drawn at the size it is shown (240x100, it was a 110px canvas stretched to 120), hue slider 22px (was 32), gap 6 / padding 8, smaller swatch and Done row.
+  3. TWO BUTTONS: "Customise" opens the customise area (chips, colour picker, items, saved looks) with NO camera; "Try on (camera)" opens the same area and starts the camera. While customising without the camera the preview corner shows "📷 Try on" (left) next to "✕ Done" (right) so the camera can be started later; once it is on, that button disappears. Done, Back and leaving the Profile turn the camera off as before.
+- Verified: 282/282 tests (new: camera starts only via Try on or the corner button, Customise never touches it, Done/Back stop it, hue gradient scoped, compact panel). SW restamped. NOT seen on a phone.
+- Needs screenshot review: the hue handle against the gradient, panel height, the two buttons side by side on a narrow phone, the two corner buttons on a small preview.
+
 ## 2026-11-02 (11) — Skin content batch 1: 8 hands + 3 nail items (ALL NEED SCREENSHOT REVIEW: drawn blind)
 - Added with the EXISTING format only (generator `tools/make_batch1.py`; no rig / format / connection / validation change; all generic styles):
   HANDS (Hand category): Geometric `lowpoly`, Frog `frog`, Duck `duck`, Toy brick `toybrick`, Floppy `floppy` = FREE (owned); Mechanical `mechanical`, Cyberpunk `cyberpunk`, Flaming `flaming` = LOCKED (ad / purchase 0.99 / ad).

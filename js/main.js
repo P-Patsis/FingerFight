@@ -1168,7 +1168,8 @@ function layoutPreview() {
   $('cWearTop').hidden = which !== 'fit';
   $('wearBox').hidden = false;
   $('stickyTop').classList.toggle('stuck', c);
-  $('custBtn').hidden = c; $('custDone').hidden = !c;
+  $('custBtn').hidden = c; $('tryBtn').hidden = c; $('custDone').hidden = !c;
+  $('tryNow').hidden = !c || tryOn.on || tryOn.busy;           // customising without the camera: the corner offers to turn it on
   $('profileLayers').hidden = !c; $('cCat').hidden = !c; $('looksRow').hidden = !c; if (!c) { $('lookEdit').hidden = true; picker.layer = null; }
   if (c) renderLooks();
   if (which === 'fit') startStoreAnim();
@@ -1176,18 +1177,19 @@ function layoutPreview() {
 function leaveCust() {
   cust.on = false;
   $('custArea').hidden = true;
-  $('custBtn').textContent = 'Customise & try on'; $('custBtn').setAttribute('aria-pressed', 'false');
   layoutPreview();
 }
 $('custDone').onclick = () => { if (cust.on) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
-$('custBtn').onclick = () => {
-  if (cust.on) { leaveCust(); stopTryOn(); return; }                 // "Done": the camera goes off and the plain preview is back
+/** Opens the customise area WITHOUT the camera (the camera only starts through a Try-on button). */
+function enterCust() {
+  if (cust.on) return;
   cust.on = true;
   $('custArea').hidden = false;
-  $('custBtn').textContent = 'Done (camera off)'; $('custBtn').setAttribute('aria-pressed', 'true');
   layoutWear('profile'); renderProfileItems(); layoutPreview();
-  startTryOn();                                                      // camera ON (says why when it cannot)
-};
+}
+$('custBtn').onclick = enterCust;                                    // "Customise": pick and arrange, no camera
+$('tryBtn').onclick = () => { enterCust(); startTryOn(); };          // "Try on (camera)": the same area with the camera ON (says why when it cannot)
+$('tryNow').onclick = () => { if (cust.on) startTryOn(); };          // customising without the camera and now wanting it
 
 /** The first colour a category starts from when nothing was picked: the default of its first colourable item (the hand: the worn hand). */
 function categoryDefault(layer) {
@@ -1223,7 +1225,7 @@ function colorRow(box, layer, cur, apply, live) {
 function colorPanel(layer, cur, apply, live) {
   const hsv = hexToHsv(cleanColor(cur) || '#ffffff');
   const panel = el('div', 'cp-panel'); panel.dataset.act = 'panel';
-  const sv = document.createElement('canvas'); sv.className = 'cp-sv'; sv.width = 240; sv.height = 110; sv.dataset.act = 'sv'; sv.setAttribute('aria-label', 'Saturation and brightness');
+  const sv = document.createElement('canvas'); sv.className = 'cp-sv'; sv.width = 240; sv.height = 100; sv.dataset.act = 'sv'; sv.setAttribute('aria-label', 'Saturation and brightness');
   const hue = document.createElement('input'); hue.type = 'range'; hue.min = '0'; hue.max = '360'; hue.step = '1'; hue.value = String(Math.round(hsv.h)); hue.className = 'cp-hue'; hue.dataset.act = 'hue'; hue.setAttribute('aria-label', 'Hue');
   const swatch = el('span', 'cp-swatch'), code = el('code', 'cp-hex');
   const done = el('button', 'btn small', 'Done'); done.type = 'button'; done.dataset.act = 'done';
@@ -1408,6 +1410,7 @@ function stopTryOn() {
 }
 function updateTryOnButtons() {
   $('wearCamOff').hidden = !(tryOn.on || tryOn.busy);
+  $('tryNow').hidden = !cust.on || tryOn.on || tryOn.busy;
   $('storeSnap').disabled = tryOn.busy;
 }
 
