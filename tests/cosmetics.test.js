@@ -524,7 +524,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(b.visible(), ['profile']);
   assert.equal($('wearTop').parentElement, $('cWearTop'), 'the preview moved to the Profile customise area');
   const pcards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
-  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet', 'lowpoly', 'frog', 'duck', 'toybrick', 'floppy']), 'the Hand category holds the hands you own (there is no separate hand row)');
+  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet', 'lowpoly', 'frog', 'duck', 'toybrick', 'floppy', 'gridmesh']), 'the Hand category holds the hands you own (there is no separate hand row)');
   $('profileLayers').children.find(x => x.dataset.value === 'glove').onclick();
   pcards().find(c => c.dataset.id === 'whiteglove').onclick();
   assert.equal(stackIds().at(-1), 'whiteglove');

@@ -48,3 +48,27 @@ test('resolveLoadout draws the Geometric hand with the level it is given', async
   setGen({ gc: 3 });
   assert.ok(Object.keys(GENERATED).includes('painting'));
 });
+
+test('gridmesh and painting are registered hands that load; painting is locked, gridmesh free', async () => {
+  const fetchFn = async u => ({ ok: true, json: async () => JSON.parse(readFileSync(new URL('../' + String(u).replace(/^\.?\//, ''), import.meta.url))) });
+  resetSkins();
+  const ids = await loadSkins(fetchFn, 'assets/skins/');
+  assert.ok(ids.includes('gridmesh') && ids.includes('painting'));
+  const g = parseSkin(JSON.parse(readFileSync(new URL('../assets/skins/gridmesh.json', import.meta.url))));
+  assert.ok(Object.values(g.parts).every(p => p.shapes.length <= 12));
+  const pj = JSON.parse(readFileSync(new URL('../assets/skins/painting.json', import.meta.url)));
+  assert.equal(pj.free, false);
+});
+
+test('Painting: the seed a phone sends makes the opponent draw the same painting as the sender', async () => {
+  const fetchFn = async u => ({ ok: true, json: async () => JSON.parse(readFileSync(new URL('../' + String(u).replace(/^\.?\//, ''), import.meta.url))) });
+  resetSkins(); await loadSkins(fetchFn, 'assets/skins/');
+  setGen({ sd: 31337 });
+  const mine = resolveLoadout('painting', [], null).skin;
+  const wire = genWire('painting'); assert.deepEqual(wire, { sd: 31337 });
+  assert.ok(validPicture({ view: 'puppet', skin: 'painting', ...wire, hands: [], lm: null, ar: 1.3, photo: '' }, true));
+  setGen({ sd: 5 });                                  // the opponent's own seed is different
+  const theirs = resolveLoadout('painting', [], null, wire).skin;
+  assert.equal(JSON.stringify(theirs.parts), JSON.stringify(mine.parts));
+  assert.notEqual(JSON.stringify(resolveLoadout('painting', [], null).skin.parts), JSON.stringify(mine.parts));
+});

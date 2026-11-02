@@ -12,7 +12,7 @@ import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPictur
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, setGen } from './cosmetics.js';
-import { cleanGc, GC_MIN, GC_MAX } from './generated.js';
+import { cleanGc, GC_MIN, GC_MAX, newSeed } from './generated.js';
 import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
 import { Stats } from './stats.js';
@@ -280,7 +280,7 @@ $('countryInput').oninput = e => {
   const c = countryFromText(e.target.value);      // the box keeps what was typed; only the matching code is saved
   profile.country = c; store.set('ff-country', c); $('countryHint').textContent = flagEmoji(c);
 };
-$('profileBtn').onclick = () => { buildStyleCard(); renderProfile(); show('profile'); };
+$('profileBtn').onclick = () => { if (!inGame) setGen({ sd: newSeed() }); buildStyleCard(); renderProfile(); show('profile'); };
 $('profileBack').onclick = () => show('menu');
 renderWho();
 
@@ -1450,6 +1450,7 @@ $('storeClear').onclick = () => { inv.clear(); syncStyle(); };
 // Game
 // ---------------------------------------------------------------------------------------------
 function startGame() {
+  setGen({ sd: newSeed() });                          // a new painting for every match: my seed, sent with each picture, so the opponent draws the same one
   saveSession();
   token++;
   inGame = true;
