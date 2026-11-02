@@ -1,0 +1,127 @@
+{
+ "format": 1,
+ "id": "blades",
+ "name": "Blade fingers",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "layer": "nails",
+ "category": "scifi",
+ "tint": {
+  "default": "#cbd5e1",
+  "map": {
+   "#cbd5e1": "main",
+   "#334155": "dark",
+   "#475569": "mid",
+   "#f8fafc": "light"
+  },
+  "swatches": [
+   "#cbd5e1",
+   "#fbbf24",
+   "#ef4444",
+   "#22d3ee",
+   "#a855f7",
+   "#22c55e"
+  ]
+ },
+ "parts": {
+  "thumb_tip": [
+   {
+    "d": "M -7.7700000000000005 -9.5 L 7.7700000000000005 -9.5 L 7.7700000000000005 -15.5 L -7.7700000000000005 -15.5 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M -4.44 -15.5 L -3.7 -36.5 L 0 -44.5 L 3.7 -36.5 L 4.44 -15.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M 0 -15.5 L 0 -40.5",
+    "stroke": "#f8fafc",
+    "strokeWidth": 1
+   }
+  ],
+  "index_tip": [
+   {
+    "d": "M -6.510000000000001 -8 L 6.510000000000001 -8 L 6.510000000000001 -14 L -6.510000000000001 -14 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M -3.7199999999999998 -14 L -3.1 -35 L 0 -43 L 3.1 -35 L 3.7199999999999998 -14 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M 0 -14 L 0 -39",
+    "stroke": "#f8fafc",
+    "strokeWidth": 1
+   }
+  ],
+  "middle_tip": [
+   {
+    "d": "M -6.825 -9.5 L 6.825 -9.5 L 6.825 -15.5 L -6.825 -15.5 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M -3.9 -15.5 L -3.25 -36.5 L 0 -44.5 L 3.25 -36.5 L 3.9 -15.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M 0 -15.5 L 0 -40.5",
+    "stroke": "#f8fafc",
+    "strokeWidth": 1
+   }
+  ],
+  "ring_tip": [
+   {
+    "d": "M -6.405 -8 L 6.405 -8 L 6.405 -14 L -6.405 -14 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M -3.6599999999999997 -14 L -3.05 -35 L 0 -43 L 3.05 -35 L 3.6599999999999997 -14 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M 0 -14 L 0 -39",
+    "stroke": "#f8fafc",
+    "strokeWidth": 1
+   }
+  ],
+  "pinky_tip": [
+   {
+    "d": "M -5.460000000000001 -4.5 L 5.460000000000001 -4.5 L 5.460000000000001 -10.5 L -5.460000000000001 -10.5 Z",
+    "fill": "#475569",
+    "stroke": "#0f172a",
+    "strokeWidth": 1
+   },
+   {
+    "d": "M -3.12 -10.5 L -2.6 -31.5 L 0 -39.5 L 2.6 -31.5 L 3.12 -10.5 Z",
+    "fill": "#cbd5e1",
+    "stroke": "#334155",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M 0 -10.5 L 0 -35.5",
+    "stroke": "#f8fafc",
+    "strokeWidth": 1
+   }
+  ]
+ },
+ "free": false,
+ "unlock": {
+  "method": "ad"
+ }
+}

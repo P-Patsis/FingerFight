@@ -221,3 +221,23 @@ on, shows the type chips (Hand ... Effect), the owned items of that type, the ca
 * The full-colour control is **our own picker** (`js/colorpick.js` + `colorPanel` in main.js), not `<input type=color>`: hue slider + saturation/brightness square, live while dragging, Done to close. It only produces lower-case `#rrggbb` (`hsvToHex`), applied through `Inventory.setCategoryColor` / the skeleton colour (`sk`), so storage and the wire format (`c`, `bc`, `sk`) are unchanged.
 * `Looks.rename(id, name)` and `Looks.update(id, getup)` (overwrite the outfit, keep id / name / position); both re-clean everything with `cleanLook`.
 
+## Content batch 1 (2026-11-02): eight hands and three nail items, all generic styles
+Drawn by `tools/make_batch1.py` (uses the helpers of `make_skins.py`, appends to both manifests). Existing format only; no rig, validation or wire change.
+
+| id | what | category | state |
+|---|---|---|---|
+| `lowpoly` Geometric | angular faceted hand, two tones | scifi | free, recolourable |
+| `frog` Frog | green, round toe pads, webbing between the fingers | animal | free, recolourable |
+| `duck` Duck | yellow, bill-orange tips and webbing, feather tufts at the wrist | animal | free |
+| `toybrick` Toy brick | blocky building-block hand with studs (no brand marks) | fantasy | free, recolourable |
+| `floppy` Floppy | fat, soft, oversized fingers that sag a little | human | free, recolourable |
+| `mechanical` Mechanical | plates, gear at every joint, piston rod per segment; sparks at the knuckles | scifi | locked (ad) |
+| `cyberpunk` Cyberpunk | dark plated hand, glow lines, circuit traces, LED tips; glint | scifi | locked (purchase 0.99), recolourable accent |
+| `flaming` Flaming | charred glowing hand with flame licks on the tips, ANIMATED by emitters: embers (tips 16/s, hand 8/s) + glow (palm, tips) = 4 emitters, inside the 90-particle cap | fantasy | locked (ad) |
+| `longnails` Long nails | pointed stiletto nails reaching past the tip | human | free, recolourable |
+| `claws` Claws | short curved animal claws, ivory | animal | free, recolourable |
+| `blades` Blade fingers | steel blades with a dark guard, reaching ~28 units past the tip | scifi | locked (ad), recolourable |
+
+* The three nail items are in the existing **nails layer** (Nail polish chip), so they get the category colour picker, stack with polish, and are drawn on the nail side only.
+* **Not built (rig limit):** *longer fingers*. The rig stretches every segment so its end lands exactly on the next landmark, so a skin cannot make a finger longer, and an item that only extends the tip cannot match the hand's colour. It needs a rig extension (a per-finger extension past the tip landmark, drawn in the base hand's own colours). *Floppy fingers* was possible because width is part of the skin, so it is a **base hand**, not an item.
+

@@ -169,7 +169,7 @@ test('TAP TO TOGGLE: wearing an item adds it on top, tapping it again takes it o
   const full = new Inventory(memStorage());
   const wearable = catalog().filter(e => e.free && e.layer !== 'base').map(e => e.id);
   let n = 0; for (const id of wearable) if (full.toggle(id).ok) n++;
-  assert.equal(n, wearable.length, 'every free wearable fits'); assert.equal(full.stack.length, Math.min(wearable.length, MAX_STACK));
+  assert.equal(n, Math.min(wearable.length, MAX_STACK), 'free wearables fit up to the limit'); assert.equal(full.stack.length, Math.min(wearable.length, MAX_STACK));
   while (full.stack.length < MAX_STACK) { const extra = catalog().find(e => e.layer !== 'base' && !full.isEquipped(e.id)); full.grant(extra.id); full.toggle(extra.id); }
   full.grant('ruby'); full.remove('ruby'); assert.equal(full.toggle('ruby').full, true, 'past the limit is refused'); assert.equal(full.isEquipped('ruby'), false);
 });
@@ -517,7 +517,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(b.visible(), ['profile']);
   assert.equal($('wearTop').parentElement, $('cWearTop'), 'the preview moved to the Profile customise area');
   const pcards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
-  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet']), 'the Hand category holds the hands you own (there is no separate hand row)');
+  assert.deepEqual(new Set(pcards().map(c => c.dataset.id)), new Set(['cartoon', 'robot', 'neon', 'paw', 'gauntlet', 'lowpoly', 'frog', 'duck', 'toybrick', 'floppy']), 'the Hand category holds the hands you own (there is no separate hand row)');
   $('profileLayers').children.find(x => x.dataset.value === 'glove').onclick();
   pcards().find(c => c.dataset.id === 'whiteglove').onclick();
   assert.equal(stackIds().at(-1), 'whiteglove');

@@ -7,7 +7,7 @@ Adding a skin = drop `assets/skins/<id>.json` in, add `<id>` to `manifest.json`,
 `node tools/stamp.mjs`. It then appears in the Profile skin picker. Nothing else in the code changes.
 (`tools/make_skins.py` is only the script that drew the three built-in skins; skins can be written by hand or by any tool.)
 
-Built in: `cartoon` (default), `robot`, `neon`, `paw`, `dragon`, `gauntlet`, `goldhand`. The skin id travels with each picture (`skin` in the message, 1-12 lower-case
+Built in: `cartoon` (default), `robot`, `neon`, `paw`, `dragon`, `gauntlet`, `goldhand`, and batch 1: `lowpoly` (geometric), `frog`, `duck`, `toybrick`, `mechanical`, `cyberpunk`, `flaming`, `floppy` (all drawn by `tools/make_batch1.py`). The skin id travels with each picture (`skin` in the message, 1-12 lower-case
 letters); the receiver draws with **its own copy** of that skin and falls back to the default if it does not have it, so a
 stranger can never push a drawing or an image through a skin id.
 

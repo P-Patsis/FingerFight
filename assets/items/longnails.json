@@ -1,0 +1,96 @@
+{
+ "format": 1,
+ "id": "longnails",
+ "name": "Long nails",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "layer": "nails",
+ "category": "human",
+ "tint": {
+  "default": "#dc2626",
+  "map": {
+   "#dc2626": "main",
+   "#7f1d1d": "dark",
+   "#fca5a5": "light"
+  },
+  "swatches": [
+   "#dc2626",
+   "#f97316",
+   "#facc15",
+   "#22c55e",
+   "#22d3ee",
+   "#3b82f6",
+   "#a855f7",
+   "#ec4899",
+   "#f8fafc",
+   "#111827"
+  ]
+ },
+ "parts": {
+  "thumb_tip": [
+   {
+    "d": "M -5.920000000000001 -11.5 L -6.808000000000001 -17.5 L 0 -35.5 L 6.808000000000001 -17.5 L 5.920000000000001 -11.5 Q 0 -7.5 -5.920000000000001 -11.5 Z",
+    "fill": "#dc2626",
+    "stroke": "#7f1d1d",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M -2.59 -15.5 L 0 -32.5",
+    "stroke": "#fca5a5",
+    "strokeWidth": 1
+   }
+  ],
+  "index_tip": [
+   {
+    "d": "M -4.960000000000001 -10 L -5.704000000000001 -16 L 0 -34 L 5.704000000000001 -16 L 4.960000000000001 -10 Q 0 -6 -4.960000000000001 -10 Z",
+    "fill": "#dc2626",
+    "stroke": "#7f1d1d",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M -2.17 -14 L 0 -31",
+    "stroke": "#fca5a5",
+    "strokeWidth": 1
+   }
+  ],
+  "middle_tip": [
+   {
+    "d": "M -5.2 -11.5 L -5.98 -17.5 L 0 -35.5 L 5.98 -17.5 L 5.2 -11.5 Q 0 -7.5 -5.2 -11.5 Z",
+    "fill": "#dc2626",
+    "stroke": "#7f1d1d",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M -2.275 -15.5 L 0 -32.5",
+    "stroke": "#fca5a5",
+    "strokeWidth": 1
+   }
+  ],
+  "ring_tip": [
+   {
+    "d": "M -4.88 -10 L -5.612 -16 L 0 -34 L 5.612 -16 L 4.88 -10 Q 0 -6 -4.88 -10 Z",
+    "fill": "#dc2626",
+    "stroke": "#7f1d1d",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M -2.135 -14 L 0 -31",
+    "stroke": "#fca5a5",
+    "strokeWidth": 1
+   }
+  ],
+  "pinky_tip": [
+   {
+    "d": "M -4.16 -6.5 L -4.784000000000001 -12.5 L 0 -30.5 L 4.784000000000001 -12.5 L 4.16 -6.5 Q 0 -2.5 -4.16 -6.5 Z",
+    "fill": "#dc2626",
+    "stroke": "#7f1d1d",
+    "strokeWidth": 1.1
+   },
+   {
+    "d": "M -1.8199999999999998 -10.5 L 0 -27.5",
+    "stroke": "#fca5a5",
+    "strokeWidth": 1
+   }
+  ]
+ }
+}

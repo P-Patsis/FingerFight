@@ -1,0 +1,293 @@
+{
+ "format": 1,
+ "id": "lowpoly",
+ "name": "Geometric",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "parts": {
+  "palm": {
+   "ref": {
+    "wrist": [
+     50,
+     100
+    ],
+    "index": [
+     20,
+     38
+    ],
+    "pinky": [
+     80,
+     46
+    ]
+   },
+   "shapes": [
+    {
+     "d": "M 30 106 L 14 90 L 8 56 L 14 36 L 24 31 L 76 38 L 88 48 L 88 62 L 76 92 L 70 106 Z",
+     "fill": "#38bdf8",
+     "stroke": "#0369a1",
+     "strokeWidth": 2.2
+    },
+    {
+     "d": "M 8 56 L 14 36 L 24 31 L 50 70 L 14 90 Z",
+     "fill": "#7dd3fc"
+    },
+    {
+     "d": "M 50 70 L 76 38 L 88 48 L 88 62 L 76 92 L 70 106 L 30 106 Z",
+     "fill": "#0ea5e9"
+    },
+    {
+     "d": "M 24 31 L 50 70 L 76 38 M 14 90 L 50 70 L 76 92 M 30 106 L 50 70 L 70 106",
+     "stroke": "#0369a1",
+     "strokeWidth": 1.4
+    }
+   ]
+  },
+  "thumb_base": {
+   "length": 23,
+   "shapes": [
+    {
+     "d": "M -8.5 0 L -8.5 -18.32 L -3.82 -24.87 L 3.82 -24.87 L 8.5 -18.32 L 8.5 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -8.5 0 L -8.5 -18.32 L -3.82 -24.87 L 0 -23 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "thumb_mid": {
+   "length": 21,
+   "shapes": [
+    {
+     "d": "M -8 0 L -8 -16.6 L -3.6 -22.76 L 3.6 -22.76 L 8 -16.6 L 8 0 Z",
+     "fill": "#38bdf8",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -8 0 L -8 -16.6 L -3.6 -22.76 L 0 -21 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "thumb_tip": {
+   "length": 16.5,
+   "shapes": [
+    {
+     "d": "M -7.4 0 L -7.4 -12.43 L -3.33 -18.13 L 3.33 -18.13 L 7.4 -12.43 L 7.4 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -7.4 0 L -7.4 -12.43 L -3.33 -18.13 L 0 -16.5 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "index_base": {
+   "length": 26,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -22.15 L -3.15 -27.54 L 3.15 -27.54 L 7 -22.15 L 7 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -7 0 L -7 -22.15 L -3.15 -27.54 L 0 -26 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "index_mid": {
+   "length": 20,
+   "shapes": [
+    {
+     "d": "M -6.6 0 L -6.6 -16.37 L -2.97 -21.45 L 2.97 -21.45 L 6.6 -16.37 L 6.6 0 Z",
+     "fill": "#38bdf8",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -6.6 0 L -6.6 -16.37 L -2.97 -21.45 L 0 -20 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "index_tip": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -6.2 0 L -6.2 -11.59 L -2.79 -16.36 L 2.79 -16.36 L 6.2 -11.59 L 6.2 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -6.2 0 L -6.2 -11.59 L -2.79 -16.36 L 0 -15 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "middle_base": {
+   "length": 30,
+   "shapes": [
+    {
+     "d": "M -7.4 0 L -7.4 -25.93 L -3.33 -31.63 L 3.33 -31.63 L 7.4 -25.93 L 7.4 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -7.4 0 L -7.4 -25.93 L -3.33 -31.63 L 0 -30 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "middle_mid": {
+   "length": 22,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -18.15 L -3.15 -23.54 L 3.15 -23.54 L 7 -18.15 L 7 0 Z",
+     "fill": "#38bdf8",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -7 0 L -7 -18.15 L -3.15 -23.54 L 0 -22 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "middle_tip": {
+   "length": 16.5,
+   "shapes": [
+    {
+     "d": "M -6.5 0 L -6.5 -12.93 L -2.92 -17.93 L 2.92 -17.93 L 6.5 -12.93 L 6.5 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -6.5 0 L -6.5 -12.93 L -2.92 -17.93 L 0 -16.5 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "ring_base": {
+   "length": 27,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -23.15 L -3.15 -28.54 L 3.15 -28.54 L 7 -23.15 L 7 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -7 0 L -7 -23.15 L -3.15 -28.54 L 0 -27 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "ring_mid": {
+   "length": 20,
+   "shapes": [
+    {
+     "d": "M -6.6 0 L -6.6 -16.37 L -2.97 -21.45 L 2.97 -21.45 L 6.6 -16.37 L 6.6 0 Z",
+     "fill": "#38bdf8",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -6.6 0 L -6.6 -16.37 L -2.97 -21.45 L 0 -20 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "ring_tip": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -6.1 0 L -6.1 -11.64 L -2.74 -16.34 L 2.74 -16.34 L 6.1 -11.64 L 6.1 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -6.1 0 L -6.1 -11.64 L -2.74 -16.34 L 0 -15 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "pinky_base": {
+   "length": 21,
+   "shapes": [
+    {
+     "d": "M -6 0 L -6 -17.7 L -2.7 -22.32 L 2.7 -22.32 L 6 -17.7 L 6 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -6 0 L -6 -17.7 L -2.7 -22.32 L 0 -21 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "pinky_mid": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -5.6 0 L -5.6 -11.92 L -2.52 -16.23 L 2.52 -16.23 L 5.6 -11.92 L 5.6 0 Z",
+     "fill": "#38bdf8",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -5.6 0 L -5.6 -11.92 L -2.52 -16.23 L 0 -15 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  },
+  "pinky_tip": {
+   "length": 11.5,
+   "shapes": [
+    {
+     "d": "M -5.2 0 L -5.2 -8.64 L -2.34 -12.64 L 2.34 -12.64 L 5.2 -8.64 L 5.2 0 Z",
+     "fill": "#0ea5e9",
+     "stroke": "#0369a1",
+     "strokeWidth": 2
+    },
+    {
+     "d": "M -5.2 0 L -5.2 -8.64 L -2.34 -12.64 L 0 -11.5 L 0 0 Z",
+     "fill": "#7dd3fc"
+    }
+   ]
+  }
+ },
+ "overlays": [],
+ "category": "scifi",
+ "tint": {
+  "default": "#38bdf8",
+  "map": {
+   "#38bdf8": "main",
+   "#7dd3fc": "light",
+   "#0ea5e9": "mid",
+   "#0369a1": "dark"
+  },
+  "swatches": [
+   "#ef4444",
+   "#f97316",
+   "#facc15",
+   "#22c55e",
+   "#22d3ee",
+   "#3b82f6",
+   "#a855f7",
+   "#ec4899",
+   "#f8fafc"
+  ]
+ }
+}

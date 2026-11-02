@@ -1,0 +1,330 @@
+{
+ "format": 1,
+ "id": "frog",
+ "name": "Frog",
+ "author": "Finger Fight",
+ "license": "CC0 (made for Finger Fight)",
+ "parts": {
+  "palm": {
+   "ref": {
+    "wrist": [
+     50,
+     100
+    ],
+    "index": [
+     20,
+     38
+    ],
+    "pinky": [
+     80,
+     46
+    ]
+   },
+   "shapes": [
+    {
+     "d": "M 20 38 L 40 33 L 30 12 Z",
+     "fill": "#4f9a3b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.6,
+     "opacity": 0.9
+    },
+    {
+     "d": "M 40 33 L 60 37 L 50 12 Z",
+     "fill": "#4f9a3b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.6,
+     "opacity": 0.9
+    },
+    {
+     "d": "M 60 37 L 80 46 L 70 18 Z",
+     "fill": "#4f9a3b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 1.6,
+     "opacity": 0.9
+    },
+    {
+     "d": "M 30 106 C 16 94 8 76 8 56 C 8 42 14 33 24 31 L 76 38 C 86 40 90 48 88 60 C 86 78 76 94 70 106 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M 29 74 A 5 5 0 1 0 39 74 A 5 5 0 1 0 29 74 ZM 58 66 A 4 4 0 1 0 66 66 A 4 4 0 1 0 58 66 ZM 48.5 88 A 3.5 3.5 0 1 0 55.5 88 A 3.5 3.5 0 1 0 48.5 88 Z",
+     "fill": "#4f9a3b"
+    },
+    {
+     "d": "M 30 62 C 40 66 54 66 66 60",
+     "stroke": "#a7e07f",
+     "strokeWidth": 2
+    }
+   ]
+  },
+  "thumb_base": {
+   "length": 23,
+   "shapes": [
+    {
+     "d": "M -8.5 0 L -8.5 -23 A 8.5 8.5 0 0 1 8.5 -23 L 8.5 0 A 8.5 8.5 0 0 1 -8.5 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.25 -11.5 L 4.25 -11.5",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "thumb_mid": {
+   "length": 21,
+   "shapes": [
+    {
+     "d": "M -8 0 L -8 -21 A 8 8 0 0 1 8 -21 L 8 0 A 8 8 0 0 1 -8 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -4.0 -10.5 L 4.0 -10.5",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "thumb_tip": {
+   "length": 16.5,
+   "shapes": [
+    {
+     "d": "M -7.4 0 L -7.4 -16.5 A 7.4 7.4 0 0 1 7.4 -16.5 L 7.4 0 A 7.4 7.4 0 0 1 -7.4 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -9.990000000000002 -17.0 A 9.990000000000002 9.990000000000002 0 1 0 9.990000000000002 -17.0 A 9.990000000000002 9.990000000000002 0 1 0 -9.990000000000002 -17.0 Z",
+     "fill": "#a7e07f",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.2
+    }
+   ]
+  },
+  "index_base": {
+   "length": 26,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -26 A 7 7 0 0 1 7 -26 L 7 0 A 7 7 0 0 1 -7 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.5 -13.0 L 3.5 -13.0",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "index_mid": {
+   "length": 20,
+   "shapes": [
+    {
+     "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.3 -10.0 L 3.3 -10.0",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "index_tip": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -6.2 0 L -6.2 -15 A 6.2 6.2 0 0 1 6.2 -15 L 6.2 0 A 6.2 6.2 0 0 1 -6.2 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -8.370000000000001 -15.5 A 8.370000000000001 8.370000000000001 0 1 0 8.370000000000001 -15.5 A 8.370000000000001 8.370000000000001 0 1 0 -8.370000000000001 -15.5 Z",
+     "fill": "#a7e07f",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.2
+    }
+   ]
+  },
+  "middle_base": {
+   "length": 30,
+   "shapes": [
+    {
+     "d": "M -7.4 0 L -7.4 -30 A 7.4 7.4 0 0 1 7.4 -30 L 7.4 0 A 7.4 7.4 0 0 1 -7.4 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.7 -15.0 L 3.7 -15.0",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "middle_mid": {
+   "length": 22,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -22 A 7 7 0 0 1 7 -22 L 7 0 A 7 7 0 0 1 -7 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.5 -11.0 L 3.5 -11.0",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "middle_tip": {
+   "length": 16.5,
+   "shapes": [
+    {
+     "d": "M -6.5 0 L -6.5 -16.5 A 6.5 6.5 0 0 1 6.5 -16.5 L 6.5 0 A 6.5 6.5 0 0 1 -6.5 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -8.775 -17.0 A 8.775 8.775 0 1 0 8.775 -17.0 A 8.775 8.775 0 1 0 -8.775 -17.0 Z",
+     "fill": "#a7e07f",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.2
+    }
+   ]
+  },
+  "ring_base": {
+   "length": 27,
+   "shapes": [
+    {
+     "d": "M -7 0 L -7 -27 A 7 7 0 0 1 7 -27 L 7 0 A 7 7 0 0 1 -7 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.5 -13.5 L 3.5 -13.5",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "ring_mid": {
+   "length": 20,
+   "shapes": [
+    {
+     "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.3 -10.0 L 3.3 -10.0",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "ring_tip": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -6.1 0 L -6.1 -15 A 6.1 6.1 0 0 1 6.1 -15 L 6.1 0 A 6.1 6.1 0 0 1 -6.1 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -8.235 -15.5 A 8.235 8.235 0 1 0 8.235 -15.5 A 8.235 8.235 0 1 0 -8.235 -15.5 Z",
+     "fill": "#a7e07f",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.2
+    }
+   ]
+  },
+  "pinky_base": {
+   "length": 21,
+   "shapes": [
+    {
+     "d": "M -6 0 L -6 -21 A 6 6 0 0 1 6 -21 L 6 0 A 6 6 0 0 1 -6 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -3.0 -10.5 L 3.0 -10.5",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "pinky_mid": {
+   "length": 15,
+   "shapes": [
+    {
+     "d": "M -5.6 0 L -5.6 -15 A 5.6 5.6 0 0 1 5.6 -15 L 5.6 0 A 5.6 5.6 0 0 1 -5.6 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -2.8 -7.5 L 2.8 -7.5",
+     "stroke": "#a7e07f",
+     "strokeWidth": 1.5
+    }
+   ]
+  },
+  "pinky_tip": {
+   "length": 11.5,
+   "shapes": [
+    {
+     "d": "M -5.2 0 L -5.2 -11.5 A 5.2 5.2 0 0 1 5.2 -11.5 L 5.2 0 A 5.2 5.2 0 0 1 -5.2 0 Z",
+     "fill": "#6dbf4b",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.5
+    },
+    {
+     "d": "M -7.0200000000000005 -12.0 A 7.0200000000000005 7.0200000000000005 0 1 0 7.0200000000000005 -12.0 A 7.0200000000000005 7.0200000000000005 0 1 0 -7.0200000000000005 -12.0 Z",
+     "fill": "#a7e07f",
+     "stroke": "#2f6b36",
+     "strokeWidth": 2.2
+    }
+   ]
+  }
+ },
+ "overlays": [],
+ "category": "animal",
+ "tint": {
+  "default": "#6dbf4b",
+  "map": {
+   "#6dbf4b": "main",
+   "#a7e07f": "light",
+   "#4f9a3b": "mid",
+   "#2f6b36": "dark"
+  },
+  "swatches": [
+   "#ef4444",
+   "#f97316",
+   "#facc15",
+   "#22c55e",
+   "#22d3ee",
+   "#3b82f6",
+   "#a855f7",
+   "#ec4899",
+   "#f8fafc"
+  ]
+ }
+}
