@@ -78,7 +78,7 @@ export const DEFAULT_SKELETON_STYLE = 'classic';
 export const cleanSkelStyle = s => (SKELETON_STYLE_IDS.includes(s) ? s : null);
 
 /** The Profile's customise chips: the catalogue layers plus the Skeleton styles (which are not wearable items), Hand first, Skeleton second. */
-export const PROFILE_LAYERS = ['base', 'skeleton', 'tattoo', 'nails', 'ring', 'glove', 'effect'];
+export const PROFILE_LAYERS = ['base', 'skeleton', 'ring', 'nails', 'tattoo', 'glove', 'effect'];
 
 export const BASIC_PALETTE = Object.freeze(['#e42525', '#e4a825', '#a8e425', '#25e46a', '#25d3e4', '#2552e4', '#7a25e4', '#e425a8', '#ffffff', '#8a8a8a', '#111111']);
 /** Every category has ONE colour picker (the Hand's recolours the worn base hand, when that hand supports it). One plain #rrggbb each, no gradients. */

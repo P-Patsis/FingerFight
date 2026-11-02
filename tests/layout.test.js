@@ -79,3 +79,11 @@ test('the hue slider has a rainbow track scoped to the colour picker; the picker
   assert.match(css, /\.cp-sv\s*\{\s*height:\s*100px/); assert.match(css, /\.cp-panel\s*\{\s*gap:\s*6px;\s*padding:\s*8px/);
   assert.match(fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8'), /sv\.width = 240; sv\.height = 100;/, 'the canvas is drawn at its shown size: no stretched, padded square');
 });
+
+test('Customise and Try on are side by side; the chip row order has Ring before Nail polish and Tattoo / scar given two columns so no label is cut', () => {
+  const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  assert.match(css.slice(css.lastIndexOf('#custOnly.cust-only {')), /flex-direction:\s*row/);
+  assert.ok(at('custBtn') < at('tryBtn') && html.slice(at('custOnly'), at('tryBtn')).indexOf('</div>') === -1, 'one container, two buttons');
+  assert.match(css, /\.chips\.two-rows button\[data-value="tattoo"\]\s*\{[^}]*grid-column:\s*span 2/s);
+  assert.doesNotMatch(css.slice(css.lastIndexOf('.chips.two-rows button {')), /^[^}]*text-overflow:\s*ellipsis/);
+});

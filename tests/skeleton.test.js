@@ -98,3 +98,16 @@ test('view <-> category sync works BOTH ways: the Hand chip switches the view to
   mode('skeleton'); assert.equal($('profileLayers').children.filter(x => x.classList.contains('sel')).map(x => x.dataset.value)[0], 'skeleton', 'and the view still picks the category');
   mode('puppet'); $('custDone').onclick(); $('profileBack').onclick();
 });
+
+test('Customise without the camera keeps the placeholder picture for photo views (person + puppet), and the puppet pane only for plain puppet views', async () => {
+  $('profileBtn').onclick(); $('custBtn').onclick();
+  await until(() => !$('custArea').hidden, 'customise open');
+  const mode = m => $('modePicker').children.find(x => x.dataset.mode === m).onclick();
+  const shown = () => ({ placeholder: !$('viewPreviewBox').hidden, sway: !$('cWearTop').hidden, live: !$('liveBox').hidden });
+  mode('photo-puppet'); assert.deepEqual(shown(), { placeholder: true, sway: false, live: false }, 'photo + puppet: the static placeholder (silhouette + puppet)');
+  assert.match($('viewPreviewLabel').textContent, /camera picture \+ puppet/);
+  mode('photo-skeleton'); assert.deepEqual(shown(), { placeholder: true, sway: false, live: false });
+  mode('puppet'); assert.deepEqual(shown(), { placeholder: false, sway: true, live: false }, 'plain puppet: the swaying puppet');
+  mode('skeleton'); assert.deepEqual(shown(), { placeholder: true, sway: false, live: false });
+  $('custDone').onclick(); $('profileBack').onclick();
+});

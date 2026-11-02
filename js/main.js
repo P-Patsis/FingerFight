@@ -1162,7 +1162,8 @@ function layoutWear(where) {
  *  The whole top block (preview, hand row, colour, type chips) is pinned while customising. */
 function layoutPreview() {
   const c = inProfileCust(), live = c && tryOn.on, puppetView = effectiveStyle().mode.endsWith('puppet');
-  const which = !c ? 'static' : live ? 'live' : puppetView ? 'fit' : 'static';
+  const photoView = effectiveStyle().mode.startsWith('photo-');
+  const which = !c ? 'static' : live ? 'live' : puppetView && !photoView ? 'fit' : 'static';      // a photo view without the camera keeps its placeholder (person + hand)
   $('viewPreviewBox').hidden = which !== 'static';
   $('liveBox').hidden = which !== 'live';
   $('cWearTop').hidden = which !== 'fit';
