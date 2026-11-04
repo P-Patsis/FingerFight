@@ -1,3 +1,4 @@
+import { PaintingFist } from './generated.js';
 // Camera + hand tracking, and a camera-free simulator with the same interface (?sim=1) for testing.
 // The MediaPipe runtime and hand model are loaded from the CDN, as in the original fingers app (about 17 MB, once).
 import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './gestures.js';
@@ -6,7 +7,7 @@ import { viewOf } from './logic.js';
 import { drawPuppet, handBack } from './puppet.js';
 import { HandDynamics } from './dynamics.js';
 import { skinIdOf } from './skins.js';
-import { resolveLoadout, stackToWire, genWire } from './cosmetics.js';
+import { resolveLoadout, stackToWire, genWire, rerollPainting } from './cosmetics.js';
 import { cleanColor, cleanSkelStyle } from './layers.js';
 import { ParticleSystem } from './particles.js';
 
@@ -41,7 +42,7 @@ export class HandCam {
     this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', []) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
     this.hd = [];                                        // live per-hand state: steady side, finger stretch, floppy-finger physics, idle animation clock (js/dynamics.js)
     this.particles = new ParticleSystem();               // item effects; driven by the tracking loop below, no timers of their own
-    this.lastPts = null; this.lastDraw = 0;
+    this.lastPts = null; this.lastDraw = 0; this.paintFist = new PaintingFist(); this.lastPaint = 0;
     this.deviceId = null; this.exact = false; this.flipping = false;
     this.landmarker = null; this.stream = null;
     this.samples = []; this.running = false; this.lastTime = -1;
@@ -175,6 +176,14 @@ export class HandCam {
         this.frameTimes.push(now); if (this.frameTimes.length > 20) this.frameTimes.shift();
         if (this.frameTimes.length > 1) this.fps = (this.frameTimes.length - 1) * 1000 / (now - this.frameTimes[0]);
         const s = { has: hands.length > 0, count: countHands(hands, aspect), gesture: classifyHands(hands, aspect), hands, scores, fps: this.fps };
+        if (this.overlay.skin === 'painting') {
+          const dt = this.lastPaint ? (now - this.lastPaint) / 1000 : 0;
+          this.lastPaint = now;
+          if (this.paintFist.update(s.has, s.count, dt)) {
+            rerollPainting();
+            this.overlay.rec = resolveLoadout('painting', this.overlay.stack, this.overlay.baseColor);
+          }
+        }
         if (this.debug) s.dbg = hands.map(lm => fingerDebug(lm, aspect));
         this.samples.push(s);
         if (this.samples.length > SAMPLES) this.samples.shift();
@@ -211,8 +220,9 @@ export class HandCam {
   setOverlay(view, skin, stack, baseColor = null, skel = null, skelStyle = null) {
     const v = viewOf(view);
     this.skel = cleanColor(skel); this.skelStyle = cleanSkelStyle(skelStyle) || 'classic';
+    if (this.overlay.skin !== skinIdOf(skin)) { this.paintFist = new PaintingFist(); this.lastPaint = 0; }
     const rec = resolveLoadout(skin, stack, baseColor);
-    this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec };
+    this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec, stack, baseColor };
     this.particles.setEmitters(v.endsWith('puppet') ? rec.emitters : []);
     this.particles.setSand(v.endsWith('puppet') ? rec.skin.sand : null);       // a sand hand crumbles when shaken (js/sand.js)
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
@@ -244,7 +254,7 @@ export class HandCam {
 
   pause() {
     this.running = false;
-    this.particles.clear(); this.lastDraw = 0; this.lastPts = null;
+    this.particles.clear(); this.lastPaint = 0; this.lastDraw = 0; this.lastPts = null;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
@@ -349,6 +359,6 @@ export class SimCam {
       ctx.fillText(String(count), 120, 110);
       photo = c.toDataURL('image/jpeg', 0.6);
     }
-    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), hands, lm: null, ar: 1.333, lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined };
+    return { count: noHand ? 0 : count, gesture: noHand ? null : gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), ...genWire(skinIdOf(style.skin)), hands, lm: null, ar: 1.333, lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined };
   }
 }

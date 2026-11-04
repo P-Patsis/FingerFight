@@ -115,3 +115,20 @@ export function paintingJson(seed = 1) {
 export const GENERATED = Object.freeze({ lowpoly: p => geometricJson(p.gc), painting: p => paintingJson(p.sd) });
 /** The numbers that must travel with a picture of this hand so the opponent draws the same one (nothing for other hands). */
 export const paramsKey = (id, p) => (id === 'lowpoly' ? 'gc' + (cleanGc(p.gc) || GC_DEFAULT) : id === 'painting' ? 'sd' + (cleanSd(p.sd) ?? 1) : '');
+
+/** Debounce a fist using the count already computed by tracking; no landmark mutation or extra inference. */
+export class PaintingFist {
+  constructor() { this.closed = 0; this.open = 0; this.latched = false; }
+  update(has, count, dt) {
+    const step = Math.min(0.1, Math.max(0, dt || 0));
+    if (!has) { this.closed = 0; this.open = 0; return false; }
+    if (count > 0) {
+      this.closed = 0; this.open += step;
+      if (this.open >= 0.15) this.latched = false;
+      return false;
+    }
+    this.open = 0; this.closed += step;
+    if (!this.latched && this.closed >= 0.15) { this.latched = true; return true; }
+    return false;
+  }
+}

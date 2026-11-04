@@ -17,7 +17,9 @@ test('frog and duck thumb webs stay outside the palm, mirror correctly and hide 
     assert.equal(P.thumbWebOpen(lm), true);
     const thumb = P.webGeometry(lm, web).find(g => g.pair[0] === 'thumb');
     assert.ok(thumb, id + ': open thumb has a web');
-    const w = lm[2], k = lm[5], cross = (x, y) => (k.x - w.x) * (y - w.y) - (k.y - w.y) * (x - w.x);
+    const root = thumb.fill.match(/-?\d+(?:\.\d+)?/g).slice(0, 2).map(Number);
+    assert.ok(Math.hypot(root[0] - lm[1].x, root[1] - lm[1].y) < 0.2, 'thumb web starts at its base');
+    const w = lm[1], k = lm[5], cross = (x, y) => (k.x - w.x) * (y - w.y) - (k.y - w.y) * (x - w.x);
     const side = Math.sign(cross(lm[0].x, lm[0].y));
     const ns = thumb.fill.match(/-?\d+(?:\.\d+)?/g).map(Number);
     for (let i = 0; i < ns.length; i += 2) assert.ok(cross(ns[i], ns[i + 1]) * side < 2, 'all path points, including scallop control, outside palm');

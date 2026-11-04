@@ -75,7 +75,7 @@ export function parseShapes(list, where) {
 // `pieces` links that turn toward screen-down by `droop` radians in total, drawn with the base hand's own mid / tip shapes (so it always
 // matches the hand's colours, shape and recolouring).
 export const WEB_GAPS = Object.freeze([['index', 'middle'], ['middle', 'ring'], ['ring', 'pinky']]);
-const WEB_ROOT = 0.04;                                   // the membrane starts just past the knuckle landmark (a share of the finger length)
+const WEB_ROOT = 0;                                   // the membrane starts exactly at each finger base
 
 const inRange = (v, lo, hi) => num(v) && v >= lo && v <= hi;
 /** Checks a skin's "web" (missing = no web = null). */
@@ -273,11 +273,11 @@ export function webGeometry(lm, web, ext = null, ends = null) {
   const gaps = thumbWebOpen(lm) ? [...WEB_GAPS, ['thumb', 'index']] : WEB_GAPS;
   for (const [fa, fb] of gaps) {
     const thumb = fa === 'thumb';
-    // Start at the thumb MCP, not the CMC inside the palm; keep its reach shallow.
-    const A = thumb ? polySlice([lm[2], lm[3], lm[4]], 0, 0.65) : polySlice(fingerPolyline(lm, fa, ext, ends), WEB_ROOT, web.reach);
-    const B = polySlice(fingerPolyline(lm, fb, ext, ends), WEB_ROOT, thumb ? Math.min(web.reach, 0.45) : web.reach);
+    // Root the membrane at the thumb CMC and index MCP; tucked thumbs are hidden.
+    const A = thumb ? polySlice(fingerPolyline(lm, fa, ext, ends), 0, Math.min(web.reach, 0.8)) : polySlice(fingerPolyline(lm, fa, ext, ends), WEB_ROOT, web.reach);
+    const B = polySlice(fingerPolyline(lm, fb, ext, ends), WEB_ROOT, thumb ? Math.min(web.reach, 0.65) : web.reach);
     if (thumb) {
-      const w = lm[2], k = lm[5], p = lm[0];
+      const w = lm[1], k = lm[5], p = lm[0];
       const cross = q => (k.x - w.x) * (q.y - w.y) - (k.y - w.y) * (q.x - w.x);
       if ([...A, ...B].some(q => cross(q) * Math.sign(cross(p)) > 1e-6)) continue;
     }

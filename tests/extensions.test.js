@@ -66,12 +66,12 @@ test('web: it stretches as the fingers spread and contracts as they close, with 
     for (const id of ids.slice(1)) { const dx = spread[id].x - k.x, dy = spread[id].y - k.y; spread[id] = { x: k.x + dx * c - dy * s, y: k.y + dx * s + dy * c }; }
   }
   const web = skinOf('duck').web;
-  const widthOf = lm => { const [a, b] = P.WEB_GAPS[0]; const ra = P.chainSlice(lm, a, 0.04, web.reach), rb = P.chainSlice(lm, b, 0.04, web.reach); return dist(ra[ra.length - 1], rb[rb.length - 1]); };
+  const widthOf = lm => { const [a, b] = P.WEB_GAPS[0]; const ra = P.chainSlice(lm, a, 0, web.reach), rb = P.chainSlice(lm, b, 0, web.reach); return dist(ra[ra.length - 1], rb[rb.length - 1]); };
   assert.ok(widthOf(spread) > widthOf(closed) * 1.5, 'the free edge spans the wider gap');
   // the membrane's two corners always sit exactly on the two fingers' points at the web reach, whatever the spread
   for (const lm of [closed, spread]) {
     const g = P.webGeometry(lm, web)[0], ns = nums(g.edge);
-    const ra = P.chainSlice(lm, 'index', 0.04, web.reach), rb = P.chainSlice(lm, 'middle', 0.04, web.reach);
+    const ra = P.chainSlice(lm, 'index', 0, web.reach), rb = P.chainSlice(lm, 'middle', 0, web.reach);
     assert.ok(Math.hypot(ns[0] - ra[ra.length - 1].x, ns[1] - ra[ra.length - 1].y) < 0.2);
     assert.ok(Math.hypot(ns[ns.length - 2] - rb[rb.length - 1].x, ns[ns.length - 1] - rb[rb.length - 1].y) < 0.2);
   }

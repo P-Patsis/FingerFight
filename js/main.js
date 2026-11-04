@@ -11,7 +11,7 @@ import { createWakeLock } from './wake.js';
 import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPicture, statesFromCount, previewHandPx, SKELETON_COLOR } from './avatars.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
-import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, setGen } from './cosmetics.js';
+import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, setGen, rerollPainting } from './cosmetics.js';
 import { cleanGc, GC_MIN, GC_MAX, newSeed } from './generated.js';
 import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
@@ -84,7 +84,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
-setGen({ gc: Number(store_get('ff-polylevel')) });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
+setGen({ gc: Number(store_get('ff-polylevel')), fi: Number(store_get('ff-fire')) });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), skelStyle: cleanSkelStyle(store_get('ff-skelstyle')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
 const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
@@ -1006,6 +1006,7 @@ function itemCard(e) {
     el('span', 'badge ' + (owned ? 'own' : 'lock'), where));
   if (owned) {
     card.onclick = () => {
+      if (e.id === 'painting') rerollPainting();
       const r = inv.toggle(e.id);
       if (r.full) storeMsg('You can wear up to ' + MAX_STACK + ' items. Take one off first.'); else storeMsg('');
       sfx.ui(); syncStyle();
@@ -1282,6 +1283,14 @@ function renderCatColor() {
     sl.onchange = () => { try { localStorage.setItem('ff-polylevel', String(cleanGc(Number(sl.value)) || gen.gc)); } catch { /* a setting */ } syncStyle(); };
     ctl.append(el('span', 'fine', 'Detail'), sl, val); box.append(ctl);
   }
+  if (layer === 'base' && ['flaming', 'burnbone'].includes(inv.baseId)) {
+    const ctl = el('div', 'ctl'), val = el('b', '', String(gen.fi));
+    const sl = document.createElement('input'); sl.type = 'range'; sl.min = '1'; sl.max = '10'; sl.step = '1'; sl.value = String(gen.fi); sl.dataset.act = 'fire'; sl.setAttribute('aria-label', 'Fire intensity');
+    sl.oninput = () => { setGen({ fi: Number(sl.value) }); val.textContent = String(gen.fi); liveColor(); };
+    sl.onchange = () => { store.set('ff-fire', String(gen.fi)); syncStyle(); };
+    ctl.append(el('span', 'fine', 'Fire intensity'), sl, val); box.append(ctl);
+  }
+  if (layer === 'base' && inv.baseId === 'painting') box.append(el('p', 'fine', 'Tap Painting or the preview to repaint. Make a fist on camera for a new painting.'));
   if (layer === 'effect') {
     const k = st.k || INTENSITY_DEFAULT, ctl = el('div', 'ctl'), val = el('b', '', String(k));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(INTENSITY_MIN); sl.max = String(INTENSITY_MAX); sl.step = '1'; sl.value = String(k); sl.dataset.act = 'intensity'; sl.setAttribute('aria-label', 'Effect intensity');
@@ -1439,6 +1448,7 @@ function renderStats() {
 $('statsBtn').onclick = () => { renderStats(); show('stats'); };
 $('statsBack').onclick = () => show('menu');
 $('statsReset').onclick = () => { if (typeof globalThis.confirm !== 'function' || globalThis.confirm('Reset all your stats?')) { stats.reset(); renderStats(); } };
+$('storePreview').onclick = () => { if (inv.baseId === 'painting') { rerollPainting(); liveColor(); } };
 $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
 $('storeBack').onclick = () => show('menu');

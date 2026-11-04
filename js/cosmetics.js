@@ -5,7 +5,7 @@
 //   effect     - a particle effect (no shapes)
 // Colour pickers: an item with a `tint` is drawn in the colour the player picked (see layers.js). Only plain #rrggbb is ever kept.
 import { parseShapes, PART_NAMES, parseSkin, parseExtend, parseDynamic } from './puppet.js';
-import { GENERATED, paramsKey, cleanGc, cleanSd, GC_DEFAULT } from './generated.js';
+import { GENERATED, paramsKey, cleanGc, cleanSd, GC_DEFAULT, newSeed, SD_MAX } from './generated.js';
 import { LAYERS, MAX_STACK, ITEM_ID, parseMeta, roleColor, cleanColor, cleanIntensity, INTENSITY_DEFAULT, shiftColor, dominantHue } from './layers.js';
 import { loadSkins, skinIds, getSkin, skinIdOf, hasSkin } from './skins.js';
 
@@ -229,11 +229,17 @@ export const colorOf = (id, picked) => { const e = entryOf(id); return e && e.ti
  * [stack] may also be an old {layer: id} object (a phone that still sends that). Unknown ids are ignored (another phone may have items
  * this one lacks); nothing here can throw on bad input.
  */
-/** The numbers the generated hands (Geometric detail `gc`, Painting seed `sd`) are drawn from on THIS phone; a received picture passes its own via [extra]. */
-export const gen = { gc: GC_DEFAULT, sd: 1 };
-export const setGen = (o = {}) => { const g = cleanGc(o.gc), s = cleanSd(o.sd); if (g) gen.gc = g; if (s !== null) gen.sd = s; };
-/** What a picture of base hand [id] must carry so the opponent draws the same hand: {gc} or {sd} (empty for fixed hands). */
-export const genWire = (id, p = gen) => (id === 'lowpoly' ? { gc: cleanGc(p.gc) || GC_DEFAULT } : id === 'painting' ? { sd: cleanSd(p.sd) ?? 1 } : {});
+/** The numbers for generated hands (`gc`, `sd`) and fire intensity (`fi`) on THIS phone; a received picture passes its own via [extra]. */
+export const FIRE_DEFAULT = 7;
+export const gen = { gc: GC_DEFAULT, sd: 1, fi: FIRE_DEFAULT };
+export const setGen = (o = {}) => { const g = cleanGc(o.gc), s = cleanSd(o.sd); if (g) gen.gc = g; if (s !== null) gen.sd = s; const f = cleanIntensity(o.fi); if (f) gen.fi = f; };
+export function rerollPainting(random = Math.random) {
+  const seed = newSeed(random);
+  gen.sd = seed === gen.sd ? (seed + 1) % (SD_MAX + 1) : seed;
+  return gen.sd;
+}
+/** Parameters carried with pictures: generated geometry (`gc`/`sd`) or fire intensity (`fi`). */
+export const genWire = (id, p = gen) => (id === 'lowpoly' ? { gc: cleanGc(p.gc) || GC_DEFAULT } : id === 'painting' ? { sd: cleanSd(p.sd) ?? 1 } : ['flaming', 'burnbone'].includes(id) ? { fi: cleanIntensity(p.fi) || FIRE_DEFAULT } : {});
 const genCache = new Map();
 function generatedSkin(id, p) {
   const key = id + ':' + paramsKey(id, p);
@@ -258,7 +264,10 @@ export function resolveLoadout(baseId, stack, baseColor = null, extra = null) {
     if (baseSkin.tint) { if (bc !== baseSkin.tint.default) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc); }
     else baseSkin = shiftedSkin(baseSkin, bc);                 // every other hand: a hue-shift, so the design stays
   }
-  const layers = [], emitters = [...baseSkin.particles];
+  const layers = [];
+  const fire = ['flaming', 'burnbone'].includes(sid);
+  const intensity = cleanIntensity(extra?.fi) || (extra ? FIRE_DEFAULT : gen.fi);
+  const emitters = fire ? scaleEmitters(baseSkin.particles, intensity).map(e => ({ ...e, size: 0.4 + intensity * 0.12 })) : [...baseSkin.particles];
   for (const e of list) {
     const it = items.get(e.id);
     if (!it) continue;
