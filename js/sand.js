@@ -34,12 +34,19 @@ const smooth = x => x * x * (3 - 2 * x);
 
 /** The collapse state of one hand. update() is called once per analysed frame. */
 export class SandMotion {
-  constructor() { this.c = 0; this.collapsed = false; this.calm = 0; this.hot = 0; this.speed = 0; this.prev = null; }
+  constructor() { this.c = 0; this.collapsed = false; this.calm = 0; this.hot = 0; this.speed = 0; this.prev = null; this.swarm = []; this.time = 0; this.partition = null; this.launch = { x: 0, y: 0 }; }
 
   /** [lm]: the hand's 21 {x, y} pixel points; [dt]: seconds since the last frame. Returns the collapse amount 0..1. */
-  update(lm, dt) {
+  update(lm, dt, handIndex = 0, hands = 1) {
     dt = Math.min(Math.max(dt, 0), 0.1);                 // a stalled frame must not look like a huge jump
     if (dt > 0) {
+      const palm = dist(lm[5], lm[17]);
+      if (this.prev && palm > 0) {
+        let dx = 0, dy = 0;
+        for (let i = 0; i < 21; i++) { dx += lm[i].x - this.prev[i].x; dy += lm[i].y - this.prev[i].y; }
+        const max = palm * 5;
+        this.launch = { x: Math.max(-max, Math.min(max, dx / 21 / dt)), y: Math.max(-max, Math.min(max, dy / 21 / dt)) };
+      }
       const raw = handSpeed(this.prev, lm, dt);
       this.speed += (raw - this.speed) * (1 - Math.exp(-dt / SAND.SMOOTH_S));
       this.hot = Math.min(1, Math.max(0, this.hot + (raw > SAND.COLLAPSE_SPEED ? dt : -dt)));     // time spent moving fast; a dip at a turn-around only costs a little
@@ -52,8 +59,42 @@ export class SandMotion {
       if (this.calm >= SAND.SETTLE_S) this.collapsed = false;
     } else this.calm = 0;
     this.c = this.collapsed ? Math.min(1, this.c + dt / SAND.COLLAPSE_S) : Math.max(0, this.c - dt / SAND.REFORM_S);
+    this.time += dt;
+    this.advanceSwarm(lm, dt, handIndex, hands);
     return this.c;
   }
+
+  /** World-space grain positions retain momentum instead of riding the current landmarks. */
+  advanceSwarm(lm, dt, handIndex, hands) {
+    const partition = handIndex + '/' + hands;
+    if (partition !== this.partition || this.c <= 0.01) { this.swarm = []; this.partition = partition; }
+    const palm = dist(lm[5], lm[17]);
+    if (!(this.c > 0.01) || !(palm > 0)) return;
+    const steps = Math.max(1, Math.ceil(dt / 0.016)), h = dt / steps;
+    for (let i = handIndex; i < GRAINS.length; i += hands) {
+      const g = GRAINS[i], home = grainHome(lm, g, palm);
+      const release = smooth(Math.max(0, Math.min(1, (this.c - g.delay * 0.28) / 0.72)));
+      let p = this.swarm[i];
+      if (!release && !p) continue;
+      if (!p || dist(p, home) > palm * 8) {
+        p = this.swarm[i] = { x: home.x, y: home.y, vx: this.launch.x * 0.55 + Math.cos(g.ang) * palm * (0.6 + g.rad * 0.4), vy: this.launch.y * 0.55 + Math.sin(g.ang) * palm * 0.7 - palm * 0.3, size: g.size, shade: i % 3 };
+      }
+      for (let k = 0; k < steps; k++) {
+        if (this.collapsed) {
+          const drag = Math.exp(-h * 1.8);
+          p.vx = p.vx * drag + Math.sin(this.time * 2 + g.phase) * palm * 0.4 * h;
+          p.vy = p.vy * drag + palm * 1.8 * h;
+        } else {
+          // Critically damped return: no stiff straight-line pop or orbit about a moving hand.
+          p.vx += ((home.x - p.x) * 36 - p.vx * 12) * h;
+          p.vy += ((home.y - p.y) * 36 - p.vy * 12) * h;
+        }
+        p.x += p.vx * h; p.y += p.vy * h;
+      }
+      p.alpha = smooth(Math.min(1, this.c * 3)) * Math.min(1, release * 5);
+    }
+  }
+
   /** How much of the solid hand is still drawn: 1 = whole, 0 = all grains. */
   get body() { return 1 - smooth(this.c); }
 }
@@ -109,6 +150,18 @@ export function swarmGrains(lm, c, t, handIndex = 0, hands = 1) {
       y: home.y + (Math.sin(orbit) * g.rad * 0.55 * e + g.rad * e * e + Math.cos(t * 0.9 + g.phase) * 0.08 * e) * palm,
       size: g.size, alpha: smooth(Math.min(1, c * 3)), shade: g.shade,
     });
+  }
+  return out;
+}
+
+/** A rolling dissolve: tips crumble first; the palm reforms first on the way home. */
+export function sandPartAlphas(c) {
+  const fade = (start, end) => 1 - smooth(Math.max(0, Math.min(1, (c - start) / (end - start))));
+  const out = { palm: fade(0.3, 1) };
+  for (const finger of ['thumb', 'index', 'middle', 'ring', 'pinky']) {
+    out[finger + '_base'] = fade(0.18, 0.94);
+    out[finger + '_mid'] = fade(0.07, 0.8);
+    out[finger + '_tip'] = fade(0, 0.64);
   }
   return out;
 }

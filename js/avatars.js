@@ -119,7 +119,7 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
   const pts = lms.map(hand => hand.map(px));
   if (rec?.jolt) for (const hand of pts) for (const p of hand) { p.x += rec.jolt.x; p.y += rec.jolt.y; }        // the preview's demo shake (decoration)
   const hd = rec?.hd ? pts.map((hand, i) => (rec.hd[i] ??= new HandDynamics()).update(hand, rec.dt || 0, skin, rec.layers || [])) : null;   // a live preview: animations and physics run
-  drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs, rec?.alphas, hd);
+  drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs, rec?.alphas, hd, rec?.partAlphas);
   if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead
   const tips = raisedTips(lms, hands, px);
   if (withNumbers) annotate(ctx, tips, Math.max(8, h * 0.07));

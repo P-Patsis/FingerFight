@@ -69,6 +69,7 @@ def main():
                 for name, p in j['parts'].items():
                     if 'shapes' not in p: continue
                     for s in p['shapes']:
+                        if s.get('detail') == 'material-v1': continue  # keep the final material pass
                         a = rule(s, n, {'part': name})
                         if a: s['anim'] = a; n += 1; count += 1
                         else: s.pop('anim', None)

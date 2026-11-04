@@ -238,9 +238,10 @@ export class HandCam {
         this.lastDraw = now; this.lastPts = pts;
         this.hd.length = hands.length;
         const hs = hands.map((lm, i) => (this.hd[i] ??= new HandDynamics()).update(pts[i], dt, rec.skin, rec.layers, handBack(lm, scores[i]?.side)));
-        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hs.map(h => h.back), this.particles.bodyAlphas(), hs);   // nails only when the back of that hand faces the camera (held steady); a crumbling sand hand fades
+        if (this.particles.active) this.particles.update(dt, pts);
+        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hs.map(h => h.back), this.particles.bodyAlphas(), hs, this.particles.partAlphas());   // nails only when the back of that hand faces the camera (held steady); a crumbling sand hand fades
         if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
-          this.particles.update(dt, pts); this.particles.draw(this.ctx);
+          this.particles.draw(this.ctx);
         }
         return;
       }

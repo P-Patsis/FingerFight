@@ -438,32 +438,40 @@ function pathOf(shape) {
 }
 
 /** The matrix and opacity factor of an animated shape at [time] seconds (idle animation: pulse, drift, spin, blink); pure, so it is testable. */
-export function animState(anim, m, time) {
+export function animState(anim, m, time, strength = 1) {
+  strength = num(strength) ? Math.max(0, Math.min(2, strength)) : 1;
+  if (!strength) return { m, k: 1, moved: false };
   let k = 1, t = IDENTITY;
-  if (anim.drift) { const [ax, ay, sp, ph] = anim.drift, a = time * sp * 2 * Math.PI + ph; t = mulM(t, [1, 0, 0, 1, ax * Math.sin(a), ay * Math.cos(a)]); }
-  if (anim.spin) { const [cx, cy, sp] = anim.spin, a = time * sp, c = Math.cos(a), s = Math.sin(a); t = mulM(t, [c, s, -s, c, cx - c * cx + s * cy, cy - s * cx - c * cy]); }
+  if (anim.drift) { const [ax, ay, sp, ph] = anim.drift, a = time * sp * 2 * Math.PI + ph; t = mulM(t, [1, 0, 0, 1, ax * strength * Math.sin(a), ay * strength * Math.cos(a)]); }
+  if (anim.spin) { const [cx, cy, sp] = anim.spin, a = time * sp * strength, c = Math.cos(a), s = Math.sin(a); t = mulM(t, [c, s, -s, c, cx - c * cx + s * cy, cy - s * cx - c * cy]); }
   if (anim.blink) {                                     // the shape squashes flat for 0.16 s every `period` seconds
     const [cy, period, ph] = anim.blink, x = (time + ph) % period;
-    if (x < 0.16) { const q = 1 - Math.sin(Math.PI * x / 0.16) * 0.92; t = mulM(t, [1, 0, 0, q, 0, cy * (1 - q)]); }
+    if (x < 0.16) { const q = 1 - Math.sin(Math.PI * x / 0.16) * 0.92 * Math.min(1, strength); t = mulM(t, [1, 0, 0, q, 0, cy * (1 - q)]); }
   }
-  if (anim.pulse) { const [sp, amt, ph] = anim.pulse; k = 1 - amt + amt * (0.5 + 0.5 * Math.sin(time * sp * 2 * Math.PI + ph)); }
+  if (anim.pulse) { const [sp, amt, ph] = anim.pulse; const amount = Math.min(1, amt * strength); k = 1 - amount + amount * (0.5 + 0.5 * Math.sin(time * sp * 2 * Math.PI + ph)); }
   return { m: t === IDENTITY ? m : mulM(m, t), k, moved: t !== IDENTITY };
 }
 
 /** Draws a plan made by rigPlan. Needs Path2D (every browser); where it is missing nothing is drawn.
- *  [time]: seconds for the idle animations (null / undefined = still: reduced motion, pictures, a phone that is too slow). */
-export function drawPlan(ctx, plan, alpha = 1, time = null) {
+ *  [time]: seconds for the idle animations (null / undefined = still: reduced motion, pictures). */
+export function drawPlan(ctx, plan, alpha = 1, time = null, strength = 1, partAlphas = null) {
   if (typeof Path2D === 'undefined' || !(alpha > 0.01)) return;
   ctx.save();
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   for (const step of plan) {
+    let opacity = alpha;
+    if (partAlphas) {
+      const part = step.part?.split(/[@+]/)[0];
+      opacity *= partAlphas[part] ?? (part?.endsWith('_ext') ? partAlphas[part.replace('_ext', '_tip')] : undefined) ?? 1;
+    }
+    if (!(opacity > 0.01)) continue;
     ctx.setTransform(...step.m);
     for (const s of step.shapes) {
       const p = pathOf(s);
       let k = 1;
       let moved = false;
-      if (s.anim && time !== null && time !== undefined) { const a = animState(s.anim, step.m, time); k = a.k; if (a.moved) { moved = true; ctx.setTransform(...a.m); } }
-      ctx.globalAlpha = s.opacity * alpha * k;
+      if (s.anim && time !== null && time !== undefined) { const a = animState(s.anim, step.m, time, strength); k = a.k; if (a.moved) { moved = true; ctx.setTransform(...a.m); } }
+      ctx.globalAlpha = s.opacity * opacity * k;
       if (s.fill !== 'none') { ctx.fillStyle = s.fill; ctx.fill(p); }
       if (s.stroke !== 'none' && s.strokeWidth > 0) { ctx.lineWidth = s.strokeWidth; ctx.strokeStyle = s.stroke; ctx.stroke(p); }
       if (moved) ctx.setTransform(...step.m);
@@ -474,10 +482,10 @@ export function drawPlan(ctx, plan, alpha = 1, time = null) {
 
 /** One call: pose [skin] on each hand ([hands]: lists of 21 {x, y} pixel points) and draw it.
  *  [dyns]: per-hand live state (js/dynamics.js: stretch, physics, idle time); [alphas]: a crumbling sand hand fades as its grains take over. */
-export function drawPuppet(ctx, hands, skin, layers = [], backs = [], alphas = null, dyns = null) {
+export function drawPuppet(ctx, hands, skin, layers = [], backs = [], alphas = null, dyns = null, parts = null) {
   hands.forEach((lm, i) => {
     const d = dyns?.[i] || null;
-    drawPlan(ctx, rigPlan(lm, skin, layers, d?.back !== undefined && d?.back !== null ? d.back : backs?.[i], d), alphas?.[i] ?? 1, d ? d.animTime : null);
+    drawPlan(ctx, rigPlan(lm, skin, layers, d?.back !== undefined && d?.back !== null ? d.back : backs?.[i], d), parts?.[i] ? 1 : alphas?.[i] ?? 1, d ? d.animTime : null, d?.animStrength ?? 1, parts?.[i]);
   });
 }
 

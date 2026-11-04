@@ -37,7 +37,20 @@
    {
     "d": "M -2.59 -15.5 L 0 -32.5",
     "stroke": "#fca5a5",
-    "strokeWidth": 1
+    "strokeWidth": 1,
+    "anim": {
+     "drift": [
+      0.06,
+      0.18,
+      0.12,
+      0.0
+     ],
+     "pulse": [
+      0.22,
+      0.5,
+      0.0
+     ]
+    }
    }
   ],
   "index_tip": [
@@ -50,7 +63,20 @@
    {
     "d": "M -2.17 -14 L 0 -31",
     "stroke": "#fca5a5",
-    "strokeWidth": 1
+    "strokeWidth": 1,
+    "anim": {
+     "drift": [
+      0.06,
+      0.18,
+      0.12,
+      0.7
+     ],
+     "pulse": [
+      0.22,
+      0.5,
+      0.7
+     ]
+    }
    }
   ],
   "middle_tip": [
@@ -63,7 +89,20 @@
    {
     "d": "M -2.275 -15.5 L 0 -32.5",
     "stroke": "#fca5a5",
-    "strokeWidth": 1
+    "strokeWidth": 1,
+    "anim": {
+     "drift": [
+      0.06,
+      0.18,
+      0.12,
+      1.4
+     ],
+     "pulse": [
+      0.22,
+      0.5,
+      1.4
+     ]
+    }
    }
   ],
   "ring_tip": [
@@ -76,7 +115,20 @@
    {
     "d": "M -2.135 -14 L 0 -31",
     "stroke": "#fca5a5",
-    "strokeWidth": 1
+    "strokeWidth": 1,
+    "anim": {
+     "drift": [
+      0.06,
+      0.18,
+      0.12,
+      2.1
+     ],
+     "pulse": [
+      0.22,
+      0.5,
+      2.1
+     ]
+    }
    }
   ],
   "pinky_tip": [
@@ -89,7 +141,20 @@
    {
     "d": "M -1.8199999999999998 -10.5 L 0 -27.5",
     "stroke": "#fca5a5",
-    "strokeWidth": 1
+    "strokeWidth": 1,
+    "anim": {
+     "drift": [
+      0.06,
+      0.18,
+      0.12,
+      2.8
+     ],
+     "pulse": [
+      0.22,
+      0.5,
+      2.8
+     ]
+    }
    }
   ]
  },

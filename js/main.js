@@ -9,6 +9,7 @@ import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, ne
 import { HandCam, SimCam } from './hands.js';
 import { createWakeLock } from './wake.js';
 import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPicture, statesFromCount, previewHandPx, SKELETON_COLOR } from './avatars.js';
+import { motionStyle, setMotionStrength } from './dynamics.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, setGen, rerollPainting } from './cosmetics.js';
@@ -85,6 +86,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
 setGen({ gc: Number(store_get('ff-polylevel')), fi: Number(store_get('ff-fire')) });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
+setMotionStrength(Number(store_get('ff-motion') ?? 5));
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), skelStyle: cleanSkelStyle(store_get('ff-skelstyle')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
 const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
@@ -1276,6 +1278,14 @@ function renderCatColor() {
   const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
   const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
   colorRow(box, layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); });
+  if (layer === 'base') {
+    const ctl = el('div', 'ctl'), val = el('b', '', String(motionStyle.strength));
+    const sl = document.createElement('input'); sl.type = 'range'; sl.min = '0'; sl.max = '10'; sl.step = '1'; sl.value = String(motionStyle.strength); sl.dataset.act = 'motion'; sl.setAttribute('aria-label', 'Idle animation strength');
+    sl.oninput = () => { if (setMotionStrength(Number(sl.value))) { val.textContent = String(motionStyle.strength); refreshPreview(); } };
+    sl.onchange = () => { store.set('ff-motion', String(motionStyle.strength)); };
+    ctl.append(el('span', 'fine', 'Idle animation'), sl, val); box.append(ctl);
+    box.append(el('p', 'fine', '0 = still, 5 = gentle, 10 = stronger. Reduced motion keeps idle animations still.'));
+  }
   if (layer === 'base' && inv.baseId === 'lowpoly') {
     const ctl = el('div', 'ctl'), val = el('b', '', String(gen.gc));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(GC_MIN); sl.max = String(GC_MAX); sl.step = '1'; sl.value = String(gen.gc); sl.dataset.act = 'polylevel'; sl.setAttribute('aria-label', 'Geometric detail: few big blocks to many small facets');
@@ -1356,9 +1366,10 @@ function startStoreAnim() {
       ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, c.width, c.height);
       ctx.save();
       const jolt = demoJolt(rec, now);
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), hd: storeAnim.hd, dt, jolt });
+      storeAnim.ps.update(dt, jolt ? hands.map(lm => lm.map(p => ({ x: p.x + jolt.x, y: p.y + jolt.y }))) : hands);
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), partAlphas: storeAnim.ps.partAlphas(), hd: storeAnim.hd, dt, jolt });
       ctx.restore();
-      storeAnim.ps.update(dt, jolt ? hands.map(lm => lm.map(p => ({ x: p.x + jolt.x, y: p.y + jolt.y }))) : hands); storeAnim.ps.draw(ctx);
+      storeAnim.ps.draw(ctx);
     } catch { /* decoration */ }
   };
   const frame = now => {

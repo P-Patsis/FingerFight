@@ -3,7 +3,7 @@
 // Cheap on purpose: one global cap, no gradients, no shadow blur, no timers of its own (the caller's frame loop drives update/draw),
 // nothing at all under reduced motion except a still snapshot.
 
-import { SandMotion, swarmGrains, SAND } from './sand.js';
+import { SandMotion, sandPartAlphas, SAND } from './sand.js';
 
 export const MAX_PARTICLES = 90;                     // for the whole system, however many items are equipped (a sand hand's swarm is counted inside it)
 export const MAX_EMITTERS = 6;
@@ -76,6 +76,7 @@ export class ParticleSystem {
   setSand(cfg) { this.sand = cfg ? { color: cfg.color, color2: cfg.color2 } : null; this.motions = []; }
   /** How much of each solid hand to draw (1 = all, 0 = all grains); 1 when there is no sand hand or reduced motion is on. */
   bodyAlphas() { return this.sand && !this.reduced() ? this.motions.map(m => m.body) : []; }
+  partAlphas() { return this.sand && !this.reduced() ? this.motions.map(m => sandPartAlphas(m.c)) : null; }
   /** Grains of the swarm that exist right now (they count toward the cap with everything else). */
   get swarmSize() { return this.sand && this.motions.some(m => m.c > 0.01) ? SAND.GRAINS : 0; }
 
@@ -104,7 +105,7 @@ export class ParticleSystem {
     this.hands = hands || [];
     if (this.sand) {                                     // one shake detector per hand, fed by the landmarks the tracker already made
       this.motions.length = this.hands.length;
-      this.hands.forEach((lm, i) => { (this.motions[i] ??= new SandMotion()).update(lm, dt); });
+      this.hands.forEach((lm, i) => { (this.motions[i] ??= new SandMotion()).update(lm, dt, i, this.hands.length); });
     }
     // Reserve space as the swarm appears, including already-live shed particles.
     this.list.length = Math.min(this.list.length, Math.max(0, this.max - this.swarmSize));
@@ -129,7 +130,7 @@ export class ParticleSystem {
     if (this.list.length) drawParticles(ctx, this.list);
     if (this.sand && this.motions.length) {
       const grains = [];
-      this.hands.forEach((lm, i) => { if (this.motions[i]) grains.push(...swarmGrains(lm, this.motions[i].c, this.time, i, this.hands.length)); });
+      this.hands.forEach((_, i) => { if (this.motions[i]) grains.push(...this.motions[i].swarm.filter(Boolean)); });
       if (grains.length) drawGrains(ctx, grains, this.sand, Math.max(0.3, Math.hypot(this.hands[0][5].x - this.hands[0][17].x, this.hands[0][5].y - this.hands[0][17].y) / 60));
     }
   }
@@ -173,14 +174,16 @@ export function drawParticles(ctx, list) {
   ctx.restore();
 }
 
-/** Draws the swarm of a crumbled sand hand: little squares in the hand's two sand colours (fills only). */
+/** Draws the swarm of a crumbled sand hand: small shaded grains in three tones (fills only, no extra particles). */
 export function drawGrains(ctx, grains, sand, scale) {
   ctx.save();
+  const dark = '#' + sand.color.replace('#', '').match(/../g).map(h => Math.round(parseInt(h, 16) * 0.68).toString(16).padStart(2, '0')).join('');
   for (const g of grains) {
     const s = Math.max(1.5, g.size * scale * 1.7);
     ctx.globalAlpha = g.alpha;
-    ctx.fillStyle = g.shade ? sand.color2 : sand.color;
-    ctx.fillRect(g.x - s / 2, g.y - s / 2, s, s);
+    ctx.fillStyle = g.shade === 2 ? dark : g.shade ? sand.color2 : sand.color;
+    ctx.fillRect(g.x - s / 2, g.y - s / 2, s, s * (g.shade === 2 ? 0.7 : 1));
+    if (g.shade !== 2) { ctx.globalAlpha = g.alpha * 0.55; ctx.fillStyle = sand.color2; ctx.fillRect(g.x - s / 2, g.y - s / 2, Math.max(0.7, s * 0.5), Math.max(0.7, s * 0.25)); }
   }
   ctx.restore();
 }

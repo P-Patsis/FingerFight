@@ -19,6 +19,12 @@ export const DYN = Object.freeze({
   SLOW_DT: 0.05,        // average frame time (s) above which spring physics switches itself off (below ~20 fps)
 });
 
+export const motionStyle = { strength: 5 };
+export function setMotionStrength(n) {
+  if (!Number.isInteger(n) || n < 0 || n > 10) return false;
+  motionStyle.strength = n; return true;
+}
+
 const reducedNow = () => typeof matchMedia === 'function' && !!matchMedia('(prefers-reduced-motion: reduce)').matches;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -27,11 +33,13 @@ export class HandDynamics {
     this.reduced = reduced;
     this.ext = {}; this.shown = {}; this.ends = {};
     this.back = undefined; this.#flip = 0;
-    this.animTime = null;                  // null = still (reduced motion, too slow, or not started)
+    this.animTime = null;                  // null = still (reduced motion or not started)
     this.avgDt = 0.016; this.t = 0;
     this.vel = {};
   }
   #flip;
+
+  get animStrength() { return motionStyle.strength / 5; }
 
   /** Spring physics is allowed: reduced motion off and the frame rate fine. */
   get animating() { return !this.reduced() && this.avgDt < DYN.SLOW_DT; }
