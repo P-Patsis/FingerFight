@@ -143,3 +143,7 @@ Also optional (Part A-C): `extend.physics`, overlay `dynamic`, shape `anim`; see
 ### Rendering fixes (2026-11-04)
 
 Idle shape animation now continues on slow live-camera frames; reduced motion still freezes it and slow-frame spring physics stays disabled. Geometric detail also changes recoloured geometry because its cache follows source-skin identity. Frog/Duck thumb webs are generated from landmarks only when the thumb is outside the palm, with shallow reach and a palm-boundary guard. Burning Bone combines clean Bone geometry, static flames on every part, and Flaming's capped emitters. Sand uses 84 shared swarm grains; see COSMETICS.md for timing and caps. The static preview no longer rotates between faces.
+
+### Follow-up controls and web root
+
+Painting can be rerolled by clicking its owned tile or large preview, or closing a tracked hand into a fist (150 ms debounce and reopen latch). Its current `sd` remains the snapshot seed. Flaming/Burning Bone have a saved fire-intensity slider, default 7/10, and optional validated `fi` in pictures. All web gaps start at the finger base; thumb/index specifically use CMC (1) and MCP (5), with tucked-thumb/palm-edge guards. See COSMETICS.md for bounds and review notes.

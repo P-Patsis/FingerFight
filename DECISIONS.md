@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-04 — Follow-up interactions and thumb-web root
+
+- Swap the menu positions of Profile & settings and Store.
+- Painting rerolls on its owned tile/large fitting-preview click and on entry into a deliberate fist. Debounce closure and reopening at 150 ms, latch while closed, and never treat a missing hand as a fist or reopening. Regenerate only at the gesture transition, from the existing tracked count. Keep the generated seed in the existing validated `sd`; simulator snapshots now carry generated parameters too.
+- Add a shared saved 1–10 Fire intensity control for Flaming/Burning Bone, stronger default 7. Keep the 90-particle/6-emitter and per-emitter limits; increase coverage through bounded particle size as well as spawn rate. Carry optional validated integer `fi` so opponent stills use the sender's intensity. Reduced motion remains the static authored flame look.
+- Root all webs at finger bases, with thumb CMC (landmark 1) to index MCP (5), rather than the earlier shallow thumb-MCP root. Keep tucked-thumb and palm-boundary checks. More distal reach improves thumb/index coverage while open; photos remain the authority for visual tuning.
+- Broader Sand/all-cosmetic polish is an idea list for a later visual pass, not an unreviewed catalogue rewrite in this interaction change.
+
 ## 2026-11-04 — Camera idle animation, generated-colour cache, web and skin fixes
 
 - Keep cheap idle shape transforms running at the camera's tracking cadence even below 20 fps. The existing `HandCam` render path already advances/passes the clock; the bug was `HandDynamics` freezing it at the spring-physics cutoff. Reduced motion freezes both; slow frames still disable springs. No second inference pass or animation loop, and opponent snapshots remain still.

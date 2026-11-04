@@ -1,5 +1,16 @@
 # Finger Fight: progress
 
+## 2026-11-04 — Painting interactions, fire intensity, menu swap and web roots
+
+- User feedback: preceding cosmetic update looks pretty good on device. Requested interaction/web follow-up; broader Sand/all-cosmetic improvements discussed as ideas.
+- Changed: Profile & settings now occupies Store's former menu position, above Store. Painting gets a different seed on each owned-tile or large fitting-preview click and on a deliberate tracked fist (150 ms closure debounce; one reroll per hold; 150 ms of real reopening rearms it). Missing hands do not reroll or rearm. Existing computed counts drive this; geometry/detection rules are unchanged. Camera overlay regenerates immediately and its current seed is sent with the snapshot. Simulator snapshots also include generated parameters.
+- Changed: Flaming/Burning Bone have a saved Hand-category Fire intensity slider (1–10, default 7), increasing bounded spawn rate and visible flame size. Optional `fi` is validated as an integer 1–10 and carried to the receiver, which uses the sender's setting for stills. 90 particles / 6 emitters / 40 spawns per emitter per second remain caps. Reduced motion remains the static authored flame.
+- Changed: web membranes start at each finger base (rather than 4% along); thumb-index starts at thumb CMC landmark 1 and index MCP 5, with larger thumb/index reach. Tucked-thumb and palm-edge guards retained; the earlier thumb-MCP root left the base looking unwebbed.
+- Verified: **337/337 tests pass**. New actual UI tests cover repeated Painting tile/preview taps, live fire slider and saved value; pure tests cover fist latch/no-hand glitches, seed collisions and intensity/wire bounds. Extended actual-camera regression confirms fist rerolls, hold stability, reopening and snapshot seed; thumb regression checks CMC root. Existing match, relay, camera, validation, physics and reduced-motion coverage passes. Service worker restamped; diff whitespace check passes.
+- Performance scope: no extra tracking pass/render loop, constant-time fist debounce, generation only once per deliberate closure/click; fire particle count remains bounded. Larger flame fill area may affect phone GPU cost; no new phone FPS measurement.
+- Verified on device: this follow-up not yet viewed. Review larger fire and rooted thumb web first, then Painting gesture feel. Broader Sand/material polish remains an idea list in COSMETICS.md, not a catalogue rewrite.
+- Publishing: pushed to main; Pages commit and live asset verification reported with delivery. Live URL https://p-patsis.github.io/FingerFight/ .
+
 ## 2026-11-04 — Six follow-up cosmetic fixes (phone visuals still need review)
 
 - Changed: camera idle animation no longer freezes below 20 tracking fps (the existing clock/render plumbing was present; its shared physics cutoff caused the freeze). Both live try-on and own-match puppet modes use this fix. Reduced motion still freezes idle animation and slow frames still disable spring physics. No new tracking/render loop or wire fields.
