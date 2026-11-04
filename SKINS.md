@@ -133,9 +133,13 @@ effects), with a Store, a local inventory and a stubbed unlock path: see **COSME
 metadata described there (`category`, `free`, `unlock`, `whole`, `particles`); the rig and everything above are unchanged.
 Real ads and payments are NOT built: the unlock path is a marked stub (`js/unlock.js`) for the future native app.
 
-**Built-in hands added since:** `lowpoly` (Geometric, generated from a detail level 1-5), `frog`, `duck` (web membrane between the fingers), `toybrick`, `mechanical`, `cyberpunk`, `flaming`, `floppy` (hotdog fingers), `gridmesh` (wireframe), `painting` (generated from a seed), `bone`, `chrome`, `burnbone`, `sand`, `eyes`, `inksketch`, `hook`.
+**Built-in hands added since:** `lowpoly` (Geometric, generated from a detail level 1-5), `frog`, `duck` (web membrane between the fingers), `toybrick`, `mechanical`, `cyberpunk`, `flaming`, `floppy` (hotdog fingers), `gridmesh` (wireframe), `painting` (generated from a seed), `bone`, `burnbone`, `sand`, `eyes`, `inksketch`, `hook`.
 
 ## Optional rig fields (2026-11-02)
 A skin may also carry `web` (a membrane between neighbouring fingers), `extend` (fingers drawn past the tip) and `sand` (a crumbling sand hand). They are validated like everything else (`parseWeb`, `parseExtend`, `parseSand` in js/puppet.js) and described in COSMETICS.md ("Rig extensions"). The 16 parts and the neutral pose are unchanged; the old per-finger web "fins" are gone.
 
 Also optional (Part A-C): `extend.physics`, overlay `dynamic`, shape `anim`; see COSMETICS.md "Parts A-C". The `chrome` hand was removed.
+
+### Rendering fixes (2026-11-04)
+
+Idle shape animation now continues on slow live-camera frames; reduced motion still freezes it and slow-frame spring physics stays disabled. Geometric detail also changes recoloured geometry because its cache follows source-skin identity. Frog/Duck thumb webs are generated from landmarks only when the thumb is outside the palm, with shallow reach and a palm-boundary guard. Burning Bone combines clean Bone geometry, static flames on every part, and Flaming's capped emitters. Sand uses 84 shared swarm grains; see COSMETICS.md for timing and caps. The static preview no longer rotates between faces.

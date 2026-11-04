@@ -1,5 +1,14 @@
 # Finger Fight: decisions
 
+## 2026-11-04 — Camera idle animation, generated-colour cache, web and skin fixes
+
+- Keep cheap idle shape transforms running at the camera's tracking cadence even below 20 fps. The existing `HandCam` render path already advances/passes the clock; the bug was `HandDynamics` freezing it at the spring-physics cutoff. Reduced motion freezes both; slow frames still disable springs. No second inference pass or animation loop, and opponent snapshots remain still.
+- Cache recolours by source object identity with weak ownership. Geometric levels and Painting seeds share ids but differ in geometry; a cache keyed only by id/colour returned an earlier variant. Keep the existing validated `gc`/`sd` fields and slider persistence.
+- Add a guarded thumb-index web to Frog/Duck. Require the distal thumb outside the wrist-index boundary and an extended index, then require the whole shallow membrane outside the thumb-MCP/index-knuckle palm edge. Hide ambiguous poses rather than crossing the palm. No extra wire fields or landmark edits.
+- Remove the static preview face sway and its exported clock/constants. The fixed pose starts on the back; camera tracking supplies real orientation.
+- Burning Bone reuses Flaming's four emitters and static flame treatment over clean bones. Sand reserves 84 of the 90 particle slots for its shared swarm, uses curved staggered dispersal and longer easing, and trims shed particles when necessary. Six emitters remain the cap. All art is generic; generators reflect the new design.
+- Automated render-path checks and JavaScript timings cannot verify phone rasterisation, camera feel or visual quality. Camera animation, Burning Bone, Sand and thumb web need device review before calling their appearance verified.
+
 ## Current implementation (reviewed 2026-10-30)
 
 This file contains dated history; later decisions supersede earlier ones. Current source/tests establish:
