@@ -147,3 +147,7 @@ Idle shape animation now continues on slow live-camera frames; reduced motion st
 ### Follow-up controls and web root
 
 Painting can be rerolled by clicking its owned tile or large preview, or closing a tracked hand into a fist (150 ms debounce and reopen latch). Its current `sd` remains the snapshot seed. Flaming/Burning Bone have a saved fire-intensity slider, default 7/10, and optional validated `fi` in pictures. All web gaps start at the finger base; thumb/index specifically use CMC (1) and MCP (5), with tucked-thumb/palm-edge guards. See COSMETICS.md for bounds and review notes.
+
+### Material detail and live Sand
+
+The final `tools/make_visual_pass.py` authoring pass adds ordinary validated paths/animations for metal shine, glove folds, nail/ring highlights and Sand shading. Run it after other generators. Its `detail` shape marker is ignored by the runtime; no new rig parts or network fields are required. Live idle strength is a local 0–10 preference (Hand category); snapshots remain still and reduced motion wins. Sand now uses momentum-driven world-space grain state and per-part rolling dissolve/reform, within the existing particle caps. See COSMETICS.md and the generated static `artifacts/material-review.svg` review sheet.

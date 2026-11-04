@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-04 — Material pass, local idle strength and world-space Sand
+
+- Use bounded normal rig paths for material shading/glints, not shaders, images, gradients or extra particle emitters. Polish 23 metal, glove, nail/ring and Sand assets while retaining base silhouettes, draw order, side policy, dynamic extensions and colour roles. A final idempotent authoring pass is easier to maintain than rewriting every historical generator.
+- Add a local saved 0–10 idle-strength preference in the Hand category. It scales existing shape animation, with 0 still and 5 default, and affects existing camera dynamics immediately. Do not send it: opponent pictures remain still. Reduced motion overrides it. Fire intensity and shake/spring physics remain separate controls/behaviours.
+- Replace Sand's live landmark-relative scatter with bounded world-space grain state. Release inherits measured hand velocity; drag/gravity and a small curl act in flight; critically damped springs return grains to current homes. Substep at <=16 ms, clamp frame delta, and reset distant/changed-partition grains. Keep the original shake/calm thresholds and 84 shared-grain/90-total/6-emitter budgets.
+- Dissolve Sand by part (tip, mid, base, palm), apply that alpha to worn layers too, and update body/swarm in the same frame. Reassembly reverses the dissolve, returning palm first. Still pictures and reduced motion draw the complete static texture.
+- Provide a static vector review sheet from the actual rig and animation transforms. It supports art review but cannot establish real-camera appearance, browser raster cost or motion feel. Report JS-only timings separately and require phone review for the material/physics look.
+
 ## 2026-11-04 — Follow-up interactions and thumb-web root
 
 - Swap the menu positions of Profile & settings and Store.
