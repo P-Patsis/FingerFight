@@ -185,12 +185,3 @@ export function previewHandPx(w, h, skin = null, layers = []) {
   const px = fitter(lms, w, h, 1, 0.16, skin ? reachOf(lms, 1, skin, layers) : []);
   return lms.map(hand => hand.map(px));
 }
-
-/** The idle sway of the static preview (camera off): the hand turns about its vertical axis, gently, past edge-on so BOTH sides show. It starts on the
- *  BACK of the hand (nail polish and back tattoos), turns to the PALM side (palm tattoos, no nails) and back. The palm side is the same hand seen
- *  mirrored, as a real turn looks. Period 8 s, +-110 degrees. `back` = the back of the hand faces the viewer (the rig then shows `nails` / `back` items). */
-export const SWAY_PERIOD_S = 8, SWAY_MAX_RAD = 1.92;
-export function swayOf(nowMs) {
-  const a = SWAY_MAX_RAD * Math.sin((nowMs / 1000) * 2 * Math.PI / SWAY_PERIOD_S), c = Math.cos(a);
-  return { angle: a, back: c >= 0, scale: Math.abs(c) < 0.06 ? (c < 0 ? -0.06 : 0.06) : c };
-}

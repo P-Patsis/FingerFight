@@ -72,3 +72,12 @@ test('Painting: the seed a phone sends makes the opponent draw the same painting
   assert.equal(JSON.stringify(theirs.parts), JSON.stringify(mine.parts));
   assert.notEqual(JSON.stringify(resolveLoadout('painting', [], null).skin.parts), JSON.stringify(mine.parts));
 });
+
+test('recolour cache preserves facet detail and painting seeds when a colour is selected', () => {
+  const count = r => shapes(r.skin);
+  const counts = [1, 2, 3, 4, 5].map(gc => count(resolveLoadout('lowpoly', [], '#ff2244', { gc })));
+  assert.ok(counts.every((n, i) => !i || n > counts[i - 1]), counts.join(','));
+  const a = resolveLoadout('painting', [], '#ff2244', { sd: 77 });
+  const b = resolveLoadout('painting', [], '#ff2244', { sd: 78 });
+  assert.notDeepEqual(a.skin.parts, b.skin.parts);
+});

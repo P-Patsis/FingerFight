@@ -5,7 +5,7 @@
 //             that appears and vanishes every other frame is the flicker this fixes)
 //   ends      physics for floppy extended fingers (hotdog): each link end follows its ideal place on a damped spring, so the finger lags behind
 //             the hand, overshoots and settles with a little bounce
-//   animTime  seconds for the idle animations (pulse, spin, drift, blink); frozen under reduced motion or when the phone is too slow
+//   animTime  seconds for the idle animations (pulse, spin, drift, blink); frozen under reduced motion
 // Pictures that are not live (the opponent's reveal, previews) have no HandDynamics: they are computed from the landmarks alone and are still.
 import { FINGER_NAMES, fingerExtension, activeExtend, extensionPieces } from './puppet.js';
 
@@ -16,7 +16,7 @@ export const DYN = Object.freeze({
   BACK_FRAMES: 6,       // frames in a row the other side must be seen before the hand is considered turned over
   SPRING_K: 140,        // physics: stiffness (1/s^2)
   SPRING_C: 11,         // physics: damping (1/s); with K = 140 this is a damping ratio ~0.46: a visible overshoot, then it settles
-  SLOW_DT: 0.05,        // average frame time (s) above which animations and physics switch themselves off (below ~20 fps)
+  SLOW_DT: 0.05,        // average frame time (s) above which spring physics switches itself off (below ~20 fps)
 });
 
 const reducedNow = () => typeof matchMedia === 'function' && !!matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -33,7 +33,7 @@ export class HandDynamics {
   }
   #flip;
 
-  /** Both animations and physics are allowed: reduced motion off and the frame rate fine. */
+  /** Spring physics is allowed: reduced motion off and the frame rate fine. */
   get animating() { return !this.reduced() && this.avgDt < DYN.SLOW_DT; }
 
   /** Smoothed "is the back of this hand to the camera": [raw] is true / false / undefined from handBack() for this frame. */
@@ -60,7 +60,9 @@ export class HandDynamics {
       const was = this.shown[f] ?? true;
       this.shown[f] = was ? this.ext[f] > DYN.SHOW_OFF : this.ext[f] > DYN.SHOW_ON;
     }
-    if (this.animating) { this.t += dt; this.animTime = this.t; } else this.animTime = null;
+    // Idle shape transforms are cheap even when camera inference is below 20 fps.
+    // Keep their clock independent of the spring-physics safety cutoff.
+    if (!this.reduced()) { this.t += dt; this.animTime = this.t; } else this.animTime = null;
     const ext = activeExtend(skin, layers);
     if (ext && ext.physics && this.animating && dt > 0) this.#physics(lm, dt, ext);
     else this.ends = {};

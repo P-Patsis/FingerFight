@@ -151,13 +151,16 @@ export const stackOf = x => (Array.isArray(x) ? cleanStack(x.map(e => (e && LEGA
 
 // ---- colours applied ---------------------------------------------------------------------------------------------------------
 
-const recolorCache = new Map();
+const recolorCache = new WeakMap();
 function recolor(kind, owner, key2, build) {
-  const key = kind + '/' + owner.id + '/' + key2;
-  if (recolorCache.has(key)) return recolorCache.get(key);
+  // Generated skins share an id, but each detail/seed has different geometry.
+  let cache = recolorCache.get(owner);
+  if (!cache) { cache = new Map(); recolorCache.set(owner, cache); }
+  const key = kind + '/' + key2;
+  if (cache.has(key)) return cache.get(key);
   const out = build();
-  if (recolorCache.size > 300) recolorCache.clear();
-  recolorCache.set(key, out);
+  if (cache.size > 300) cache.clear();
+  cache.set(key, out);
   return out;
 }
 const mapper = (tint, picked) => c => {

@@ -8,7 +8,7 @@ import * as fx from './fx.js';
 import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, newToken, validToken } from './net.js';
 import { HandCam, SimCam } from './hands.js';
 import { createWakeLock } from './wake.js';
-import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPicture, statesFromCount, previewHandPx, SKELETON_COLOR, swayOf } from './avatars.js';
+import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPicture, statesFromCount, previewHandPx, SKELETON_COLOR } from './avatars.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, setGen } from './cosmetics.js';
@@ -1160,7 +1160,7 @@ function layoutWear(where) {
 // ---- customise mode (Profile): the camera goes on with it and off when it ends (state: `cust`, declared at the top)
 /** What the Profile's preview zone shows: EXACTLY ONE picture for the selected view, never a leftover pane.
  *  Normal: the opponent-view picture. Customise: the live camera showing the selected view itself (the skeleton, or the puppet, over the photo for the photo
- *  views); while the camera is not on, a puppet view shows the swaying puppet wearing everything, a skeleton view its static picture.
+ *  views); while the camera is not on, a puppet view shows the stationary puppet wearing everything, a skeleton view its static picture.
  *  The whole top block (preview, hand row, colour, type chips) is pinned while customising. */
 function layoutPreview() {
   const c = inProfileCust(), live = c && tryOn.on, puppetView = effectiveStyle().mode.endsWith('puppet');
@@ -1343,12 +1343,11 @@ function startStoreAnim() {
     const dt = storeAnim.last ? (now - storeAnim.last) / 1000 : 0;
     storeAnim.last = now;
     try {
-      const sw = swayOf(now), rec = storeAnim.rec, hands = previewHandPx(c.width, c.height, rec.skin, rec.layers);
+      const rec = storeAnim.rec, hands = previewHandPx(c.width, c.height, rec.skin, rec.layers);
       ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, c.width, c.height);
       ctx.save();
-      ctx.translate(c.width / 2, 0); ctx.scale(sw.scale, 1); ctx.translate(-c.width / 2, 0);        // turn about the hand's vertical axis
       const jolt = demoJolt(rec, now);
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [sw.back], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), hd: storeAnim.hd, dt, jolt });
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), hd: storeAnim.hd, dt, jolt });
       ctx.restore();
       storeAnim.ps.update(dt, jolt ? hands.map(lm => lm.map(p => ({ x: p.x + jolt.x, y: p.y + jolt.y }))) : hands); storeAnim.ps.draw(ctx);
     } catch { /* decoration */ }

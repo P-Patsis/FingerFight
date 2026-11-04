@@ -256,10 +256,31 @@ function fingerPolyline(lm, finger, ext, ends) {
  * two long sides are slices of the neighbouring fingers' own centre lines (landmark chain + extension, so it is pinned to both fingers, follows
  * the spread and the length) and whose free edge is a scallop curve dipping back toward the knuckles. Returns [{pair, fill, edge}] as path data in pixel space.
  */
+// The thumb web must stay outside the palm's wrist-index boundary, on the side
+// opposite the pinky. This works for either hand and a mirrored camera.
+export function thumbWebOpen(lm) {
+  const w = lm[0], index = lm[5], pinky = lm[17];
+  const cross = p => (index.x - w.x) * (p.y - w.y) - (index.y - w.y) * (p.x - w.x);
+  const side = Math.sign(cross(pinky)), width = dist2(index, pinky);
+  const edge = dist2(w, index);
+  if (!side || !edge || !width || fingerExtension(lm, 'index') < 0.5) return false;
+  // Every distal thumb joint must be clearly outside: a tucked or crossed thumb draws no web.
+  return [2, 3, 4].every(i => -side * cross(lm[i]) / edge > width * 0.06);
+}
+
 export function webGeometry(lm, web, ext = null, ends = null) {
   const out = [];
-  for (const [fa, fb] of WEB_GAPS) {
-    const A = polySlice(fingerPolyline(lm, fa, ext, ends), WEB_ROOT, web.reach), B = polySlice(fingerPolyline(lm, fb, ext, ends), WEB_ROOT, web.reach);
+  const gaps = thumbWebOpen(lm) ? [...WEB_GAPS, ['thumb', 'index']] : WEB_GAPS;
+  for (const [fa, fb] of gaps) {
+    const thumb = fa === 'thumb';
+    // Start at the thumb MCP, not the CMC inside the palm; keep its reach shallow.
+    const A = thumb ? polySlice([lm[2], lm[3], lm[4]], 0, 0.65) : polySlice(fingerPolyline(lm, fa, ext, ends), WEB_ROOT, web.reach);
+    const B = polySlice(fingerPolyline(lm, fb, ext, ends), WEB_ROOT, thumb ? Math.min(web.reach, 0.45) : web.reach);
+    if (thumb) {
+      const w = lm[2], k = lm[5], p = lm[0];
+      const cross = q => (k.x - w.x) * (q.y - w.y) - (k.y - w.y) * (q.x - w.x);
+      if ([...A, ...B].some(q => cross(q) * Math.sign(cross(p)) > 1e-6)) continue;
+    }
     const a0 = A[0], a1 = A[A.length - 1], b0 = B[0], b1 = B[B.length - 1];
     const m1 = { x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 }, m0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 };
     const k = web.scallop * 2;                           // the curve's middle ends up `scallop` of the way from the free edge to the knuckles

@@ -45,14 +45,14 @@ test('hotdog physics: fingers lag behind a sudden move, overshoot, settle, and k
   assert.notDeepEqual(plan.find(s => s.part === 'index_ext').m, ideal.find(s => s.part === 'index_ext').m);
 });
 
-test('physics and animation switch themselves off for reduced motion and for a slow phone; landmarks are never changed', () => {
+test('reduced motion freezes animation and physics; slow phones disable physics only; landmarks are unchanged', () => {
   const lm = hand(0), before = JSON.stringify(lm);
   const rm = new D.HandDynamics({ reduced: () => true });
   for (let i = 0; i < 5; i++) rm.update(hand(i * 10), 1 / 30, floppy, []);
   assert.deepEqual(rm.ends, {}, 'reduced motion: no physics'); assert.equal(rm.animTime, null, 'and no animation clock');
   const slow = new D.HandDynamics({ reduced: () => false });
   for (let i = 0; i < 60; i++) slow.update(hand(i % 2 ? 10 : 0), 0.1, floppy, []);        // 10 fps
-  assert.equal(slow.animating, false); assert.deepEqual(slow.ends, {}); assert.equal(slow.animTime, null);
+  assert.equal(slow.animating, false); assert.deepEqual(slow.ends, {}); assert.ok(slow.animTime > 0, 'cheap idle animations continue on slow camera frames');
   const fast = new D.HandDynamics({ reduced: () => false });
   for (let i = 0; i < 30; i++) fast.update(lm, 1 / 30, floppy, []);
   assert.equal(fast.animating, true); assert.ok(fast.animTime > 0.9);

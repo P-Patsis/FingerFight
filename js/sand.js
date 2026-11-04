@@ -8,14 +8,14 @@
 // The constants are guesses until tried on a real hand: they are the only thing to tune.
 
 export const SAND = Object.freeze({
-  GRAINS: 60,            // the swarm, counted inside the particle system's 90-particle cap
+  GRAINS: 84,            // the swarm, counted inside the particle system's 90-particle cap
   COLLAPSE_SPEED: 4.5,   // palm widths / second (smoothed) that crumbles the hand
   SETTLE_SPEED: 1.5,     // calmer than this, for SETTLE_S, and the sand re-forms
   SETTLE_S: 0.4,
   SMOOTH_S: 0.08,        // speed smoothing window (used to decide when the hand has settled)
   HOT_S: 0.15,           // fast movement must last this long (a tracking glitch is one or two frames) before the hand crumbles
-  COLLAPSE_S: 0.22,      // seconds for the hand to crumble
-  REFORM_S: 0.8,         // seconds for the sand to flow back
+  COLLAPSE_S: 0.45,      // seconds for the hand to crumble
+  REFORM_S: 1.2,         // seconds for the sand to flow back
 });
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -100,11 +100,14 @@ export function swarmGrains(lm, c, t, handIndex = 0, hands = 1) {
   for (let i = handIndex; i < GRAINS.length; i += hands) {
     const g = GRAINS[i], home = grainHome(lm, g, palm);
     const e = smooth(Math.min(1, Math.max(0, (c - g.delay * 0.35) / 0.65)));
-    const sway = Math.sin(t * 3 + g.phase) * 0.1, bob = Math.cos(t * 2.3 + g.phase * 1.7) * 0.08;
+    // Continuous curved trajectories: staggered release, outward curl, then gravity.
+    // The envelope and its endpoint slopes vanish at home, so reassembly eases in.
+    const orbit = g.ang + Math.sin(t * 0.8 + g.phase) * 0.3 + (1 - e) * 0.9;
+    const drift = Math.sin(t * 1.1 + g.phase) * 0.18;
     out.push({
-      x: home.x + (Math.cos(g.ang) * g.rad + sway) * palm * e,
-      y: home.y + (Math.sin(g.ang) * g.rad * 0.7 + 0.5 * g.rad + bob) * palm * e,     // + a pull toward the ground
-      size: g.size, alpha: Math.min(1, c * 3), shade: g.shade,
+      x: home.x + (Math.cos(orbit) * g.rad + drift) * palm * e,
+      y: home.y + (Math.sin(orbit) * g.rad * 0.55 * e + g.rad * e * e + Math.cos(t * 0.9 + g.phase) * 0.08 * e) * palm,
+      size: g.size, alpha: smooth(Math.min(1, c * 3)), shade: g.shade,
     });
   }
   return out;

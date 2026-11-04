@@ -106,6 +106,8 @@ export class ParticleSystem {
       this.motions.length = this.hands.length;
       this.hands.forEach((lm, i) => { (this.motions[i] ??= new SandMotion()).update(lm, dt); });
     }
+    // Reserve space as the swarm appears, including already-live shed particles.
+    this.list.length = Math.min(this.list.length, Math.max(0, this.max - this.swarmSize));
     for (const p of this.list) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt * 0.5; }
     this.list = this.list.filter(p => p.age < p.life);
     if (!hands?.length) return;

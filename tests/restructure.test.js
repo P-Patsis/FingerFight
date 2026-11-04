@@ -210,21 +210,10 @@ test('Choose your Hand: built-in hands and the player\'s own hands share one lis
   S.resetSkins();
 });
 
-// ---- idle sway -----------------------------------------------------------------------------------------------------------------
-test('static preview sway: gentle, starts on the back of the hand (nails), and turns far enough to show the palm side too', () => {
-  let back = 0, palm = 0, maxStep = 0, prev = null;
-  for (let t = 0; t <= 16000; t += 40) {
-    const s = A.swayOf(t);
-    if (s.back) back++; else palm++;
-    assert.ok(Math.abs(s.scale) <= 1 && Math.abs(s.scale) >= 0.05, 'never a degenerate scale');
-    assert.equal(s.back, s.scale > 0, 'past edge-on the hand is seen from the palm side (mirrored, as a real turn)');
-    if (prev !== null) maxStep = Math.max(maxStep, Math.abs(s.angle - prev));
-    prev = s.angle;
-  }
-  assert.ok(back > 0 && palm > 0, 'both sides appear');
-  assert.ok(back / (back + palm) > 0.5 && palm / (back + palm) > 0.15, 'the nail side is the main view, the palm is seen for a good part');
-  assert.ok(maxStep < 0.12, 'a gentle turn, not a spin (max ' + maxStep.toFixed(3) + ' rad per 40 ms)');
-  assert.equal(A.swayOf(0).back, true, 'starts on the back of the hand (also the still picture under reduced motion)');
+test('static preview has no rotation sway code', () => {
+  assert.equal(A.swayOf, undefined);
+  const src = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  assert.ok(!src.includes('swayOf') && !src.includes('sw.scale'));
 });
 
 // ---- nails only on the nail side ------------------------------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 """Idle animations (Part C): adds a small `anim` to chosen shapes of the built-in hands, by simple rules. Idempotent. Run it AFTER the generators
 (make_batch1 / 3 / 5, make_gridmesh), because they rewrite the files without animations. Geometric and Painting are animated in js/generated.js.
 Animations are cheap on purpose (opacity pulses, tiny drifts, gear spins, blinks); the rig draws them only while a live hand is on screen, and not
-under reduced motion or on a slow phone. Run: python3 tools/make_anims.py"""
+under reduced motion. Run: python3 tools/make_anims.py"""
 import json, os, re
 
 SK = os.path.join(os.path.dirname(__file__), '..', 'assets', 'skins')
@@ -33,7 +33,7 @@ def rules(skin_id):
         'mechanical': lambda s, n, st: {'spin': [*centre(s['d']), r2((0.5 if st['part'] == 'palm' else 1.1) * (1 if n % 2 == 0 else -1))]} if kind(s) == 'gear' else None,
         'cyberpunk': lambda s, n, st: {'pulse': [0.9, 0.6, ph(n, 0.7)]} if (s.get('stroke') == '#22d3ee' and s.get('strokeWidth') in (1.3, 1.6)) or (s.get('fill') == '#22d3ee' and not s.get('stroke')) else None,
         'bone':      lambda s, n, st: {'pulse': [0.2, 0.12, ph(n)]} if kind(s) == 'circle' and s.get('fill') == '#f1ead8' else None,
-        'burnbone':  lambda s, n, st: {'pulse': [0.2, 0.12, ph(n)]} if kind(s) == 'circle' and s.get('fill') == '#f1ead8' else None,
+        'burnbone':  lambda s, n, st: ({'pulse': [0.2, 0.12, ph(n)]} if kind(s) == 'circle' and s.get('fill') == '#f1ead8' else {'drift': [0.6, 0.9, 1.3, ph(n, 1.3)]} if s.get('fill') in ('#f97316', '#fde047') and s['d'].count('Q') == 4 else None),
         'inksketch': lambda s, n, st: {'drift': [0.7, 0.5, 0.8, ph(n, 1.7)]} if s.get('stroke') == '#111827' and s.get('strokeWidth') in (0.9, 1.2) else None,
         'gridmesh':  lambda s, n, st: ({'pulse': [0.35, 0.8, ph(n, 0.8)]} if s.get('opacity') == 0.12 else {'pulse': [0.5, 0.3, ph(n, 0.5)]} if s.get('stroke') == '#22d3ee' else None),
         'flaming':   lambda s, n, st: {'drift': [0.6, 0.9, 1.3, ph(n, 1.3)]} if s.get('fill') in ('#f97316', '#fde047') and s.get('opacity') in (0.85, 0.9, None) and s['d'].count('Q') == 4 else None,

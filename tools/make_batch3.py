@@ -25,13 +25,17 @@ def bone_seg(f, i, w, L):
     return s
 BONE_T = tint('#f1ead8', {'#f1ead8': 'main', '#8a7a58': 'dark', '#e6dcc0': 'mid', '#c9bb96': 'light'})
 
+def flame_shapes(part):
+    # Share Flaming's authored static flames; make_batch1 must run first.
+    with open(os.path.join(ROOT, 'skins', 'flaming.json')) as fh:
+        flaming = json.load(fh)
+    return [s for s in flaming['parts'][part]['shapes']
+            if s.get('fill') in ('#f97316', '#fde047') and s['d'].count('Q') == 4]
+
 def burn_palm():
-    p = bone_palm()
-    return p + [{'d': 'M 24 100 Q 30 70 38 96 Q 44 62 52 96 Q 60 66 66 98 Q 72 78 76 100 Z', 'fill': '#f97316', 'opacity': 0.8}]
+    return bone_palm() + flame_shapes('palm')
 def burn_seg(f, i, w, L):
-    s = bone_seg(f, i, w, L)
-    if i == 2: s.append({'d': f'M {-w * 0.8} {-L - 1} Q {-w} {-L - 10} {-w * 0.3} {-L - 12} Q {-w * 0.2} {-L - 22} 0 {-L - 26} Q {w * 0.3} {-L - 18} {w * 0.5} {-L - 14} Q {w} {-L - 10} {w * 0.8} {-L - 1} Z', 'fill': '#fb923c', 'stroke': '#dc2626', 'strokeWidth': 1.2, 'opacity': 0.92})
-    return s
+    return bone_seg(f, i, w, L) + flame_shapes(NAMES[(f, i)])
 
 # Sand: a grainy body (dots of three sands, drawn as zero-length round-capped strokes so one shape holds dozens), a rough edge of loose grains,
 # and, from the skin's "sand" field + a `grain` emitter, a hand that sheds sand and crumbles when shaken (js/sand.js).
@@ -82,8 +86,10 @@ INK_T = tint('#faf7ee', {'#faf7ee': 'main', '#111827': 'dark'}, ['#faf7ee', '#fd
 def skins():
     return [build('bone', 'Bone', A, bone_palm(), bone_seg, category='scifi', tint=BONE_T),
             build('burnbone', 'Burning bone', A, burn_palm(), burn_seg, category='fantasy', free=False, unlock={'method': 'ad'},
-                  particles=[{'effect': 'embers', 'color': '#f97316', 'where': 'tips', 'rate': 14}, {'effect': 'glow', 'color': '#dc2626', 'where': 'tips', 'rate': 2},
-                             {'effect': 'embers', 'color': '#fde047', 'where': 'hand', 'rate': 6}]),
+                  particles=[{'effect': 'flame', 'color': '#dc2626', 'where': 'hand', 'rate': 32},
+                             {'effect': 'flame', 'color': '#f97316', 'where': 'hand', 'rate': 32},
+                             {'effect': 'flame', 'color': '#fde047', 'where': 'tips', 'rate': 26},
+                             {'effect': 'flame', 'color': '#fb923c', 'where': 'palm', 'rate': 22}]),
             build('sand', 'Sand', A, sand_palm(), sand_seg, category='fantasy', tint=SAND_T,
                   sand={'color': SAND_BODY, 'color2': SAND_LIGHT},
                   particles=[{'effect': 'grain', 'color': SAND_BODY, 'where': 'hand', 'rate': 7}]),
