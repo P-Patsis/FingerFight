@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-05 — Faster default matches and visible finger reductions
+
+- Changed: new matches start with **2 lives per player**, **5 fingers**, and the fewer-fingers option **On**. Rounds 1–4 retain the chosen limit; it drops by one each following round. Default sequence: round 5 → 4, round 6 → 3, round 7+ → 2. Floor 2; an explicitly chosen limit already below the floor is never raised. Host overrides and Off remain supported.
+- Changed: on each actual decrease the round-start banner prominently says **Fingers reduced to X**, with the round underneath; the same message stays in the turn description for that round. No repeated notice at the floor. Banner has polite status semantics. Reconnecting keeps its independent badge.
+- Verified: 46/46 focused settings/rule/notice/SW checks pass. New real guest-network/DOM integration test checks the default lobby values, two health segments for each player and round 1–8 notices. Its initial GET READY/round-label timing race was corrected by waiting for the round message to render. Existing shrink expectations intentionally updated to the new schedule; private-host flow retains custom settings. Full suite **374/374 passes** (51 s), including reconnect health preservation with the new default. SW restamped; diff check clean.
+- Device: no phone visual review this session; banner uses the existing round/turn feedback UI. No cosmetic/tracking/render changes. Live https://p-patsis.github.io/FingerFight/ ; publishing SHA and served files checked at delivery.
+
+
 ## 2026-11-05 — Manual puppet fitting controls
 
 - Changed: Hand category has compact **Finger fatness** (50–180%, default 100), **Palm width** (70–150%, default 100) and **Coverage** (0–10% of palm width, default 0) sliders plus **Reset fit**. Input immediately updates preview and camera; changes save as `ff-fit`. Controls are available on fixed-colour hands too. Fitting rows reserve four characters for percentages inside the bounded grid.

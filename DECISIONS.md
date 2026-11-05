@@ -1,5 +1,11 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Default two lives, shrinking finger limit after round four
+
+- New match defaults are 2 hits/lives, 5 fingers and shrink enabled. Interpret “after round 4” as round 5 reducing to 4, round 6 to 3, round 7 onward to 2. Keep custom host settings, explicit Off and limits already below the floor.
+- Use the existing round-start overlay for the exact **Fingers reduced to X** notice, promoted to its primary text, with the round as secondary text. Announce only an actual change; preserve the separate reconnect badge and existing round timing. Both peers derive the limit/notice from synchronized settings and round number.
+
+
 ## 2026-11-05 — Manual fit before automatic edge estimation
 
 - Expose independent finger fatness and palm width, plus a small coverage margin for edges/tips. Defaults reproduce existing proportions. Keep compact controls in Hand, persist locally, and provide Reset fit.

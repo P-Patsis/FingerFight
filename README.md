@@ -11,7 +11,7 @@ player's phone does the same. Phone-to-phone over the internet with a 16-charact
 3. At zero both phones capture finger data; only private photo styles send a JPEG.
 4. A correct guess deals 1 damage to the pointer. A wrong guess or missing hand deals no damage.
    A closed fist is a valid zero. Gestures never score; the rude-gesture display filter defaults on.
-5. Health defaults to 3 hits. Three consecutive no-hand rounds by one player cause an idle forfeit
+5. Health defaults to 2 hits. Matches start with a 5-finger limit; after round 4 it drops by one each round, stopping at 2. Three consecutive no-hand rounds by one player cause an idle forfeit
    (warning after two); simultaneous idleness does not choose a loser. Private idle forfeits return
    both players to the lobby; random idle forfeits close the connection and return to the menu.
 
@@ -27,7 +27,7 @@ and the idle flow tests.
 - **Find a random opponent:** matchmaking with strangers. Strangers get generated names ("Fighter 4821"), and **no camera
   image is ever sent or shown**: phones exchange only finger data, and each phone *draws* the other's puppet hand or
   skeleton itself. A message carrying a photo is rejected, so a modified client can't push one at you.
-- In a private match the host sets seconds, hits, finger limit, optional shrinking cap and one of five arenas.
+- In a private match the host sets seconds, hits, finger limit, shrinking cap (on by default; starts after round 4, floor 2) and one of five arenas.
   The lobby attempts camera setup automatically once; failures show a retry button. A random match starts when both players are ready.
 - No camera? Add `?sim=1` to the address to set the hand by tapping (also how the tests drive the game).
 
