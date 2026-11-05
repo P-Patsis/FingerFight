@@ -34,7 +34,9 @@ const smooth = x => x * x * (3 - 2 * x);
 
 /** The collapse state of one hand. update() is called once per analysed frame. */
 export class SandMotion {
-  constructor() { this.c = 0; this.collapsed = false; this.calm = 0; this.hot = 0; this.speed = 0; this.prev = null; this.swarm = []; this.time = 0; this.partition = null; this.launch = { x: 0, y: 0 }; }
+  constructor() { this.c = 0; this.collapsed = false; this.calm = 0; this.hot = 0; this.speed = 0; this.prev = null; this.swarm = []; this.time = 0; this.partition = null; this.hold = 0; this.launch = { x: 0, y: 0 }; }
+
+  burst() { this.collapsed = true; this.calm = 0; this.hot = 0; this.hold = 0.35; }
 
   /** [lm]: the hand's 21 {x, y} pixel points; [dt]: seconds since the last frame. Returns the collapse amount 0..1. */
   update(lm, dt, handIndex = 0, hands = 1) {
@@ -54,7 +56,7 @@ export class SandMotion {
     this.prev = lm.map(p => ({ x: p.x, y: p.y }));
     if (!this.collapsed) {
       if (this.hot >= SAND.HOT_S) { this.collapsed = true; this.calm = 0; this.hot = 0; }
-    } else if (this.speed < SAND.SETTLE_SPEED) {
+    } else if (this.hold > 0) { this.hold = Math.max(0, this.hold - dt); this.calm = 0; } else if (this.speed < SAND.SETTLE_SPEED) {
       this.calm += dt;
       if (this.calm >= SAND.SETTLE_S) this.collapsed = false;
     } else this.calm = 0;

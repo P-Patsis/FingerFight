@@ -406,8 +406,8 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cat-color h4 { margin: 0; font-size: 14px; align-self: flex-start; }
 .cat-color .sw { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; }
 .cat-color .lbl { font-size: 12px; color: var(--muted); align-self: flex-start; }
-.cat-color .ctl { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; width: 100%; }
-.cat-color .ctl input[type=range] { flex: 1 1 0; width: 0; min-width: 0; }
+.cat-color .ctl { display: grid; grid-template-columns: max-content minmax(0, 1fr) 2ch; gap: 6px; align-items: center; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+.cat-color .ctl input[type=range] { display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
 .cat-color .ctl > .fine { flex: 0 0 auto; white-space: nowrap; margin: 0; max-width: none; text-align: left; }
 .cat-color .ctl > b { flex: 0 0 auto; min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
 
@@ -453,7 +453,7 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cprow button.sw { width: 24px; height: 24px; min-width: 24px; border-radius: 50%; border: 2px solid #475569; padding: 0; }
 .cprow button.sw.sel { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
 .cprow .btn { padding: 4px 10px; font-size: 12px; }
-.cat-color .ctl { display: flex; align-items: center; gap: 8px; width: 100%; }
+
 
 /* ---------- quick fixes: name + country on one aligned row, scrollable hand row, roomier colour picker ---------- */
 .idrow { display: flex; align-items: flex-start; gap: 12px; }
@@ -551,3 +551,7 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 #custOnly.cust-only .btn { flex: 1 1 0; min-width: 0; font-size: 15px; padding: 8px 6px; }
 .chips.two-rows button { text-overflow: clip; overflow: visible; }
 .chips.two-rows button[data-value="tattoo"] { grid-column: span 2; }
+
+/* Keep native ranges and scrolling palettes inside the shared sticky panel. */
+#cCat, #sCat, #catColor, .cat-color .ctl, .cat-color .cprow { min-width: 0; max-width: 100%; }
+.cat-color .ctl > .fine { max-width: 7.5rem; overflow: hidden; text-overflow: ellipsis; }

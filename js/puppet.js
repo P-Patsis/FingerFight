@@ -111,7 +111,8 @@ export function parseSand(s, id = 'skin') {
   if (s === undefined || s === null) return null;
   if (typeof s !== 'object' || Array.isArray(s)) throw new Error(id + ': sand must be an object');
   for (const k of ['color', 'color2']) if (typeof s[k] !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(s[k])) throw new Error(id + ': sand.' + k + ' must be #rrggbb');
-  return { color: s.color.toLowerCase(), color2: s.color2.toLowerCase() };
+  if (s.chunks !== undefined && typeof s.chunks !== 'boolean') throw new Error(id + ': sand.chunks must be boolean');
+  return { color: s.color.toLowerCase(), color2: s.color2.toLowerCase(), ...(s.chunks === undefined ? {} : { chunks: s.chunks }) };
 }
 
 /**

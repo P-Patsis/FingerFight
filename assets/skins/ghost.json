@@ -26,28 +26,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M 30 106 C 16 94 8 76 8 56 C 8 42 14 33 24 31 L 76 38 C 86 40 90 48 88 60 C 86 78 76 94 70 106 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
-    },
-    {
-     "d": "M 22 70 Q 30 53 38 69 M 56 67 Q 64 52 72 68 M 35 87 Q 49 96 63 85",
-     "stroke": "#ebfaff",
-     "strokeWidth": 2,
-     "opacity": 0.65
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -59,22 +45,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -8.5 0 L -8.5 -23 A 8.5 8.5 0 0 1 8.5 -23 L 8.5 0 A 8.5 8.5 0 0 1 -8.5 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -86,22 +64,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -8 0 L -8 -21 A 8 8 0 0 1 8 -21 L 8 0 A 8 8 0 0 1 -8 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -113,22 +83,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -7.4 0 L -7.4 -16.5 A 7.4 7.4 0 0 1 7.4 -16.5 L 7.4 0 A 7.4 7.4 0 0 1 -7.4 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -140,22 +102,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -7 0 L -7 -26 A 7 7 0 0 1 7 -26 L 7 0 A 7 7 0 0 1 -7 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -167,22 +121,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -194,22 +140,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -6.2 0 L -6.2 -15 A 6.2 6.2 0 0 1 6.2 -15 L 6.2 0 A 6.2 6.2 0 0 1 -6.2 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -221,22 +159,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -7.4 0 L -7.4 -30 A 7.4 7.4 0 0 1 7.4 -30 L 7.4 0 A 7.4 7.4 0 0 1 -7.4 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -248,22 +178,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -7 0 L -7 -22 A 7 7 0 0 1 7 -22 L 7 0 A 7 7 0 0 1 -7 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -275,22 +197,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -6.5 0 L -6.5 -16.5 A 6.5 6.5 0 0 1 6.5 -16.5 L 6.5 0 A 6.5 6.5 0 0 1 -6.5 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -302,22 +216,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -7 0 L -7 -27 A 7 7 0 0 1 7 -27 L 7 0 A 7 7 0 0 1 -7 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -329,22 +235,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -6.6 0 L -6.6 -20 A 6.6 6.6 0 0 1 6.6 -20 L 6.6 0 A 6.6 6.6 0 0 1 -6.6 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -356,22 +254,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -6.1 0 L -6.1 -15 A 6.1 6.1 0 0 1 6.1 -15 L 6.1 0 A 6.1 6.1 0 0 1 -6.1 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -383,22 +273,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -6 0 L -6 -21 A 6 6 0 0 1 6 -21 L 6 0 A 6 6 0 0 1 -6 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -410,22 +292,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -5.6 0 L -5.6 -15 A 5.6 5.6 0 0 1 5.6 -15 L 5.6 0 A 5.6 5.6 0 0 1 -5.6 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   },
@@ -437,22 +311,14 @@
      "fill": "#d8f2ff",
      "stroke": "#a9ddf4",
      "strokeWidth": 1.6,
-     "opacity": 0.25
+     "opacity": 0.08
     },
     {
      "d": "M -5.2 0 L -5.2 -11.5 A 5.2 5.2 0 0 1 5.2 -11.5 L 5.2 0 A 5.2 5.2 0 0 1 -5.2 0 Z",
      "fill": "none",
      "stroke": "#a9ddf4",
-     "strokeWidth": 5,
-     "opacity": 0.13,
-     "anim": {
-      "drift": [
-       2,
-       -1,
-       0.18,
-       0
-      ]
-     }
+     "strokeWidth": 1.4,
+     "opacity": 0.42
     }
    ]
   }
@@ -460,12 +326,5 @@
  "overlays": [],
  "category": "fantasy",
  "free": true,
- "particles": [
-  {
-   "effect": "glow",
-   "color": "#c0e9ff",
-   "where": "hand",
-   "rate": 2
-  }
- ]
+ "particles": []
 }

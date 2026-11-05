@@ -121,7 +121,7 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
   if (rec?.jolt) for (const hand of pts) for (const p of hand) { p.x += rec.jolt.x; p.y += rec.jolt.y; }        // the preview's demo shake (decoration)
   const hd = rec?.hd ? pts.map((hand, i) => (rec.hd[i] ??= new HandDynamics()).update(hand, rec.dt || 0, skin, rec.layers || [])) : null;   // a live preview: animations and physics run
   drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs, rec?.alphas, hd, rec?.partAlphas);
-  if (skin.id === 'comic') drawComic(ctx, pts, hands.length ? hands.reduce((n,s) => n + Object.values(s).filter(Boolean).length, 0) : rec?.live ? 5 : null, w, h, hd?.[0]?.animTime ?? null);
+  if (skin.id === 'comic') { if (rec?.comic) rec.comic.draw(ctx,w,h); else if (rec?.cb) drawComic(ctx,rec.cb,w,h); }
   if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead
   const tips = raisedTips(lms, hands, px);
   if (withNumbers && skin.id !== 'comic') annotate(ctx, tips, Math.max(8, h * 0.07));
@@ -147,7 +147,7 @@ export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELET
   ctx.beginPath(); ctx.ellipse(w * 0.2, h * 0.95, w * 0.17, h * 0.34, 0, 0, 7); ctx.fill();
   const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1, puppet ? reachOf(lms, 1, skin, rec?.layers || []) : []);        // the hand sits in the right 60% of the picture
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
-  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (skin.id === 'comic') drawComic(ctx, pts, 5, w, h); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
+  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (skin.id === 'comic' && rec?.cb) drawComic(ctx,rec.cb,w,h); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
   else {
     for (const hand of lms) drawBones(ctx, hand.map(at), skel, Math.max(2, h * 0.016), skelStyle);
   }
@@ -178,7 +178,7 @@ export function drawFromMessage(ctx, w, h, msg) {
   if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar, true, msg.sk, msg.ss);
   const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc, { gc: msg.gc, sd: msg.sd, fi: msg.fi, nl: msg.nl, el: msg.el });               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
   const backs = Array.isArray(msg.bk) ? msg.bk.slice(0, 2).map(x => (x === true || x === false ? x : undefined)) : [];     // which way the sender's hand faced (nails show on the back)
-  return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, { ...rec, backs });
+  return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, { ...rec, backs, cb: msg.cb });
 }
 
 /** The sample open hand used by the Profile preview and the Store, as pixel points in a w x h picture: for animating particles on it. */

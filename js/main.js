@@ -1,3 +1,4 @@
+import { ComicMotion } from './handfx.js';
 import { ELEMENTS } from './special-skins.js';
 // Finger Fight: the controller. Screens (menu, lobby, game, over), the room link, and the round state machine.
 //
@@ -974,7 +975,7 @@ $('startBtn').onclick = () => {
 // ---------------------------------------------------------------------------------------------
 const storeView = { category: 'all', layer: 'all', reset: false };
 const profileView = { category: 'all', layer: 'base', reset: false };
-let storeAnim = { raf: 0, ps: null, last: 0, rec: null, hd: [] };
+let storeAnim = { raf: 0, ps: null, last: 0, rec: null, hd: [], comic: new ComicMotion() };
 const wearVisible = () => !$('store').hidden || !$('profile').hidden;
 const storeMsg = t => { $('storeMsg').textContent = t; };
 
@@ -1376,12 +1377,14 @@ function refreshPreview() {
   storeAnim.rec = rec;
   if (!storeAnim.ps) storeAnim.ps = new ParticleSystem();
   storeAnim.ps.setEmitters(rec.emitters);
+  storeAnim.ps.setElement(rec.skin.id === 'elemental' ? gen.el : null);
+  if (rec.skin.id !== 'comic') storeAnim.comic.clear();
   storeAnim.ps.setSand(rec.skin.sand);
   startStoreAnim();
 }
 /** The still preview has no real hand to shake, so a sand hand is jolted for a moment every few seconds to show its collapse (decoration only). */
 function demoJolt(rec, now) {
-  if (!rec.skin.sand && !rec.skin.extend?.physics) return null;
+  if (!rec.skin.sand && !rec.skin.extend?.physics && rec.skin.id !== 'comic') return null;
   const phase = (now / 1000) % 6;
   return phase > 1.2 ? null : { x: Math.sin(now / 26) * 26, y: 0 };
 }
@@ -1398,7 +1401,9 @@ function startStoreAnim() {
       ctx.save();
       const jolt = demoJolt(rec, now);
       storeAnim.ps.update(dt, jolt ? hands.map(lm => lm.map(p => ({ x: p.x + jolt.x, y: p.y + jolt.y }))) : hands);
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), partAlphas: storeAnim.ps.partAlphas(), hd: storeAnim.hd, dt, jolt });
+      if (rec.skin.id === 'comic') storeAnim.comic.update(jolt ? hands.map(lm => lm.map(p => ({x:p.x+jolt.x,y:p.y+jolt.y}))) : hands, 5, dt, c.width, c.height);
+      storeAnim.ps.drawBackdrop(ctx);
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), partAlphas: storeAnim.ps.partAlphas(), hd: storeAnim.hd, comic: storeAnim.comic, dt, jolt });
       ctx.restore();
       storeAnim.ps.draw(ctx);
     } catch { /* decoration */ }

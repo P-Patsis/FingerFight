@@ -1,3 +1,4 @@
+import { COMIC_LABELS } from './handfx.js';
 // Pure game rules. No DOM, no network: everything here is testable with `node --test`.
 //
 // A round: one player is the POINTER (holds up fingers), the other is the GUESSER (guesses the total number
@@ -215,6 +216,7 @@ export const validBk = b => b === undefined || b === null || (Array.isArray(b) &
 export const validSs = s => s === undefined || s === null || (typeof s === 'string' && /^[a-z]{1,12}$/.test(s));
 /** The generated-hand numbers: `gc` Geometric detail (1-5) and `sd` Painting seed (0-999999), whole numbers only. They only pick which shapes a hand program draws. */
 export const validGc = g => g === undefined || g === null || (Number.isInteger(g) && g >= 1 && g <= 5);
+export const validComicBursts = b => b === undefined || b === null || (Array.isArray(b) && b.length <= 2 && b.every(e => e && typeof e === 'object' && !Array.isArray(e) && Object.keys(e).every(k => ['s','x','y'].includes(k)) && COMIC_LABELS.includes(e.s) && Number.isInteger(e.x) && e.x >= 0 && e.x <= 1000 && Number.isInteger(e.y) && e.y >= 0 && e.y <= 1000));
 export const validElement = e => e === undefined || e === null || ['water', 'fire', 'earth', 'air'].includes(e);
 export const validNl = n => n === undefined || n === null || (Number.isInteger(n) && n >= 0 && n <= 10);
 export const validFi = f => f === undefined || f === null || (Number.isInteger(f) && f >= 1 && f <= 10);
@@ -224,7 +226,7 @@ export const validBc = c => c === undefined || c === null || (typeof c === 'stri
 export function validPicture(m, allowPhoto) {
   return !!m && normalizeView(m.view) !== null
     && typeof m.skin === 'string' && /^[a-z]{1,12}$/.test(m.skin)
-    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc) && validBc(m.bd) && validBc(m.sk) && validSs(m.ss) && validGc(m.gc) && validSd(m.sd) && validFi(m.fi) && validNl(m.nl) && validElement(m.el) && validBk(m.bk)
+    && validHands(m.hands) && validLandmarks(m.lm) && validCos(m.cos) && validLay(m.lay) && validBc(m.bc) && validBc(m.bd) && validBc(m.sk) && validSs(m.ss) && validGc(m.gc) && validSd(m.sd) && validFi(m.fi) && validNl(m.nl) && validElement(m.el) && validComicBursts(m.cb) && validBk(m.bk)
     && typeof m.ar === 'number' && m.ar >= 0.3 && m.ar <= 3
     && validPhoto(m.photo) && (allowPhoto || m.photo === '')
     && (allowPhoto || isSafeView(m.view));

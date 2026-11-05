@@ -1,15 +1,15 @@
 import { CloakRenderer, CLOAK_SKINS } from './cloak.js';
-import { drawComic } from './handfx.js';
+import { ComicMotion } from './handfx.js';
 import { PaintingFist } from './generated.js';
 // Camera + hand tracking, and a camera-free simulator with the same interface (?sim=1) for testing.
 // The MediaPipe runtime and hand model are loaded from the CDN, as in the original fingers app (about 17 MB, once).
 import { countHands, classifyHands, fingerStates, fingerDebug, TUNING } from './gestures.js';
 import { statesFromCount, annotate, FINGERS, TIP_ID, drawBones } from './avatars.js';
 import { viewOf } from './logic.js';
-import { drawPuppet, handBack } from './puppet.js';
+import { drawPuppet, handBack, drawPlan, rigPlan } from './puppet.js';
 import { HandDynamics } from './dynamics.js';
 import { skinIdOf } from './skins.js';
-import { resolveLoadout, stackToWire, genWire, rerollPainting } from './cosmetics.js';
+import { resolveLoadout, stackToWire, genWire, gen, rerollPainting } from './cosmetics.js';
 import { cleanColor, cleanSkelStyle } from './layers.js';
 import { ParticleSystem } from './particles.js';
 
@@ -44,6 +44,7 @@ export class HandCam {
     this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', []) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
     this.hd = [];                                        // live per-hand state: steady side, finger stretch, floppy-finger physics, idle animation clock (js/dynamics.js)
     this.cloak = new CloakRenderer();
+    this.comic = new ComicMotion();
     this.particles = new ParticleSystem();               // item effects; driven by the tracking loop below, no timers of their own
     this.lastPts = null; this.lastDraw = 0; this.paintFist = new PaintingFist(); this.lastPaint = 0;
     this.deviceId = null; this.exact = false; this.flipping = false;
@@ -224,13 +225,17 @@ export class HandCam {
   setOverlay(view, skin, stack, baseColor = null, skel = null, skelStyle = null) {
     const v = viewOf(view);
     this.skel = cleanColor(skel); this.skelStyle = cleanSkelStyle(skelStyle) || 'classic';
-    if (this.overlay.skin !== skinIdOf(skin)) this.cloak.clear();
+    if (this.overlay.skin !== skinIdOf(skin)) { this.cloak.clear(); this.comic.clear(); }
     if (this.overlay.skin !== skinIdOf(skin)) { this.paintFist = new PaintingFist(); this.lastPaint = 0; }
     const rec = resolveLoadout(skin, stack, baseColor);
     this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec, stack, baseColor };
-    this.particles.setEmitters(v.endsWith('puppet') ? rec.emitters : []);
+    const localCloak = v.endsWith('puppet') && CLOAK_SKINS.includes(rec.skin.id);
+    this.particles.setEmitters(v.endsWith('puppet') ? (localCloak ? rec.emitters.slice(rec.skin.particles.length) : rec.emitters) : []);
+    if (!localCloak) this.cloak.clear();
+    if (!v.endsWith('puppet')) this.comic.clear();
+    this.particles.setElement(v.endsWith('puppet') && rec.skin.id === 'elemental' ? gen.el : null);
     this.particles.setSand(v.endsWith('puppet') ? rec.skin.sand : null);       // a sand hand crumbles when shaken (js/sand.js)
-    this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
+    this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-') && !localCloak);   // Photos and local Vanish hands show the camera scene; other puppets use a dark background
   }
 
   #drawOverlay(hands, scores = [], count = 0) {
@@ -250,8 +255,9 @@ export class HandCam {
         const hs = hands.map((lm, i) => (this.hd[i] ??= new HandDynamics()).update(pts[i], dt, rec.skin, rec.layers, handBack(lm, scores[i]?.side)));
         if (this.particles.active) this.particles.update(dt, pts);
         if (CLOAK_SKINS.includes(rec.skin.id)) this.cloak.draw(this.ctx, w, h);
-        drawPuppet(this.ctx, pts, rec.skin, rec.layers, hs.map(h => h.back), this.particles.bodyAlphas(), hs, this.particles.partAlphas());   // nails only when the back of that hand faces the camera (held steady); a crumbling sand hand fades
-        if (rec.skin.id === 'comic') drawComic(this.ctx, pts, count, w, h, hs[0]?.animTime);
+        this.particles.drawBackdrop(this.ctx);
+        this.#drawStyled(this.ctx, pts, rec, hs.map(h => h.back), hs);   // nails only when the back of that hand faces the camera (held steady); a crumbling sand hand fades
+        if (rec.skin.id === 'comic') { this.comic.update(pts, count, dt, w, h); this.comic.draw(this.ctx, w, h); }
         if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
           this.particles.draw(this.ctx);
         }
@@ -265,9 +271,16 @@ export class HandCam {
     drawSkeleton(this.ctx, hands, w, h, 3, this.skel, this.skelStyle);       // the same landmarks the tracker just produced: no second pass over the frame
   }
 
+  #drawStyled(ctx, pts, rec, backs, dynamics = null) {
+    if (!CLOAK_SKINS.includes(rec.skin.id)) return drawPuppet(ctx, pts, rec.skin, rec.layers, backs, this.particles.bodyAlphas(), dynamics, this.particles.partAlphas());
+    // Cloak is real local camera compositing. Never repaint a cartoon hand over it.
+    pts.forEach((lm,i) => drawPlan(ctx, rigPlan(lm, rec.skin, rec.layers, backs?.[i], dynamics?.[i]).filter(s => s.part.includes('@')), 1, dynamics?.[i]?.animTime ?? null));
+  }
+
   pause() {
     this.running = false;
     this.cloak.clear();
+    this.comic.clear();
     this.particles.clear(); this.lastPaint = 0; this.lastDraw = 0; this.lastPts = null;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
@@ -317,7 +330,7 @@ export class HandCam {
     const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.skel, backs, style.skelStyle) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
     if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), ...genWire(skinIdOf(style.skin)), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), ...genWire(skinIdOf(style.skin)), ...(style.skin === 'comic' && this.comic.snapshot().length ? { cb: this.comic.snapshot() } : {}), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
   }
 
   #photo(hands, states, mode, ar, skinId, stack, baseColor, skel = null, backs = [], skelStyle = null) {
@@ -336,8 +349,8 @@ export class HandCam {
     if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
       const rec = resolveLoadout(skinId, stack, baseColor);
       if (CLOAK_SKINS.includes(skinId)) this.cloak.draw(ctx, w, h, mirror);
-      drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec.skin, rec.layers, backs);
-      if (skinId === 'comic') drawComic(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), states.reduce((n,s) => n + Object.values(s).filter(Boolean).length, 0), w, h);
+      this.#drawStyled(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec, backs);
+      if (skinId === 'comic') this.comic.draw(ctx, w, h);
     }
     const tips = [];
     hands.forEach((lm, i) => {

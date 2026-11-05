@@ -8,8 +8,8 @@ test('Vanish background learns only uncovered pixels; Ghost and Chameleon reuse 
  e.step(room,empty,out);const camera=frame(n,[240,40,20]),mask=new Uint8Array(n);mask.fill(255);
  for(let i=0;i<5;i++)e.step(camera,mask,out);
  const texture=new Uint8ClampedArray(n*4);cloakPixels(e,camera,'chameleon',texture);
- const center=(8*w+12)*4;assert.deepEqual([...texture.slice(center,center+3)],[80,120,160]);assert.ok(texture[center+3]>230);
- cloakPixels(e,camera,'ghost',texture);assert.ok(texture[center+3]>50&&texture[center+3]<120);
+ const center=(8*w+12)*4;assert.ok(Math.abs(texture[center]-80)<12&&Math.abs(texture[center+1]-120)<12,'coarse background palette');assert.ok(texture[center+3]>230);
+ cloakPixels(e,camera,'ghost',texture);assert.equal(texture[center+3],255);assert.deepEqual([...texture.slice(center,center+3)],[80,120,160],'Ghost repaints exact learned room without spectral tint');
  const unknown=new Engine(w,h);unknown.alpha.fill(255);cloakPixels(unknown,camera,'chameleon',texture);
  assert.notDeepEqual([...texture.slice(center,center+3)],[240,40,20],'unknown background does not copy the masked hand');
 });

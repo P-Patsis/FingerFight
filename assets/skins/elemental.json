@@ -440,10 +440,16 @@
  "overlays": [],
  "particles": [
   {
-   "effect": "bubbles",
-   "color": "#b9f5ff",
+   "effect": "splash",
+   "color": "#38bdf8",
    "where": "hand",
-   "rate": 9
+   "rate": 26
+  },
+  {
+   "effect": "ripple",
+   "color": "#7dd3fc",
+   "where": "palm",
+   "rate": 8
   }
  ]
 }

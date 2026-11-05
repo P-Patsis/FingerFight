@@ -53,9 +53,14 @@ for(const id of ['chameleon','ghost']){
   const base={...part.shapes[0],fill:id==='ghost'?'#d8f2ff':'#9ec17d',stroke:id==='ghost'?'#a9ddf4':'#66834e',opacity:id==='ghost'?0.25:0.3,strokeWidth:1.6};
   const rim={...base,fill:'none',strokeWidth:id==='ghost'?5:2.5,opacity:0.13,anim:{drift:[id==='ghost'?2:0.6,-1,0.18,0]}};
   part.shapes=[base,rim];
-  if(name==='palm')part.shapes.push({d:id==='ghost'?'M 22 70 Q 30 53 38 69 M 56 67 Q 64 52 72 68 M 35 87 Q 49 96 63 85':'M 22 53 L 35 47 L 45 56 L 58 49 L 75 58 M 25 75 L 39 66 L 52 78 L 69 70',stroke:id==='ghost'?'#ebfaff':'#c7dfa6',strokeWidth:2,opacity:0.65});
+  if(id==='chameleon'){
+   const dim=name==='palm'?null:name.split('_'),i=dim?['base','mid','tip'].indexOf(dim[1]):0,w=dim?HALF[dim[0]][i]:0,L=dim?LEN[dim[0]][i]:0;
+   part.shapes=[{...base,opacity:0.65},
+    {d:dim?`M ${-w*.75} -1 L ${w*.75} ${-L*.5} L ${-w*.7} ${-L*.95} Z`:'M 14 58 L 38 37 L 58 69 L 28 87 Z',fill:'#8f9d75',opacity:0.8},
+    {d:dim?`M ${w*.7} -1 L ${-w*.65} ${-L*.5} L ${w*.7} ${-L*.95} Z`:'M 57 44 L 82 58 L 62 97 L 37 82 Z',fill:'#c5b78a',opacity:0.8}];
+  }else part.shapes=[{...base,opacity:0.08},{...rim,strokeWidth:1.4,opacity:0.42,anim:undefined}];
  }
- skin.overlays=[];skin.particles=id==='ghost'?[{effect:'glow',color:'#c0e9ff',where:'hand',rate:2}]:[];
+ skin.overlays=[];skin.particles=[];
  write('skins',id,skin);
 }
 for(const [folder,key,ids]of [['skins','skins',['comic','elemental','chameleon','ghost']],['items','items',['knuckleclaws']]]){

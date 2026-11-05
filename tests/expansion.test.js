@@ -78,7 +78,7 @@ test('comic bursts show zero and ten, use fixed generic words and draw without a
  assert.equal(comicLabels(0)[0],'0');assert.equal(comicLabels(10)[0],'10');assert.equal(comicLabels(5)[0],'5');
  assert.ok(comicLabels(5,4).includes('BOOM'));assert.notEqual(...comicLabels(null),'unknown-count preview uses two distinct impact words');
  const texts=[],ctx=new Proxy({}, {get:(_,k)=>k==='fillText'?(t)=>texts.push(t):()=>{},set:()=>true});
- drawComic(ctx,[hand()],3,640,480,2);assert.ok(texts.includes('3'));assert.ok(texts.includes('POW'));
+ drawComic(ctx,[{s:'3',x:500,y:250},{s:'POW',x:500,y:750}],640,480);assert.ok(texts.includes('3'));assert.ok(texts.includes('POW'));
 });
 
 test('new special hands remain data-only for strangers; private photo rules still gate every JPEG',()=>{
