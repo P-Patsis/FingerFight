@@ -1,5 +1,11 @@
 # Finger Fight: progress
 
+## 2026-11-05 — Store and Stats share one menu row
+
+- Changed: grouped Store and Stats in the existing centred flex row beneath Profile & settings. Existing button ids and handlers retained.
+- Verified: 18/18 existing DOM, layout and service-worker tests pass; diff whitespace check passes; SW content hash restamped.
+- Device review: this small layout change has not been viewed on a phone this session. Publishing and live file verification reported with delivery.
+
 ## 2026-11-04 — Material visual pass and momentum-driven Sand (phone review needed)
 
 - Changed: material detail on 23 cosmetics. Robot/Mechanical/Gauntlet/Golden/Cyberpunk/Hook and Knight armour gain restrained moving specular highlights and joint seams. White/Leather/Fingerless/Boxing/Rubber/Formal gloves get softer curved folds and material-specific sheen. Rings get small moving glints; nail polish gains a glossy edge; long nails/claws/blades animate their existing highlights. No new skins, ids, emitters or particle types.
