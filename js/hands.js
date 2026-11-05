@@ -1,3 +1,5 @@
+import { CloakRenderer, CLOAK_SKINS } from './cloak.js';
+import { drawComic } from './handfx.js';
 import { PaintingFist } from './generated.js';
 // Camera + hand tracking, and a camera-free simulator with the same interface (?sim=1) for testing.
 // The MediaPipe runtime and hand model are loaded from the CDN, as in the original fingers app (about 17 MB, once).
@@ -41,6 +43,7 @@ export class HandCam {
     this.facing = 'user';
     this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', []) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
     this.hd = [];                                        // live per-hand state: steady side, finger stretch, floppy-finger physics, idle animation clock (js/dynamics.js)
+    this.cloak = new CloakRenderer();
     this.particles = new ParticleSystem();               // item effects; driven by the tracking loop below, no timers of their own
     this.lastPts = null; this.lastDraw = 0; this.paintFist = new PaintingFist(); this.lastPaint = 0;
     this.deviceId = null; this.exact = false; this.flipping = false;
@@ -125,6 +128,7 @@ export class HandCam {
     const before = { facing: this.facing, deviceId: this.deviceId };
     const curId = this.stream.getVideoTracks?.()[0]?.getSettings?.().deviceId;
     const want = this.facing === 'user' ? 'environment' : 'user';
+    this.cloak.clear(); // a different camera must never reuse the previous scene's background
     try {
       this.deviceId = null; this.facing = want;
       let err = await this.#tryFacing();
@@ -188,7 +192,7 @@ export class HandCam {
         this.samples.push(s);
         if (this.samples.length > SAMPLES) this.samples.shift();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.#drawOverlay(hands, scores);
+        this.#drawOverlay(hands, scores, s.count);
         const t2 = performance.now();
         this.timing = { detect: this.timing.detect * 0.8 + (t1 - t0) * 0.2, draw: this.timing.draw * 0.8 + (t2 - t1) * 0.2 };
         s.timing = this.timing;
@@ -220,6 +224,7 @@ export class HandCam {
   setOverlay(view, skin, stack, baseColor = null, skel = null, skelStyle = null) {
     const v = viewOf(view);
     this.skel = cleanColor(skel); this.skelStyle = cleanSkelStyle(skelStyle) || 'classic';
+    if (this.overlay.skin !== skinIdOf(skin)) this.cloak.clear();
     if (this.overlay.skin !== skinIdOf(skin)) { this.paintFist = new PaintingFist(); this.lastPaint = 0; }
     const rec = resolveLoadout(skin, stack, baseColor);
     this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec, stack, baseColor };
@@ -228,18 +233,25 @@ export class HandCam {
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // only a photo view shows the real picture; the others draw on a dark background
   }
 
-  #drawOverlay(hands, scores = []) {
+  #drawOverlay(hands, scores = [], count = 0) {
     const w = this.canvas.width, h = this.canvas.height;
+    let cloakPts = null;
+    if (this.overlay.puppet && CLOAK_SKINS.includes(this.overlay.rec.skin.id)) {
+      cloakPts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
+      this.cloak.update(this.video, cloakPts, w, h, this.overlay.rec.skin.id, performance.now());
+    }
     if (this.overlay.puppet && hands.length) {
       try {
-        const pts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
+        const pts = cloakPts || hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
         const rec = this.overlay.rec;
         const now = performance.now(), dt = this.lastDraw ? (now - this.lastDraw) / 1000 : 0;
         this.lastDraw = now; this.lastPts = pts;
         this.hd.length = hands.length;
         const hs = hands.map((lm, i) => (this.hd[i] ??= new HandDynamics()).update(pts[i], dt, rec.skin, rec.layers, handBack(lm, scores[i]?.side)));
         if (this.particles.active) this.particles.update(dt, pts);
+        if (CLOAK_SKINS.includes(rec.skin.id)) this.cloak.draw(this.ctx, w, h);
         drawPuppet(this.ctx, pts, rec.skin, rec.layers, hs.map(h => h.back), this.particles.bodyAlphas(), hs, this.particles.partAlphas());   // nails only when the back of that hand faces the camera (held steady); a crumbling sand hand fades
+        if (rec.skin.id === 'comic') drawComic(this.ctx, pts, count, w, h, hs[0]?.animTime);
         if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
           this.particles.draw(this.ctx);
         }
@@ -255,6 +267,7 @@ export class HandCam {
 
   pause() {
     this.running = false;
+    this.cloak.clear();
     this.particles.clear(); this.lastPaint = 0; this.lastDraw = 0; this.lastPts = null;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
@@ -322,13 +335,15 @@ export class HandCam {
     ctx.restore();
     if (mode === 'photo-puppet') {                // the puppet sets its own transform, so the mirroring is done on the points
       const rec = resolveLoadout(skinId, stack, baseColor);
+      if (CLOAK_SKINS.includes(skinId)) this.cloak.draw(ctx, w, h, mirror);
       drawPuppet(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec.skin, rec.layers, backs);
+      if (skinId === 'comic') drawComic(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), states.reduce((n,s) => n + Object.values(s).filter(Boolean).length, 0), w, h);
     }
     const tips = [];
     hands.forEach((lm, i) => {
       for (const f of FINGERS) if (states[i] && states[i][f]) { const p = lm[TIP_ID[f]]; tips.push({ finger: f, x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }); }
     });
-    annotate(ctx, tips, Math.max(8, h * 0.07));
+    if (skinId !== 'comic') annotate(ctx, tips, Math.max(8, h * 0.07));
     return c.toDataURL('image/jpeg', 0.6);
   }
 }

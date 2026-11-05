@@ -10,12 +10,12 @@ await C.loadCatalog();
 
 test('real camera render loop animates a stationary hand at 12.5 tracking fps, including try-on and match puppet modes', () => {
   const oldPerf = globalThis.performance, oldRaf = globalThis.requestAnimationFrame, oldMedia = globalThis.matchMedia;
-  let now = 1000, next, reduced = false, transforms = [];
+  let now = 1000, next, reduced = false, transforms = [], texts = [];
   globalThis.performance = { now: () => now };
   globalThis.requestAnimationFrame = cb => { next = cb; return 1; };
   globalThis.matchMedia = () => ({ matches: reduced });
   const hand = makeHand(ALL, FAN); let tracked = hand; const original = JSON.stringify(hand);
-  const ctx = new Proxy({}, { get: (_, k) => k === 'setTransform' ? (...a) => transforms.push(a) : () => {}, set: () => true });
+  const ctx = new Proxy({}, { get: (_, k) => k === 'setTransform' ? (...a) => transforms.push(a) : k === 'fillText' ? t => texts.push(t) : () => {}, set: () => true });
   const video = b.byId.get('video');
   Object.assign(video, { videoWidth: 640, videoHeight: 480, readyState: 2, currentTime: 1 });
   const canvas = { width: 640, height: 480, getContext: () => ctx };
@@ -59,6 +59,20 @@ test('real camera render loop animates a stationary hand at 12.5 tracking fps, i
     assert.equal(cam.snap({ mode: 'puppet', skin: 'painting' }).sd, painted, 'snap sends the painting actually drawn');
     tracked = hand; frame(4); tracked = makeHand({}); frame(4);
     assert.notEqual(C.gen.sd, painted, 'reopening rearms the gesture');
+    cam.pause(); tracked = hand;
+    C.setGen({ nl: 9, el: 'air' });
+    for (const skin of ['comic', 'elemental', 'chameleon', 'ghost']) {
+      const captures = []; cam.cloak.update = (_, pts, w, h, mode) => { captures.push({ hands: pts.length, mode }); return true; };
+      cam.cloak.draw = () => true;
+      cam.setOverlay('puppet', skin, []); texts = []; cam.run(); frame(4);
+      assert.equal(cam.samples.at(-1).count, 5, skin + ': cosmetic leaves count unchanged');
+      const shot = cam.snap({ mode: 'puppet', skin }); assert.equal(shot.photo, ''); assert.equal(shot.nl, 9);
+      if (skin === 'elemental') assert.equal(shot.el, 'air');
+      if (skin === 'comic') { assert.ok(texts.includes('5')); tracked = makeHand({}); texts = []; frame(3); assert.ok(texts.includes('0')); tracked = hand; }
+      if (['chameleon', 'ghost'].includes(skin)) { tracked = null; frame(2); assert.ok(captures.some(c => c.hands === 0), 'uncovered scene still reaches background learner'); tracked = hand; }
+      cam.pause();
+    }
+    C.setGen({ nl: 5, el: 'water' });
     assert.deepEqual(errors, []);
     assert.equal(JSON.stringify(hand), original, 'counting landmarks untouched');
   } finally { cam.pause(); globalThis.performance = oldPerf; globalThis.requestAnimationFrame = oldRaf; globalThis.matchMedia = oldMedia; }

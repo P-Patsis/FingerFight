@@ -6,7 +6,7 @@ import { parseParticles } from './particles.js';
  *  things in (the stack, see js/inventory.js) does. Only `base` is special: one hand, always the bottom. `tone` is a colour for the
  *  base hand (one at a time) and `effect` is a particle effect (it draws no shapes); the rest are shapes drawn over the hand. */
 export const LAYERS = Object.freeze(['base', 'tattoo', 'nails', 'ring', 'glove', 'effect']);
-export const LAYER_LABELS = Object.freeze({ base: 'Hand', skeleton: 'Skeleton', tattoo: 'Tattoo / scar', nails: 'Nail polish', ring: 'Ring', glove: 'Glove', effect: 'Effect' });
+export const LAYER_LABELS = Object.freeze({ base: 'Hand', skeleton: 'Skeleton', tattoo: 'Tattoo / scar', nails: 'Nails', ring: 'Ring', glove: 'Glove', effect: 'Effect' });
 export const MAX_STACK = 12;                       // most items worn at once (on top of the base hand)
 export const HEX = /^#[0-9a-fA-F]{6}$/;            // the only colour form that is ever stored or sent: plain #rrggbb
 export const ROLES = Object.freeze(['main', 'dark', 'mid', 'light']);

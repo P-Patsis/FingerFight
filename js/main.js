@@ -1,3 +1,4 @@
+import { ELEMENTS } from './special-skins.js';
 // Finger Fight: the controller. Screens (menu, lobby, game, over), the room link, and the round state machine.
 //
 // A round: the POINTER holds up fingers while the GUESSER guesses the total. When the timer ends the pointer's phone
@@ -85,7 +86,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
-setGen({ gc: Number(store_get('ff-polylevel')), fi: Number(store_get('ff-fire')) });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
+setGen({ gc: Number(store_get('ff-polylevel')), fi: Number(store_get('ff-fire')), nl: Number(store_get('ff-naillength') ?? 5), el: store_get('ff-element') });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
 setMotionStrength(Number(store_get('ff-motion') ?? 5));
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), skelStyle: cleanSkelStyle(store_get('ff-skelstyle')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
@@ -1298,12 +1299,24 @@ function renderCatColor() {
   const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
   const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
   colorRow(box, layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); });
+  if (layer === 'nails') {
+    const ctl = el('div', 'ctl'), val = el('b', '', String(gen.nl));
+    const sl = document.createElement('input'); sl.type = 'range'; sl.min = '0'; sl.max = '10'; sl.step = '1'; sl.value = String(gen.nl); sl.dataset.act = 'naillength'; sl.setAttribute('aria-label', 'Nail length');
+    sl.oninput = () => { setGen({ nl: Number(sl.value) }); val.textContent = String(gen.nl); liveColor(); };
+    sl.onchange = () => { store.set('ff-naillength', String(gen.nl)); syncStyle(); };
+    ctl.append(el('span', 'fine', 'Nail length'), sl, val); box.append(ctl);
+  }
   if (layer === 'base') {
     const ctl = el('div', 'ctl'), val = el('b', '', String(motionStyle.strength));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = '0'; sl.max = '10'; sl.step = '1'; sl.value = String(motionStyle.strength); sl.dataset.act = 'motion'; sl.setAttribute('aria-label', 'Idle animation strength');
     sl.oninput = () => { if (setMotionStrength(Number(sl.value))) { val.textContent = String(motionStyle.strength); refreshPreview(); } };
     sl.onchange = () => { store.set('ff-motion', String(motionStyle.strength)); };
     ctl.append(el('span', 'fine', 'Idle animation'), sl, val); box.append(ctl);
+  }
+  if (layer === 'base' && inv.baseId === 'elemental') {
+    const elements = el('div', 'chips'); elements.setAttribute('aria-label', 'Element');
+    for (const value of ELEMENTS) chip(elements, value, value[0].toUpperCase() + value.slice(1), gen.el, v => { setGen({ el: v }); store.set('ff-element', v); }, syncStyle);
+    box.append(elements);
   }
   if (layer === 'base' && inv.baseId === 'lowpoly') {
     const ctl = el('div', 'ctl'), val = el('b', '', String(gen.gc));
@@ -1312,7 +1325,7 @@ function renderCatColor() {
     sl.onchange = () => { try { localStorage.setItem('ff-polylevel', String(cleanGc(Number(sl.value)) || gen.gc)); } catch { /* a setting */ } syncStyle(); };
     ctl.append(el('span', 'fine', 'Detail'), sl, val); box.append(ctl);
   }
-  if (layer === 'base' && ['flaming', 'burnbone'].includes(inv.baseId)) {
+  if (layer === 'base' && (['flaming', 'burnbone'].includes(inv.baseId) || (inv.baseId === 'elemental' && gen.el === 'fire'))) {
     const ctl = el('div', 'ctl'), val = el('b', '', String(gen.fi));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = '1'; sl.max = '10'; sl.step = '1'; sl.value = String(gen.fi); sl.dataset.act = 'fire'; sl.setAttribute('aria-label', 'Fire intensity');
     sl.oninput = () => { setGen({ fi: Number(sl.value) }); val.textContent = String(gen.fi); liveColor(); };

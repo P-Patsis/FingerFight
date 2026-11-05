@@ -1,1 +1,32 @@
-{"default": "cartoon", "skins": ["cartoon", "robot", "neon", "paw", "dragon", "gauntlet", "goldhand", "lowpoly", "frog", "duck", "toybrick", "mechanical", "cyberpunk", "flaming", "floppy", "gridmesh", "painting", "bone", "burnbone", "sand", "eyes", "inksketch", "hook"]}
+{
+ "default": "cartoon",
+ "skins": [
+  "cartoon",
+  "robot",
+  "neon",
+  "paw",
+  "dragon",
+  "gauntlet",
+  "goldhand",
+  "lowpoly",
+  "frog",
+  "duck",
+  "toybrick",
+  "mechanical",
+  "cyberpunk",
+  "flaming",
+  "floppy",
+  "gridmesh",
+  "painting",
+  "bone",
+  "burnbone",
+  "sand",
+  "eyes",
+  "inksketch",
+  "hook",
+  "comic",
+  "elemental",
+  "chameleon",
+  "ghost"
+ ]
+}

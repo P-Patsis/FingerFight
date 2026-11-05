@@ -1,3 +1,4 @@
+import { elementalJson, cleanElement } from './special-skins.js';
 // Hands that are DRAWN BY A SMALL PROGRAM from one or two numbers instead of being a fixed file: the Geometric hand (how many facets, `gc` 1-5) and the Painting hand
 // (a random seed, `sd`). The output is an ordinary skin in the normal format and goes through the same parseSkin checks as any file, so nothing from outside
 // ever reaches the canvas except a validated integer that picks the shapes. The same numbers always give the same hand, on every phone.
@@ -112,9 +113,9 @@ export function paintingJson(seed = 1) {
 }
 
 /** The generators by skin id: id -> (params) -> skin JSON. [params]: {gc, sd}. */
-export const GENERATED = Object.freeze({ lowpoly: p => geometricJson(p.gc), painting: p => paintingJson(p.sd) });
+export const GENERATED = Object.freeze({ lowpoly: p => geometricJson(p.gc), painting: p => paintingJson(p.sd), elemental: p => elementalJson(p.el) });
 /** The numbers that must travel with a picture of this hand so the opponent draws the same one (nothing for other hands). */
-export const paramsKey = (id, p) => (id === 'lowpoly' ? 'gc' + (cleanGc(p.gc) || GC_DEFAULT) : id === 'painting' ? 'sd' + (cleanSd(p.sd) ?? 1) : '');
+export const paramsKey = (id, p) => (id === 'lowpoly' ? 'gc' + (cleanGc(p.gc) || GC_DEFAULT) : id === 'painting' ? 'sd' + (cleanSd(p.sd) ?? 1) : id === 'elemental' ? 'el' + (cleanElement(p.el) || 'water') : '');
 
 /** Debounce a fist using the count already computed by tracking; no landmark mutation or extra inference. */
 export class PaintingFist {

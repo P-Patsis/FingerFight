@@ -2,9 +2,9 @@
 //  - this site's files: network first (so an update arrives at once), the cached copy when offline
 //  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
 // Match traffic is WebRTC, which a service worker never sees.
-const VERSION = 'ff-7b51c52d';
+const VERSION = 'ff-25c5b7ec';
 const HEAVY_CACHE = 'ff-heavy';           // the 17 MB hand model lives in its own cache, so a site update never makes it download again
-const SHELL = ['./', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
+const SHELL = ['js/special-skins.js', 'js/vanish-bg.js', 'js/vanish-engine.js', 'js/cloak.js', 'js/handfx.js', 'assets/skins/comic.json', 'assets/skins/elemental.json', 'assets/skins/chameleon.json', 'assets/skins/ghost.json', 'assets/items/knuckleclaws.json', './', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
   'js/main.js', 'js/logic.js', 'js/net.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js',
   'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js', 'js/names.js',
   'js/wake.js', 'js/stats.js', 'js/looks.js', 'js/colorpick.js', 'js/generated.js', 'js/puppet.js', 'js/skins.js', 'js/layers.js', 'js/particles.js', 'js/cosmetics.js',

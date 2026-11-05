@@ -1,3 +1,4 @@
+import { cleanElement } from './special-skins.js';
 // Layered cosmetics (see COSMETICS.md): a catalogue of items (base hands from assets/skins, everything else from assets/items),
 // and the one function that turns what the player wears into what the rig draws.
 //   base hand  - a whole hand in the 16-part skin format (js/skins.js); a premade `whole` hand is one finished piece
@@ -25,6 +26,10 @@ export function parseItem(json) {
     if (!item.particles.length) throw new Error(json.id + ': an effect needs "particles"');
     return item;
   }
+  if (json.nailAnchor !== undefined && !(Number.isFinite(json.nailAnchor) && Math.abs(json.nailAnchor) <= 100)) throw new Error(json.id + ': nailAnchor out of range');
+  item.nailAnchor = json.nailAnchor;
+  if (json.fit !== undefined && (!Array.isArray(json.fit) || json.fit.length > 12 || json.fit.some(p => !p || !PART_NAMES.includes(p.part) || !Number.isFinite(p.x) || !Number.isFinite(p.y) || Math.abs(p.x) > 500 || Math.abs(p.y) > 500))) throw new Error(json.id + ': invalid fitting points');
+  item.fit = json.fit || [];
   item.dynamic = parseDynamic(json.dynamic, json.id);   // nails / claws that stretch out with the finger and retract when it curls
   item.extend = parseExtend(json.extend, json.id);   // fingers drawn past the tip, in the base hand's own shapes (see puppet.js)
   const parts = json.parts ?? (item.extend ? {} : undefined);
@@ -230,16 +235,31 @@ export const colorOf = (id, picked) => { const e = entryOf(id); return e && e.ti
  * this one lacks); nothing here can throw on bad input.
  */
 /** The numbers for generated hands (`gc`, `sd`) and fire intensity (`fi`) on THIS phone; a received picture passes its own via [extra]. */
+export const cleanNl = n => Number.isInteger(n) && n >= 0 && n <= 10 ? n : null;
 export const FIRE_DEFAULT = 7;
-export const gen = { gc: GC_DEFAULT, sd: 1, fi: FIRE_DEFAULT };
-export const setGen = (o = {}) => { const g = cleanGc(o.gc), s = cleanSd(o.sd); if (g) gen.gc = g; if (s !== null) gen.sd = s; const f = cleanIntensity(o.fi); if (f) gen.fi = f; };
+export const gen = { gc: GC_DEFAULT, sd: 1, fi: FIRE_DEFAULT, nl: 5, el: 'water' };
+export function setGen(o = {}) {
+  const gc = cleanGc(o.gc), sd = cleanSd(o.sd), fi = cleanIntensity(o.fi), nl = cleanNl(o.nl), el = cleanElement(o.el);
+  if (gc) gen.gc = gc;
+  if (sd !== null) gen.sd = sd;
+  if (fi) gen.fi = fi;
+  if (nl !== null) gen.nl = nl;
+  if (el) gen.el = el;
+}
 export function rerollPainting(random = Math.random) {
   const seed = newSeed(random);
   gen.sd = seed === gen.sd ? (seed + 1) % (SD_MAX + 1) : seed;
   return gen.sd;
 }
 /** Parameters carried with pictures: generated geometry (`gc`/`sd`) or fire intensity (`fi`). */
-export const genWire = (id, p = gen) => (id === 'lowpoly' ? { gc: cleanGc(p.gc) || GC_DEFAULT } : id === 'painting' ? { sd: cleanSd(p.sd) ?? 1 } : ['flaming', 'burnbone'].includes(id) ? { fi: cleanIntensity(p.fi) || FIRE_DEFAULT } : {});
+function baseWire(id, p) {
+  if (id === 'lowpoly') return { gc: cleanGc(p.gc) || GC_DEFAULT };
+  if (id === 'painting') return { sd: cleanSd(p.sd) ?? 1 };
+  if (id === 'elemental') { const el = cleanElement(p.el) || 'water'; return { el, ...(el === 'fire' ? { fi: cleanIntensity(p.fi) || FIRE_DEFAULT } : {}) }; }
+  if (['flaming', 'burnbone'].includes(id)) return { fi: cleanIntensity(p.fi) || FIRE_DEFAULT };
+  return {};
+}
+export const genWire = (id, p = gen) => ({ ...baseWire(id, p), ...((cleanNl(p.nl) ?? 5) !== 5 ? { nl: cleanNl(p.nl) } : {}) });
 const genCache = new Map();
 function generatedSkin(id, p) {
   const key = id + ':' + paramsKey(id, p);
@@ -264,17 +284,24 @@ export function resolveLoadout(baseId, stack, baseColor = null, extra = null) {
     if (baseSkin.tint) { if (bc !== baseSkin.tint.default) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc); }
     else baseSkin = shiftedSkin(baseSkin, bc);                 // every other hand: a hue-shift, so the design stays
   }
+  const nailScale = (cleanNl(extra ? extra.nl : gen.nl) ?? 5) / 5;
+  if (sid === 'paw' && nailScale !== 1) baseSkin = { ...baseSkin, nailScale };
   const layers = [];
-  const fire = ['flaming', 'burnbone'].includes(sid);
+  const fire = ['flaming', 'burnbone'].includes(sid) || (sid === 'elemental' && (cleanElement(extra ? extra.el : gen.el) || 'water') === 'fire');
   const intensity = cleanIntensity(extra?.fi) || (extra ? FIRE_DEFAULT : gen.fi);
   const emitters = fire ? scaleEmitters(baseSkin.particles, intensity).map(e => ({ ...e, size: 0.4 + intensity * 0.12 })) : [...baseSkin.particles];
   for (const e of list) {
     const it = items.get(e.id);
-    if (!it) continue;
+    if (!it || (it.layer === 'nails' && !nailScale)) continue;
     const picked = it.tint ? e.color || it.tint.default : null;
     const drawn = it.tint && picked !== it.tint.default ? tintedItem(it, picked) : it;
     emitters.push(...(it.layer === 'effect' ? scaleEmitters(drawn.particles, e.k) : drawn.particles));
-    if (it.layer !== 'effect') layers.push(drawn);
+    if (it.layer !== 'effect') {
+      if (it.layer === 'nails') {
+        if (!nailScale) continue;
+        layers.push(nailScale === 1 ? drawn : { ...drawn, nailScale, extend: drawn.extend ? { ...drawn.extend, len: drawn.extend.len * nailScale } : null });
+      } else layers.push(drawn);
+    }
   }
   return { skin: baseSkin, layers, emitters };
 }

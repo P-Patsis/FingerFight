@@ -1,7 +1,8 @@
+import { drawComic } from './handfx.js';
 // Pictures of a hand that never contain camera pixels: the puppet and the skeleton, drawn from finger data / landmarks.
 // A hand is described by which fingers are up: {thumb, index, middle, ring, pinky} (see gestures.js fingerStates).
 import { normalizeView } from './logic.js';
-import { drawPuppet, statesToLandmarks, extensionEnds } from './puppet.js';
+import { drawPuppet, statesToLandmarks, extensionEnds, cosmeticEnds } from './puppet.js';
 import { HandDynamics } from './dynamics.js';
 import { getSkin } from './skins.js';
 import { resolveLoadout } from './cosmetics.js';
@@ -108,7 +109,7 @@ export function drawSkeletonPicture(ctx, w, h, lms, hands, ar, withNumbers = tru
 /** Where fingers drawn past their tips end (as [x, y] landmark units), so the fitted picture leaves room for them. */
 function reachOf(lms, ar, skin, layers) {
   const out = [];
-  for (const hand of lms) for (const p of extensionEnds(hand.map(([x, y]) => ({ x: x * ar, y })), skin, layers)) out.push([p.x / ar, p.y]);
+  for (const hand of lms) for (const p of [...extensionEnds(hand.map(([x, y]) => ({ x: x * ar, y })), skin, layers), ...cosmeticEnds(hand.map(([x, y]) => ({ x: x * ar, y })), skin, layers)]) out.push([p.x / ar, p.y]);
   return out;
 }
 
@@ -120,9 +121,10 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
   if (rec?.jolt) for (const hand of pts) for (const p of hand) { p.x += rec.jolt.x; p.y += rec.jolt.y; }        // the preview's demo shake (decoration)
   const hd = rec?.hd ? pts.map((hand, i) => (rec.hd[i] ??= new HandDynamics()).update(hand, rec.dt || 0, skin, rec.layers || [])) : null;   // a live preview: animations and physics run
   drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs, rec?.alphas, hd, rec?.partAlphas);
+  if (skin.id === 'comic') drawComic(ctx, pts, hands.length ? hands.reduce((n,s) => n + Object.values(s).filter(Boolean).length, 0) : rec?.live ? 5 : null, w, h, hd?.[0]?.animTime ?? null);
   if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead
   const tips = raisedTips(lms, hands, px);
-  if (withNumbers) annotate(ctx, tips, Math.max(8, h * 0.07));
+  if (withNumbers && skin.id !== 'comic') annotate(ctx, tips, Math.max(8, h * 0.07));
   return tips;
 }
 
@@ -145,7 +147,7 @@ export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELET
   ctx.beginPath(); ctx.ellipse(w * 0.2, h * 0.95, w * 0.17, h * 0.34, 0, 0, 7); ctx.fill();
   const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1, puppet ? reachOf(lms, 1, skin, rec?.layers || []) : []);        // the hand sits in the right 60% of the picture
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
-  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
+  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (skin.id === 'comic') drawComic(ctx, pts, 5, w, h); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
   else {
     for (const hand of lms) drawBones(ctx, hand.map(at), skel, Math.max(2, h * 0.016), skelStyle);
   }
@@ -174,7 +176,7 @@ export function drawFromMessage(ctx, w, h, msg) {
     return [];
   }
   if (view === 'skeleton' || view === 'photo-skeleton') return drawSkeletonPicture(ctx, w, h, lms, msg.hands || [], ar, true, msg.sk, msg.ss);
-  const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc, { gc: msg.gc, sd: msg.sd, fi: msg.fi });               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
+  const rec = resolveLoadout(msg.skin, msg.lay ?? msg.cos, msg.bc, { gc: msg.gc, sd: msg.sd, fi: msg.fi, nl: msg.nl, el: msg.el });               // this phone's copies of the sender's skin and cosmetics (unknown ids are skipped)
   const backs = Array.isArray(msg.bk) ? msg.bk.slice(0, 2).map(x => (x === true || x === false ? x : undefined)) : [];     // which way the sender's hand faced (nails show on the back)
   return drawPuppetPicture(ctx, w, h, lms, msg.hands || [], ar, rec.skin, true, { ...rec, backs });
 }

@@ -26,7 +26,7 @@ test('the six new items load with the right layer, lock and the parts they draw 
     const it = parseItem(J('items/' + id + '.json'));
     assert.equal(it.layer, layer, id); assert.equal(it.free, free, id);
   }
-  assert.equal(Object.keys(J('items/scissors.json').parts).length, 8, 'long scissor blades on four fingers (mid plate + blade each)');
+  assert.equal(Object.keys(J('items/scissors.json').parts).length, 10, 'long scissor blades on all five fingers (mid plate + blade each)');
   assert.ok(Object.keys(J('items/boxing.json').parts).length === 16, 'a glove covers every part');
   assert.ok(J('items/ornate.json').particles.length <= 4);
   assert.ok(J('items/rubber.json').tint && J('items/boxing.json').tint, 'rubber and boxing gloves can be recoloured');

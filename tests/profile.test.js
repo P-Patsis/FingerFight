@@ -39,9 +39,9 @@ test('Profile: Player card, then how the opponent sees my hand, then App setting
 test('HANDS live in the Hand category (no separate row): one card per owned hand, the saved choice is marked, tapping saves it', async () => {
   $('profileBtn').onclick();
   const cards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
-  await until(() => cards().length === 15, 'the fifteen free hands as cards (locked ones are unlocked in the Store)');
+  await until(() => cards().length === 19, 'the nineteen free hands as cards (locked ones are unlocked in the Store)');
   assert.deepEqual($('profileLayers').children.map(x => x.dataset.value)[0], 'base', 'Hand is the first chip, and the one that is open');
-  assert.deepEqual(cards().map(x => x.dataset.id), ['cartoon', 'robot', 'neon', 'paw', 'gauntlet', 'lowpoly', 'frog', 'duck', 'toybrick', 'floppy', 'gridmesh', 'bone', 'sand', 'inksketch', 'hook']);
+  assert.deepEqual(cards().map(x => x.dataset.id), ['cartoon', 'robot', 'neon', 'paw', 'gauntlet', 'lowpoly', 'frog', 'duck', 'toybrick', 'floppy', 'gridmesh', 'bone', 'sand', 'inksketch', 'hook', 'comic', 'elemental', 'chameleon', 'ghost']);
   assert.deepEqual(cards().filter(x => x.classList.contains('eq')).map(x => x.dataset.id), ['cartoon'], 'default is the built-in cartoon');
   cards().find(x => x.dataset.id === 'robot').onclick();
   assert.equal(globalThis.localStorage.getItem('ff-puppet'), 'robot');
@@ -49,7 +49,7 @@ test('HANDS live in the Hand category (no separate row): one card per owned hand
   assert.equal(b.byId.get('skinPicker'), undefined, 'no separate "Choose your Hand" grid any more'); assert.equal(b.byId.get('skelRow'), undefined, 'no standalone skeleton colour row');
   $('modePicker').children.find(x => x.dataset.mode === 'photo-puppet').onclick();
   assert.equal(globalThis.localStorage.getItem('ff-mode'), 'photo-puppet');
-  assert.equal(cards().length, 15, 'a puppet view opens the Hand category');
+  assert.equal(cards().length, 19, 'a puppet view opens the Hand category');
   $('profileBack').onclick();
 });
 

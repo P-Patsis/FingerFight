@@ -1,1 +1,30 @@
-{"items": ["tribal", "scar", "runes", "nailpolish", "goldring", "silverring", "ruby", "whiteglove", "leather", "fingerless", "knight", "sparkles", "bubbles", "glow", "embers", "electric", "longnails", "claws", "scissors", "boxing", "rubber", "formal", "ornate", "longfingers", "longclaws"]}
+{
+ "items": [
+  "tribal",
+  "scar",
+  "runes",
+  "nailpolish",
+  "goldring",
+  "silverring",
+  "ruby",
+  "whiteglove",
+  "leather",
+  "fingerless",
+  "knight",
+  "sparkles",
+  "bubbles",
+  "glow",
+  "embers",
+  "electric",
+  "longnails",
+  "claws",
+  "scissors",
+  "boxing",
+  "rubber",
+  "formal",
+  "ornate",
+  "longfingers",
+  "longclaws",
+  "knuckleclaws"
+ ]
+}

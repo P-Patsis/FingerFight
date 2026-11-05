@@ -103,7 +103,8 @@ export function parseExtend(e, id = 'skin') {
   const fingers = e.fingers === undefined ? FINGER_NAMES.slice() : e.fingers;
   if (!Array.isArray(fingers) || !fingers.length || fingers.some((f, i) => !FINGER_NAMES.includes(f) || fingers.indexOf(f) !== i)) throw new Error(id + ': extend.fingers must list finger names once each');
   if (e.physics !== undefined && typeof e.physics !== 'boolean') throw new Error(id + ': extend.physics must be true or false');
-  return { len: e.len, pieces, droop, fingers: fingers.slice(), physics: e.physics === true };
+  if (e.spread !== undefined && !inRange(e.spread, 0, 1)) throw new Error(id + ': extend.spread must be 0-1');
+  return { len: e.len, pieces, droop, fingers: fingers.slice(), physics: e.physics === true, ...(e.spread === undefined ? {} : { spread: e.spread }) };
 }
 /** Checks a skin's "sand" (the grains of a sand hand; see js/sand.js). Missing = not a sand hand = null. */
 export function parseSand(s, id = 'skin') {
@@ -317,12 +318,16 @@ export function extensionPieces(lm, finger, ext, ends = null) {
   const straight = dist2(pts[0], pts[3]) / chain;
   const total = ext.len * chain * (0.3 + 0.7 * clamp01((straight - 0.4) / 0.5));
   const n = ext.pieces, L = total / n, out = [];
+  const spread = ext.spread || 0, fi = FINGER_NAMES.indexOf(finger);
+  const bias = Math.sin((fi + 1) * 2.37) * spread * 0.52;
+  const fallSide = spread && Math.abs(dx) < 0.35 ? (bias >= 0 ? 1 : -1) : (dx >= 0 ? 1 : -1);
   let x = pts[3].x, y = pts[3].y;
   for (let k = 0; k < n; k++) {
-    const want = ext.droop * 2 * (k + 1) / (n * (n + 1));            // the steps add up to `droop`, growing toward the end
+    const want = ext.droop * (1 - spread * (0.25 + Math.sin(fi * 1.7) * 0.18)) * 2 * (k + 1) / (n * (n + 1));            // the steps add up to `droop`, growing toward the end
     const angle = Math.atan2(Math.abs(dx), dy);                      // angle between the direction and screen-down (0 = already hanging)
-    const turn = Math.min(want, angle), sgn = dx >= 0 ? 1 : -1, cos = Math.cos(turn * sgn), sin = Math.sin(turn * sgn);
+    const turn = Math.min(want, angle), sgn = spread ? fallSide : (dx >= 0 ? 1 : -1), cos = Math.cos(turn * sgn), sin = Math.sin(turn * sgn);
     [dx, dy] = [dx * cos - dy * sin, dx * sin + dy * cos];
+    if (spread) { const a = bias * (k + 1) / (n * 2), c = Math.cos(a), s = Math.sin(a); [dx, dy] = [dx * c - dy * s, dx * s + dy * c]; }
     const nx = x + dx * L, ny = y + dy * L;
     const b = ends && ends.length === n && ends[k] && num(ends[k].x) && num(ends[k].y) ? ends[k] : { x: nx, y: ny };
     out.push({ a: { x, y }, b, last: k === n - 1, ideal: { x: nx, y: ny }, len: L });
@@ -403,14 +408,15 @@ export function rigPlan(lm, skin, layers = [], back, dyn = null) {
     }
   };
   /** Pushes [shapes] on each target of part [name], honouring a dynamic setting (retract / hide with the finger). */
-  const place = (name, shapes, tag, cfg, authored = name) => {
+  const place = (name, shapes, tag, cfg, authored = name, nailScale = 1, nailAnchor = undefined) => {
     shapes = visibleShapes(shapes, back);
     if (!shapes.length) return;
     const f = name.split('_')[0], kind = name.split('_')[1];
     for (const m0 of targets(authored)) {
       let m = m0;
       if (cfg && (cfg.only === 'all' || kind === 'tip')) m = dynamicMatrix(m0, cfg, skin.parts[name].length, stretch(f), dyn?.shown?.[f]);
-      if (m) plan.push({ part: name + tag, m, shapes });
+      if (m && nailScale !== 1) { const anchor = nailAnchor ?? -skin.parts[name].length; m = mulM(m, [1, 0, 0, nailScale, 0, anchor * (1 - nailScale)]); }
+      if (m && nailScale > 0) plan.push({ part: name + tag, m, shapes });
     }
   };
   for (const name of skin.order) {
@@ -419,7 +425,7 @@ export function rigPlan(lm, skin, layers = [], back, dyn = null) {
     plan.push({ part: name, m: matrices[name], shapes: visibleShapes(skin.parts[name].shapes, back) });
     const f = name.split('_')[0];
     if (name.endsWith('_tip') && links[f]) for (const l of links[f]) plan.push({ part: f + '_ext', m: l.m, shapes: visibleShapes(skin.parts[f + '_' + l.kind].shapes, back) });
-    for (const o of skin.overlays) if (o.part === name) place(name, o.shapes, '+', o.dynamic);
+    for (const o of skin.overlays) if (o.part === name) place(name, o.shapes, '+', o.dynamic, name, skin.id === 'paw' ? skin.nailScale ?? 1 : 1);
   }
   if (!webDone) pushWeb();
   // cosmetic layers (tattoo, nails, ring, glove...): one whole pass each, in z-order, so a glove covers a ring on ANY finger.
@@ -429,8 +435,8 @@ export function rigPlan(lm, skin, layers = [], back, dyn = null) {
     for (const name of PART_NAMES) {
       const shapes = L.parts?.[name];
       if (!shapes) continue;
-      if (name === 'palm') { if (matrices.palm) plan.push({ part: 'palm@' + L.id, m: matrices.palm, shapes }); continue; }
-      place(name, shapes, '@' + L.id, L.dynamic);
+      if (name === 'palm') { if (matrices.palm) { const scale = L.nailScale ?? 1, anchor = L.nailAnchor ?? 40; plan.push({ part: 'palm@' + L.id, m: scale === 1 ? matrices.palm : mulM(matrices.palm, [1, 0, 0, scale, 0, anchor * (1 - scale)]), shapes }); } continue; }
+      place(name, shapes, '@' + L.id, L.dynamic, name, name.endsWith('_tip') ? L.nailScale ?? 1 : 1, L.nailAnchor);
     }
   }
   return plan;
@@ -523,4 +529,15 @@ export function statesToLandmarks(st, shiftX = 0, mirror = false) {
   if (st.thumb) { lm[1] = [235, 830]; lm[2] = [165, 745]; lm[3] = [115, 660]; lm[4] = [80, 590]; }
   else { lm[1] = [235, 830]; lm[2] = [215, 740]; lm[3] = [275, 700]; lm[4] = [335, 725]; }
   return lm.map(([x, y]) => [Math.round((mirror ? 600 - x : x) + shiftX), y]);
+}
+
+/** Authored fitting points for oversized items, transformed by the exact live rig matrices. */
+export function cosmeticEnds(lm, skin, layers = []) {
+  if (!layers.some(l => l.fit?.length)) return [];
+  const plan = rigPlan(lm, skin, layers), out = [];
+  for (const layer of layers) for (const p of layer.fit || []) {
+    const step = plan.find(s => s.part === p.part + '@' + layer.id);
+    if (step) { const m = step.m; out.push({ x: m[0] * p.x + m[2] * p.y + m[4], y: m[1] * p.x + m[3] * p.y + m[5] }); }
+  }
+  return out;
 }

@@ -44,13 +44,13 @@ test('Blade fingers became Long claws: long, dynamic, length-aware, locked by ad
   assert.ok(minY(read('assets/items/claws.json').parts.index_tip) > -(15 + 20), 'Claws stay short');
 });
 
-test('Scissor fingers: long blades on four fingers that retract with the finger', () => {
+test('Scissor fingers: long blades on all five fingers that retract with the finger', () => {
   const rec = C.resolveLoadout('cartoon', [{ id: 'scissors' }]), it = rec.layers[0];
   assert.ok(it.dynamic && it.dynamic.only === 'tip');
   assert.ok(minY(read('assets/items/scissors.json').parts.index_tip) < -(15 + 60), 'long blades, not small tips');
   const names = pl => pl.filter(s => s.part.endsWith('@scissors')).map(s => s.part.replace('@scissors', ''));
   const open = names(P.rigPlan(pose(OPEN), rec.skin, rec.layers, true));
-  assert.deepEqual(open.filter(n => n.endsWith('_tip')).sort(), ['index_tip', 'middle_tip', 'pinky_tip', 'ring_tip']);
+  assert.deepEqual(open.filter(n => n.endsWith('_tip')).sort(), ['index_tip', 'middle_tip', 'pinky_tip', 'ring_tip', 'thumb_tip']);
   const curled = names(P.rigPlan(pose({ ...OPEN, middle: false }), rec.skin, rec.layers, true));
   assert.ok(!curled.includes('middle_tip') && curled.includes('index_tip'), 'a curled finger loses its blade');
   assert.ok(curled.includes('middle_mid'), 'but keeps its steel sleeve');

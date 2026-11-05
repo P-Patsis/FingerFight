@@ -92,7 +92,10 @@ export class HandDynamics {
         let prev = ideal[0].a;
         ideal.forEach((q, k) => {
           const p = st.p[k], v = st.v[k];
-          v.x += (DYN.SPRING_K * (q.ideal.x - p.x) - DYN.SPRING_C * v.x) * h;
+          const variant = ext.spread || 0, fi = FINGER_NAMES.indexOf(f);
+          const stiffness = DYN.SPRING_K * (1 - variant * 0.2 + fi * variant * 0.08);
+          const flutter = variant * q.len * 0.025 * Math.sin(this.t * (1.1 + fi * 0.17) + fi * 2.1 + k);
+          v.x += (stiffness * (q.ideal.x + flutter - p.x) - DYN.SPRING_C * v.x) * h;
           v.y += (DYN.SPRING_K * (q.ideal.y - p.y) - DYN.SPRING_C * v.y) * h;
           p.x += v.x * h; p.y += v.y * h;
           const dx = p.x - prev.x, dy = p.y - prev.y, d = Math.hypot(dx, dy) || 1e-9, ux = dx / d, uy = dy / d;
