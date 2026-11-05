@@ -16,13 +16,13 @@ test('the default finger limit is 5 and can still be raised to 10', () => {
 });
 
 test('default matches have two lives and shrink after round four to two fingers',()=>{
-  assert.equal(DEFAULTS.hits,2);assert.equal(DEFAULTS.shrink,true);assert.equal(SHRINK_EVERY,1);assert.equal(SHRINK_FLOOR,2);
-  const s=normalizeSettings({maxFingers:8});assert.deepEqual(Array.from({length:12},(_,i)=>effectiveMax(s,i+1)),[8,8,8,8,7,6,5,4,3,2,2,2]);
+  assert.equal(DEFAULTS.hits,2);assert.equal(DEFAULTS.shrink,true);assert.equal(SHRINK_EVERY,2);assert.equal(SHRINK_FLOOR,2);
+  const s=normalizeSettings({maxFingers:8});assert.deepEqual(Array.from({length:12},(_,i)=>effectiveMax(s,i+1)),[8,8,8,8,7,7,6,6,5,5,4,4]);
 });
 
 test('players get the exact notice only when fingers actually decrease',()=>{
   const s=normalizeSettings({maxFingers:5});
-  assert.deepEqual([1,4,5,6,7,8,99].map(r=>shrinkNotice(s,r)),['','','Fingers reduced to 4','Fingers reduced to 3','Fingers reduced to 2','','']);
+  assert.deepEqual([1,4,5,6,7,8,9,10,99].map(r=>shrinkNotice(s,r)),['','','Fingers reduced to 4','','Fingers reduced to 3','','Fingers reduced to 2','','']);
   assert.equal(shrinkNotice({...s,shrink:false},6),'');
 });
 

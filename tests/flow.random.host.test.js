@@ -61,7 +61,7 @@ test('photo reveal styles are not offered against a random opponent and cannot b
 
 test('the match starts by itself once both cameras are on; the round carries only drawn data', async () => {
   conn.send({ t: 'ready', ready: true });
-  await sleep(100);$('lobbyCustomise').onclick();assert.equal(b.visible()[0],'profile');
+  await sleep(100);$('custBtn').onclick();assert.equal(b.visible()[0],'profile');
   await sleep(1700);assert.equal(got.some(m=>m.t==='start'),false,'autostart waits while customising');
   $('custDone').onclick();assert.equal(b.visible()[0],'lobby');
   await until(() => got.some(m => m.t === 'start'), 'the host auto-starts the random match', 8000);

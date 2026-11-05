@@ -10,11 +10,12 @@ test('new match has two lives and announces each finger reduction prominently on
  $('codeInput').value='ABCD-EFGH-JKLM-NPQR';await $('joinBtn').onclick();await until(()=>$('nameHost').textContent==='Host','welcome');
  assert.equal($('valHits').textContent,'2');assert.equal($('valMax').textContent,'5');assert.equal($('shrinkBtn').textContent,'On');
  conn.send({t:'start',settings:DEFAULTS});await until(()=>b.visible()[0]==='game','game');assert.equal($('topHp').children.length,2);assert.equal($('botHp').children.length,2);
- for(let n=1;n<=8;n++){
+ for(let n=1;n<=10;n++){
   conn.send({t:'round',n});await until(()=>$('roundLabel').textContent==='ROUND '+n&&$('banner').children[0]?.textContent!=='GET READY','round '+n);
   const primary=$('banner').children[0].textContent;
-  if(n>=5&&n<=7){assert.equal(primary,'Fingers reduced to '+(9-n));assert.equal($('banner').children[1].textContent,'ROUND '+n);}
-  else assert.equal(primary,'ROUND '+n,'no reduction notice before round five or after reaching two');
+  if([5,7,9].includes(n)){assert.equal(primary,'Fingers reduced to '+(6-Math.floor(n/2)));assert.equal($('banner').children[1].textContent,'ROUND '+n);}
+  else assert.equal(primary,'ROUND '+n,'no reduction notice between reductions');
  }
+ await until(()=>$('bottomContent').querySelectorAll('[data-count]').length===2,'minimum controls');assert.deepEqual($('bottomContent').querySelectorAll('[data-count]').map(b=>Number(b.dataset.count)),[1,2]);
  $('leaveBtn').onclick();await until(()=>b.visible()[0]==='menu','leave');
 });

@@ -144,7 +144,7 @@ test('TWO BUTTONS: "Customise" opens the customise area with NO camera; the came
   reset();
   $('profileBtn').onclick();
   const html = (await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /id="custBtn"[^>]*>Customise<\/button>/); assert.match(html, /id="tryBtn"[^>]*>Try on \(camera\)<\/button>/);
+  assert.match(html, /id="custBtn"[^>]*>Customise<\/button>/); assert.match(html, /id="tryBtn"[^>]*>Try on<\/button>/);
   assert.equal($('custBtn').hidden, false); assert.equal($('tryBtn').hidden, false);
   $('custBtn').onclick();
   await new Promise(r => setTimeout(r, 60));
@@ -155,7 +155,7 @@ test('TWO BUTTONS: "Customise" opens the customise area with NO camera; the came
   assert.equal($('looksRow').hidden, false); assert.equal($('profileLayers').hidden, false);
   $('tryNow').onclick();
   await until(() => events.includes('run'), 'camera on from the corner');
-  assert.deepEqual(events, ['start', 'run']); assert.equal($('camBox').parentElement, $('liveBox')); assert.equal($('tryNow').hidden, true, 'once the camera is on the corner button is gone');
+  assert.deepEqual(events, ['start', 'run']); assert.equal($('camBox').parentElement, $('liveBox')); assert.equal($('tryNow').textContent,'Stop camera','camera action stays under preview');
   $('custDone').onclick();
   assert.ok(events.includes('stop')); assert.equal(cam().cameraOn, false); assert.equal($('custArea').hidden, true);
   assert.equal($('custBtn').hidden, false); assert.equal($('tryBtn').hidden, false, 'both entry buttons are back');

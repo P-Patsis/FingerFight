@@ -560,3 +560,16 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 
 /* Reserved, inactive banner position directly below the end-of-match carousel. */
 #over > .ad-slot { margin: 12px auto; min-height: 50px; border: 1px dashed #475569; border-radius: 8px; display: grid; place-items: center; color: var(--muted); font-size: 11px; }
+
+.match-settings > summary { cursor: pointer; font-weight: 700; padding: 4px 0; min-height: 32px; }
+.match-settings[open] > summary { margin-bottom: 12px; }
+#bgPicker.bg-picker.hrow { display:flex; gap:8px; }
+#bgPicker.bg-picker.hrow button { flex:0 0 76px; min-height:94px; }
+#musicPicker.hrow { flex-wrap:nowrap; overflow-x:auto; }
+.preview-actions { margin-top:10px; }
+.preview-actions .btn { min-height:44px; border-radius:12px; font-size:14px; }
+
+.social-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 0; border-bottom:1px solid #334155; }
+#social input { min-width:0; max-width:100%; }
+
+#storeSnap, #wearCamOff { min-height:44px; border-radius:12px; }

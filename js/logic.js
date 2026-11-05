@@ -37,9 +37,9 @@ export function normalizeSettings(s = {}) {
 }
 
 // ---- reduce fingers over time (optional host setting) --------------------------------------------------------------
-// Rounds 1–4 retain the chosen limit. Each following round removes one finger, down to two.
+// Rounds 1–4 retain the limit. Following pairs of turns use 4, then 3, then 2 (for default settings).
 export const SHRINK_AFTER = 4;
-export const SHRINK_EVERY = 1;
+export const SHRINK_EVERY = 2;
 export const SHRINK_FLOOR = 2;
 
 /** Text for the banner when the ceiling is lower in round [round] than in the round before; '' when it did not change. */
@@ -54,9 +54,12 @@ export function shrinkNotice(settings, round) {
 export function effectiveMax(settings, round) {
   const normalized=normalizeSettings(settings),max = normalized.maxFingers;
   if (!normalized.shrink) return max;
-  const drop = Math.max(0, Math.floor((Math.max(1, Number(round) || 1) - SHRINK_AFTER) / SHRINK_EVERY));
+  const drop = Math.max(0, Math.floor((Math.max(1, Number(round) || 1) - SHRINK_AFTER + SHRINK_EVERY - 1) / SHRINK_EVERY));
   return Math.min(max, Math.max(SHRINK_FLOOR, max - drop));
 }
+
+/** At the shrinking floor require an actual 1/2-finger choice; a fist is no longer a valid answer/guess. */
+export function effectiveMin(settings,round){return normalizeSettings(settings).shrink&&effectiveMax(settings,round)<=SHRINK_FLOOR?1:0;}
 
 // ---- anti-grief: a player who shows no hand for IDLE_ROUNDS rounds in a row forfeits ------------------------------
 export const IDLE_ROUNDS = 3;    // consecutive rounds with no detected hand before the match is forfeited (a warning comes one round earlier)

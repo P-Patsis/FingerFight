@@ -1,3 +1,6 @@
+import { API_URL } from './service-config.js';
+import { Service } from './service.js';
+import { initSocial } from './social.js';
 import { Computer } from './computer.js';
 import { FIT_DEFAULT, FIT_LIMITS } from './fit.js';
 import { ComicMotion } from './handfx.js';
@@ -16,7 +19,7 @@ import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPictur
 import { motionStyle, setMotionStrength } from './dynamics.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
-import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, setGen, rerollPainting } from './cosmetics.js';
+import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, genWire, setGen, rerollPainting } from './cosmetics.js';
 import { cleanGc, GC_MIN, GC_MAX, newSeed } from './generated.js';
 import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
@@ -27,7 +30,7 @@ import { unlockItem, unlockLabel } from './unlock.js';
 import { ParticleSystem } from './particles.js';
 import {
   NAME_MAX, DEFAULTS, normalizeSettings, newGame, pointerFor, other, resolveRound, applyResult, describe,
-  sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, cameraWarning, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, autoCameraWanted, shrinkNotice, turnMessage, HIT_MS, newIdle, trackIdle, IDLE_ROUNDS,
+  sanitizeName, validGuessMsg, validReveal, VIEWS, viewsFor, viewOf, safeViewOf, isSafeView, cameraWarning, RANDOM_SLOTS, RUDE_GESTURES, effectiveMax, effectiveMin, autoCameraWanted, shrinkNotice, turnMessage, HIT_MS, newIdle, trackIdle, IDLE_ROUNDS,
 } from './logic.js';
 import { cleanName, uniqueName, flagEmoji, countryCode, countryFromText, isObscene } from './names.js';
 import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighters.js';
@@ -77,7 +80,6 @@ let computer=null,customiseReturn='menu',editingMatch=false;
 let matchKind = null;                   // 'private' (friends, long code) | 'random' (strangers: puppet/skeleton only)
 let roomCodeRaw = '';                   // the private match code, without dashes
 let pendingGuest = null;                // private match: a guest waiting for the host to accept
-let requireApproval = true;             // host: ask before someone joins a private match
 let hideRude = store_get('ff-rude') !== '0';   // default ON: never show a rude gesture, only the number (my own choice, on my phone)
 let showPhotos = true;                  // private match: display a friend's real photo if they send one
 let helloTimer = null;                  // host: drop a connection that never says hello
@@ -146,7 +148,7 @@ function show(id) {
   currentScreen = id;
   wake.want(id === 'game');
   // the style and sound cards are shared by the Profile screen and the lobby: the same controls, so nothing is duplicated or out of step
-  $('custOnly').hidden = id !== 'profile';                // customise / try-on lives in the Profile only (the lobby shares the opponent-view part)
+  $('custOnly').hidden = !['profile','lobby'].includes(id);                // customise / try-on lives in the Profile only (the lobby shares the opponent-view part)
   if (id === 'store') { $('wearSlotStore').append($('wearCard')); layoutWear('store'); }
   if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('appSlotProfile').append($('appCard')); layoutWear('profile'); renderProfileItems(); }
   else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('appSlot').append($('appCard')); }
@@ -305,9 +307,10 @@ function closeMatchCustomise(){
   if(me){ready[me]=camReady;send({t:'ready',ready:camReady});}
   if(destination==='lobby'||destination==='over')renderLobby();
 }
-$('lobbyCustomise').onclick=openMatchCustomise;
 $('overCustomise').onclick=openMatchCustomise;
 renderWho();
+const service=new Service(API_URL),social=initSocial(service,{getName:()=>myName(),onBack:()=>show('menu'),invite:async target=>{await $('createBtn').onclick();if(!roomCodeRaw)throw new Error('Could not open a room');await service.request('/invites','POST',{target,code:roomCodeRaw});$('lobbyMsg').textContent='Invitation sent. You will approve your friend when they join.';},join:async code=>{$('codeInput').value=code;await $('joinBtn').onclick();}});
+$('accountBtn').hidden=!service.enabled;$('accountBtn').onclick=()=>{show('social');social.open();};
 
 function menuMsg(text, err = false) {
   $('menuMsg').textContent = text;
@@ -494,7 +497,7 @@ $('randomBtn').onclick = async () => {
 // Network
 // ---------------------------------------------------------------------------------------------
 const allowPhotos = () => matchKind === 'private';          // random opponents never send, and are never shown, photos
-const pictureOf = m => ({ photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, sk: m.sk, ss: m.ss, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
+const pictureOf = m => ({ ...genWire(m.skin,m),cb:m.cb, photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, sk: m.sk, ss: m.ss, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
   if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
@@ -711,7 +714,7 @@ function onMessage(m) {
       clearTimeout(helloTimer);
       guestToken = validToken(m.token) ? m.token : null;
       pendingFlag = m.flag;
-      if (matchKind === 'private' && requireApproval) { pendingGuest = cleanName(m.name); renderLobby(); }
+      if (matchKind === 'private') { pendingGuest = cleanName(m.name); renderLobby(); }
       else acceptGuest(cleanName(m.name));
       break;
     case 'welcome':                                 // guest: accepted; here are the host's details
@@ -785,8 +788,8 @@ function setArena(change) {
   setScene(); send({ t: 'settings', settings }); renderLobby();
 }
 function buildBgPicker() {
-  const box = $('bgPicker'), music = $('musicPicker'), presets = $('presetPicker');
-  box.replaceChildren(); music.replaceChildren(); presets.replaceChildren();
+  const box = $('bgPicker'), music = $('musicPicker');
+  box.replaceChildren(); music.replaceChildren();
   BACKGROUNDS.forEach((name, i) => {
     const b = el('button', 'thumb-' + i, name);
     b.type = 'button'; b.dataset.value = String(i);
@@ -795,9 +798,6 @@ function buildBgPicker() {
     const m = el('button', '', TRACK_NAMES[i]); m.type = 'button'; m.dataset.value = String(i);
     m.onclick = () => setArena({ music: i });                      // the music alone
     music.append(m);
-    const p = el('button', '', name); p.type = 'button'; p.dataset.value = String(i);
-    p.onclick = () => setArena({ background: i, music: i });       // a preset: this arena's background together with its own music
-    presets.append(p);
   });
 }
 
@@ -891,12 +891,8 @@ function renderLobby() {
   $('valMax').textContent = settings.maxFingers;
   $('shrinkBtn').textContent = settings.shrink ? 'On' : 'Off';
   $('shrinkBtn').classList.toggle('on', !!settings.shrink);
-  $('approveBtn').textContent = requireApproval ? 'On' : 'Off';
-  $('approveBtn').classList.toggle('on', requireApproval);
-  $('approveRow').hidden = !(matchKind === 'private' && me === 'host');
   [...$('bgPicker').children].forEach((b, i) => b.classList.toggle('sel', i === settings.background));
   [...$('musicPicker').children].forEach((b, i) => b.classList.toggle('sel', i === settings.music));
-  [...$('presetPicker').children].forEach((b, i) => b.classList.toggle('sel', i === settings.background && i === settings.music));
   setScene();
   $('settingsCard').hidden = random;
   $('settingsCard').classList.toggle('locked', me !== 'host');
@@ -907,7 +903,6 @@ function renderLobby() {
   const canStart = !editingMatch && me === 'host' && link?.open && !!names.guest && ready.host && ready.guest;
   $('startBtn').hidden = me !== 'host' || random;           // a random match starts by itself
   $('startBtn').disabled = !canStart;
-  $('lobbyCustomise').disabled=camBusy;
   if(!$('over').hidden)$('againBtn').disabled=!canStart;
   $('lobbyMsg').textContent = me === 'guest' ? (names.host ? (random ? 'Starts when you both have your camera on.' : 'The host starts the fight.') : 'Waiting for the host to accept you…')
     : pendingGuest ? 'Accept or decline the player above.'
@@ -930,7 +925,6 @@ $('settingsCard').addEventListener('click', e => {
   renderLobby();
 });
 $('shrinkBtn').onclick = () => { if (me === 'host') { settings = normalizeSettings({ ...settings, shrink: !settings.shrink }); send({ t: 'settings', settings }); renderLobby(); } };
-$('approveBtn').onclick = () => { if (me === 'host') { requireApproval = !requireApproval; renderLobby(); } };
 
 $('copyBtn').onclick = async () => {
   try { await navigator.clipboard.writeText(formatCode(roomCodeRaw)); $('lobbyMsg').textContent = 'Code copied. Send it to your friend.'; }
@@ -961,7 +955,7 @@ async function enableCamera() {
   if (camReady || camBusy) return;
   camBusy = true;
   if (me) renderLobby();                                // hides the button while the attempt runs
-  try { await enableCameraNow(); } finally { camBusy = false; if (me) renderLobby(); }   // ... and brings it back if it failed
+  try { await enableCameraNow(); } finally { camBusy = false; if (me) renderLobby();updateTryOnButtons(); }   // ... and brings it back if it failed
 }
 
 async function enableCameraNow() {
@@ -1230,8 +1224,9 @@ function layoutPreview() {
   $('wearBox').hidden = false;
   $('stickyTop').classList.toggle('stuck', c);
   $('custBtn').hidden = c; $('tryBtn').hidden = c; $('custDone').hidden = !c;
-  $('tryNow').hidden = !c || tryOn.on || tryOn.busy;           // customising without the camera: the corner offers to turn it on
+  $('tryNow').hidden = !c;           // customising without the camera: the corner offers to turn it on
   $('profileLayers').hidden = !c; $('cCat').hidden = !c; $('looksRow').hidden = !c; if (!c) { $('lookEdit').hidden = true; picker.layer = null; }
+  updateTryOnButtons();
   if (c) renderLooks();
   if (which === 'fit') startStoreAnim();
 }
@@ -1248,9 +1243,9 @@ function enterCust() {
   $('custArea').hidden = false;
   layoutWear('profile'); renderProfileItems(); layoutPreview();
 }
-$('custBtn').onclick = enterCust;                                    // "Customise": pick and arrange, no camera
-$('tryBtn').onclick = () => { enterCust(); startTryOn(); };          // "Try on (camera)": the same area with the camera ON (says why when it cannot)
-$('tryNow').onclick = () => { if (cust.on) startTryOn(); };          // customising without the camera and now wanting it
+$('custBtn').onclick = ()=>$('lobby').hidden?enterCust():openMatchCustomise();                                    // "Customise": pick and arrange, no camera
+$('tryBtn').onclick = () => { if(!$('lobby').hidden)openMatchCustomise();else enterCust();startTryOn(); };          // "Try on (camera)": the same area with the camera ON (says why when it cannot)
+$('tryNow').onclick = () => { if(cust.on){if(tryOn.on)stopTryOn();else startTryOn();} };          // customising without the camera and now wanting it
 
 /** The first colour a category starts from when nothing was picked: the default of its first colourable item (the hand: the worn hand). */
 function categoryDefault(layer) {
@@ -1320,7 +1315,7 @@ function skeletonColorRow(box) {
  * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
  */
 function renderFitControls(box){
-  for(const [key,label]of [['f','Finger fatness'],['p','Palm width'],['c','Coverage']]){
+  for(const [key,label]of [['f','Finger width'],['p','Palm width'],['c','Coverage']]){
     const ctl=el('div','ctl fit-control'),val=el('b','',gen.fit[key]+'%'),sl=document.createElement('input');
     sl.type='range';sl.min=String(FIT_LIMITS[key][0]);sl.max=String(FIT_LIMITS[key][1]);sl.step=key==='c'?'1':'5';sl.value=String(gen.fit[key]);sl.dataset.act='fit-'+key;sl.setAttribute('aria-label',label);
     sl.oninput=()=>{setGen({fit:{...gen.fit,[key]:Number(sl.value)}});val.textContent=gen.fit[key]+'%';liveColor();};
@@ -1528,7 +1523,12 @@ function stopTryOn() {
 }
 function updateTryOnButtons() {
   $('wearCamOff').hidden = !(tryOn.on || tryOn.busy);
-  $('tryNow').hidden = !cust.on || tryOn.on || tryOn.busy;
+  $('tryNow').hidden = !cust.on;
+  $('tryNow').textContent=tryOn.busy?'Starting camera…':tryOn.on?'Stop camera':'Try on';
+  $('tryNow').disabled=tryOn.busy||camBusy;
+  $('tryBtn').disabled=tryOn.busy||camBusy;
+  $('tryNow').setAttribute('aria-pressed',String(tryOn.on));
+  $('storeSnap').textContent=tryOn.on?'Snapshot':'Try on';
   $('storeSnap').disabled = tryOn.busy;
 }
 
@@ -1565,6 +1565,7 @@ function startGame() {
   token++;
   inGame = true;
   game = newGame(settings);
+  if(matchKind==='computer')computer?.start();
   round = null;
   fightLog = []; streak = { side: null, n: 0 };
   setScene();
@@ -1662,7 +1663,7 @@ function runTimer(seconds) {
 //      the guesser's fingers are the guess.
 function setupCameraUI() {
   const pointing = round.pointer === me;
-  const lim = curMax() < 10 ? ' (max ' + curMax() + ')' : '';
+  const lim = curMin() ? ' (show 1 or 2 fingers)' : curMax() < 10 ? ' (max ' + curMax() + ')' : '';
   const caption = (pointing ? 'POINT: hold up your fingers' : 'GUESS: show the number with your fingers') + lim;
   const box = contentEl(me);
   if (SIM) {
@@ -1674,7 +1675,7 @@ function setupCameraUI() {
       for (const b of wrap.querySelectorAll('[data-g]')) b.classList.toggle('sel', (b.dataset.g || null) === cam.sim.gesture);
       wrap.querySelector('[data-nohand]').classList.toggle('sel', cam.sim.noHand);
     };
-    for (let c = 0; c <= curMax(); c++) { const b = btn(String(c), () => { cam.set({ count: c }); refresh(); }); b.dataset.count = c; wrap.append(b); }
+    for (let c = curMin(); c <= curMax(); c++) { const b = btn(String(c), () => { cam.set({ count: c }); refresh(); }); b.dataset.count = c; wrap.append(b); }
     if (pointing) for (const g of ['', 'middle', 'sideways']) { const b = btn(g || 'no gesture', () => { cam.set({ gesture: g || null }); refresh(); }); b.dataset.g = g; wrap.append(b); }
     const nh = btn('hide hand', () => { cam.set({ noHand: !cam.sim.noHand }); refresh(); }); nh.dataset.nohand = '1'; wrap.append(nh);
     box.replaceChildren(wrap);
@@ -1689,7 +1690,7 @@ function setupCameraUI() {
   if (debugWanted) { cam.debug = true; debugPanel().show(true); }
   cam.onFrame = s => {
     dbg?.update(s);
-    $('liveCount').textContent = Math.min(s.count, curMax());
+    $('liveCount').textContent = s.count<curMin()?'Show 1 or 2':Math.min(s.count,curMax());
     // gestures never score; the label is shown only to the pointer and only if the rude-gesture filter is off
     $('liveGesture').textContent = pointing && s.gesture && !hideRude ? GESTURE_NAMES[s.gesture] : '';
   };
@@ -1793,7 +1794,8 @@ function releaseCamera() {
 function endGuessPhase() {
   if (!round || round.phase !== 'guess') return;
   round.phase = 'waiting';
-  const snap = cam.snap(effectiveStyle());         // both phones snap at 0, in the style I chose (puppet/skeleton only in random matches)
+  let snap = cam.snap(effectiveStyle());
+  if(!snap.noHand&&snap.count<curMin())snap={...snap,noHand:true,count:0};         // both phones snap at 0, in the style I chose (puppet/skeleton only in random matches)
   releaseCamera();
   if (round.pointer === me) {
     round.reveal = { count: snap.count, gesture: snap.gesture, noHand: snap.noHand, ...pictureOf(snap) };
@@ -1819,6 +1821,7 @@ function endOfMatch(won) {
 
 /** The finger limit for the round on screen (the host's setting, lower later in the match when "fewer fingers" is on). */
 const curMax = () => effectiveMax(settings, round?.n || 1);
+const curMin = () => effectiveMin(settings, round?.n || 1);
 
 function tryResolve() {
   if (!round || round.resolved || !round.reveal || !round.guessMsg) return;
@@ -1828,8 +1831,10 @@ function tryResolve() {
   // quicker matches: anything above the limit counts as the limit (and is drawn as a plain hand of that many fingers)
   const max = curMax();
   const plain = (m, n) => ({ ...m, view: 'puppet', photo: '', lm: null, gesture: null, hands: statesFromCount(n) });
-  const reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
-  const guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
+  let reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
+  let guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
+  if(reveal.count<curMin())reveal={...reveal,noHand:true};
+  if(guessMsg.guess!==null&&guessMsg.guess<curMin())guessMsg={...guessMsg,guess:null};
   const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, noHand: reveal.noHand });
   if (pointer === me) { if (!reveal.noHand) matchStats().recordShown(reveal.count); }          // what I held up
   else if (guessMsg.guess !== null) matchStats().recordGuess(guessMsg.guess);                  // what I guessed
