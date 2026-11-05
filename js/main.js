@@ -971,7 +971,7 @@ $('startBtn').onclick = () => {
 // (the order you tapped; the last is drawn on top) that can be re-ordered in the "Wearing" card, where each colourable item also
 // has a colour picker. Unlocking goes through js/unlock.js, which is a STUB for now (no ads, no payments): see the boundary comment there.
 // ---------------------------------------------------------------------------------------------
-const storeView = { category: 'all', layer: 'all' };
+const storeView = { category: 'all', layer: 'all', reset: false };
 const profileView = { category: 'all', layer: 'base', reset: false };
 let storeAnim = { raf: 0, ps: null, last: 0, rec: null, hd: [] };
 const wearVisible = () => !$('store').hidden || !$('profile').hidden;
@@ -1111,6 +1111,24 @@ function scrollRowToStart(row) {
   if (globalThis.requestAnimationFrame) globalThis.requestAnimationFrame(() => { row.scrollLeft = 0; row.style.scrollSnapType = ''; }); else row.style.scrollSnapType = '';
 }
 
+/** Reset the new cards after layout, including the enclosing vertical screen. */
+function resetCategoryItems(grid, screen, controls, sticky = null) {
+  scrollRowToStart(grid); grid.scrollTop = 0;
+  const align = () => {
+    if (screen.hidden) return;
+    const viewport = screen.getBoundingClientRect();
+    const current = screen.scrollTop || 0;
+    const header = sticky?.classList.contains('stuck') ? sticky.getBoundingClientRect() : null;
+    const target = header
+      ? current + grid.getBoundingClientRect().top - (header.bottom ?? header.top + header.height) - 8
+      : current + controls.getBoundingClientRect().top - viewport.top - (screen.querySelector('.topbar')?.getBoundingClientRect().height || 0) - 12;
+    const top = Math.max(0, target);
+    try { screen.scrollTo?.({ top, behavior: 'instant' }); } catch { /* scrollTop works on older browsers */ }
+    screen.scrollTop = top;
+  };
+  if (globalThis.requestAnimationFrame) globalThis.requestAnimationFrame(align); else align();
+}
+
 /** A Skeleton style card: the sample hand drawn in that style and the current skeleton colour; tap = use it (sent to the opponent as `ss`). */
 function skeletonCard(id, name) {
   const on = (style.skelStyle || 'classic') === id;
@@ -1133,12 +1151,13 @@ function fillGrid(grid, list) {
 function renderStore() {
   const cats = $('storeCats'), lays = $('storeLayers');
   cats.replaceChildren(); lays.replaceChildren();
-  chip(cats, 'all', 'All', storeView.category, v => { storeView.category = v; }, renderStore);
-  for (const c of CATEGORIES) chip(cats, c, CATEGORY_LABELS[c], storeView.category, v => { storeView.category = v; }, renderStore);
-  chip(lays, 'all', 'Everything', storeView.layer, v => { storeView.layer = v; }, renderStore);
-  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], storeView.layer, v => { storeView.layer = v; }, renderStore);
+  chip(cats, 'all', 'All', storeView.category, v => { storeView.category = v; storeView.reset = true; }, renderStore);
+  for (const c of CATEGORIES) chip(cats, c, CATEGORY_LABELS[c], storeView.category, v => { storeView.category = v; storeView.reset = true; }, renderStore);
+  chip(lays, 'all', 'Everything', storeView.layer, v => { storeView.layer = v; storeView.reset = true; }, renderStore);
+  for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], storeView.layer, v => { storeView.layer = v; storeView.reset = true; }, renderStore);
   fillGrid($('storeGrid'), filterCatalog(catalog(), storeView));
   renderWear();
+  if (storeView.reset) { storeView.reset = false; resetCategoryItems($('storeGrid'), $('store'), $('storeCats')); }
 }
 
 /** The Profile's customise list: one type at a time (Hand, Tattoo / scar, Nail polish, Ring, Glove, Effect) in a sideways-scrolling row, only what you own (the Store has everything). */
@@ -1149,8 +1168,9 @@ function renderProfileItems() {
   const grid = $('profileGrid');
   if (profileView.layer === 'skeleton') { grid.replaceChildren(); for (const [id, name] of SKELETON_STYLES) grid.append(skeletonCard(id, name)); }
   else fillGrid(grid, filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
-  if (profileView.reset) { profileView.reset = false; scrollRowToStart(grid); }      // a new category starts at its first items
+  const reset = profileView.reset; profileView.reset = false;
   renderWear();
+  if (reset) resetCategoryItems(grid, $('profile'), $('profileLayers'), $('stickyTop'));
 }
 
 /** Where the shared pieces (preview / camera, category colour panel, worn list) sit: inside the Store's Wearing card, or in the Profile's customise area. */
@@ -1284,7 +1304,6 @@ function renderCatColor() {
     sl.oninput = () => { if (setMotionStrength(Number(sl.value))) { val.textContent = String(motionStyle.strength); refreshPreview(); } };
     sl.onchange = () => { store.set('ff-motion', String(motionStyle.strength)); };
     ctl.append(el('span', 'fine', 'Idle animation'), sl, val); box.append(ctl);
-    box.append(el('p', 'fine', '0 = still, 5 = gentle, 10 = stronger. Reduced motion keeps idle animations still.'));
   }
   if (layer === 'base' && inv.baseId === 'lowpoly') {
     const ctl = el('div', 'ctl'), val = el('b', '', String(gen.gc));
@@ -1300,7 +1319,6 @@ function renderCatColor() {
     sl.onchange = () => { store.set('ff-fire', String(gen.fi)); syncStyle(); };
     ctl.append(el('span', 'fine', 'Fire intensity'), sl, val); box.append(ctl);
   }
-  if (layer === 'base' && inv.baseId === 'painting') box.append(el('p', 'fine', 'Tap Painting or the preview to repaint. Make a fist on camera for a new painting.'));
   if (layer === 'effect') {
     const k = st.k || INTENSITY_DEFAULT, ctl = el('div', 'ctl'), val = el('b', '', String(k));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = String(INTENSITY_MIN); sl.max = String(INTENSITY_MAX); sl.step = '1'; sl.value = String(k); sl.dataset.act = 'intensity'; sl.setAttribute('aria-label', 'Effect intensity');

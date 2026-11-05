@@ -32,7 +32,7 @@ def cartoon_palm():
             {'d': 'M 30 62 C 40 66 54 66 66 60', 'stroke': '#c98f5f', 'strokeWidth': 1.8}]
 def cartoon_seg(f, i, w, L):
     shapes = [{'d': capsule(w, L), 'fill': '#f6c9a0', 'stroke': '#9a5b2e', 'strokeWidth': 2.5}]
-    if i == 2: shapes.append({'d': f'M {-w * 0.45} {-L * 0.55} L {w * 0.45} {-L * 0.55}', 'stroke': '#e9b38a', 'strokeWidth': 1.5})   # a fingernail line
+    if i == 2: shapes.append({'d': f'M {-w * 0.45} {-L * 0.55} L {w * 0.45} {-L * 0.55}', 'stroke': '#e9b38a', 'strokeWidth': 1.5, 'side': 'back'})   # a fingernail line
     return shapes
 
 # ---- robot: grey plates, rivets at the joints
@@ -62,8 +62,15 @@ def paw_seg(f, i, w, L):
     shapes = [{'d': capsule(w, L), 'fill': '#b9824f', 'stroke': '#6b4423', 'strokeWidth': 2.5}]
     if i == 2:
         shapes.append({'d': circle(0, -L * 0.45, w * 0.5), 'fill': '#6b4423'})
-        shapes.append({'d': f'M {-2.6} {-L - w + 1.5} L 0 {-L - w - 6} L 2.6 {-L - w + 1.5} Z', 'fill': '#f1e6d0', 'stroke': '#6b4423', 'strokeWidth': 1})
     return shapes
+
+def paw_overlays():
+    out = []
+    for f in LEN:
+        L, w = LEN[f][2], HALF[f][2]
+        out.append({'part': f + '_tip', 'dynamic': {'pivot': 1, 'min': 0.05, 'hide': True, 'only': 'tip'},
+                    'shapes': [{'d': f'M {-2.6} {-L - w + 1.5} L 0 {-L - w - 6} L 2.6 {-L - w + 1.5} Z', 'fill': '#f1e6d0', 'stroke': '#6b4423', 'strokeWidth': 1}]})
+    return out
 
 # ---- dragon (fantasy): green scales, dark outline, red claws
 def dragon_palm():
@@ -101,7 +108,7 @@ def main():
                    particles=[{'effect': 'sparks', 'color': '#fde68a', 'where': 'knuckles', 'rate': 4}]),
              build('neon', 'Neon', 'Finger Fight', neon_palm(), neon_seg, category='scifi',
                    tint={'default': '#22d3ee', 'map': {'#22d3ee': 'main', '#67e8f9': 'light'}, 'swatches': ['#ef4444','#f97316','#facc15','#22c55e','#22d3ee','#3b82f6','#a855f7','#ec4899','#f8fafc']}),
-             build('paw', 'Paw', 'Finger Fight', paw_palm(), paw_seg, category='animal'),
+             build('paw', 'Paw', 'Finger Fight', paw_palm(), paw_seg, category='animal', overlays=paw_overlays()),
              build('dragon', 'Dragon', 'Finger Fight', dragon_palm(), dragon_seg, category='fantasy', free=False, unlock={'method': 'ad'},
                    particles=[{'effect': 'embers', 'color': '#fb923c', 'where': 'tips', 'rate': 5}],
                    tint={'default': '#4d9a4a', 'map': {'#4d9a4a': 'main', '#43873f': 'mid', '#2f6b36': 'dark', '#1f4d2b': 'dark'}, 'swatches': ['#4d9a4a','#dc2626','#3b82f6','#a855f7','#facc15','#f97316','#64748b','#ec4899']}),

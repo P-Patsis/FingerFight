@@ -36,6 +36,17 @@ test('real camera render loop animates a stationary hand at 12.5 tracking fps, i
       assert.equal(cam.hd[0].animTime, null);
       reduced = false; cam.pause();
     }
+    const originalDetector = cam.landmarker.detectForVideo;
+    cam.landmarker.detectForVideo = () => ({ landmarks: [tracked], handednesses: [[{ categoryName: 'Left', score: 1 }]] });
+    cam.setOverlay('puppet', 'cartoon', [{ id: 'nailpolish' }]); cam.run();
+    const facingFrames = n => { for (let i = 0; i < n; i++) { now += 80; video.currentTime++; next(); } };
+    facingFrames(8);
+    assert.equal(cam.hd[0].back, false, 'raw Left palm: live nails are hidden');
+    assert.deepEqual(cam.snap({ mode: 'puppet', skin: 'cartoon' }).bk, [false]);
+    tracked = hand.map(p => ({ ...p, x: 1 - p.x })); facingFrames(8);
+    assert.equal(cam.hd[0].back, true, 'turning over shows nails after facing hysteresis');
+    assert.deepEqual(cam.snap({ mode: 'puppet', skin: 'cartoon' }).bk, [true], 'snapshot sends corrected back flag');
+    cam.pause(); tracked = hand; cam.landmarker.detectForVideo = originalDetector;
     cam.setOverlay('puppet', 'painting', []);
     cam.run();
     const frame = n => { for (let i = 0; i < n; i++) { now += 80; video.currentTime++; next(); } };

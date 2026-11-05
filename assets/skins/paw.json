@@ -74,12 +74,6 @@
     {
      "d": "M -3.7 -7.425 A 3.7 3.7 0 1 0 3.7 -7.425 A 3.7 3.7 0 1 0 -3.7 -7.425 Z",
      "fill": "#6b4423"
-    },
-    {
-     "d": "M -2.6 -22.4 L 0 -29.9 L 2.6 -22.4 Z",
-     "fill": "#f1e6d0",
-     "stroke": "#6b4423",
-     "strokeWidth": 1
     }
    ]
   },
@@ -117,12 +111,6 @@
     {
      "d": "M -3.1 -6.75 A 3.1 3.1 0 1 0 3.1 -6.75 A 3.1 3.1 0 1 0 -3.1 -6.75 Z",
      "fill": "#6b4423"
-    },
-    {
-     "d": "M -2.6 -19.7 L 0 -27.2 L 2.6 -19.7 Z",
-     "fill": "#f1e6d0",
-     "stroke": "#6b4423",
-     "strokeWidth": 1
     }
    ]
   },
@@ -160,12 +148,6 @@
     {
      "d": "M -3.25 -7.425 A 3.25 3.25 0 1 0 3.25 -7.425 A 3.25 3.25 0 1 0 -3.25 -7.425 Z",
      "fill": "#6b4423"
-    },
-    {
-     "d": "M -2.6 -21.5 L 0 -29.0 L 2.6 -21.5 Z",
-     "fill": "#f1e6d0",
-     "stroke": "#6b4423",
-     "strokeWidth": 1
     }
    ]
   },
@@ -203,12 +185,6 @@
     {
      "d": "M -3.05 -6.75 A 3.05 3.05 0 1 0 3.05 -6.75 A 3.05 3.05 0 1 0 -3.05 -6.75 Z",
      "fill": "#6b4423"
-    },
-    {
-     "d": "M -2.6 -19.6 L 0 -27.1 L 2.6 -19.6 Z",
-     "fill": "#f1e6d0",
-     "stroke": "#6b4423",
-     "strokeWidth": 1
     }
    ]
   },
@@ -246,16 +222,96 @@
     {
      "d": "M -2.6 -5.175 A 2.6 2.6 0 1 0 2.6 -5.175 A 2.6 2.6 0 1 0 -2.6 -5.175 Z",
      "fill": "#6b4423"
-    },
+    }
+   ]
+  }
+ },
+ "overlays": [
+  {
+   "part": "thumb_tip",
+   "shapes": [
+    {
+     "d": "M -2.6 -22.4 L 0 -29.9 L 2.6 -22.4 Z",
+     "fill": "#f1e6d0",
+     "stroke": "#6b4423",
+     "strokeWidth": 1
+    }
+   ],
+   "dynamic": {
+    "pivot": 1,
+    "min": 0.05,
+    "hide": true,
+    "only": "tip"
+   }
+  },
+  {
+   "part": "index_tip",
+   "shapes": [
+    {
+     "d": "M -2.6 -19.7 L 0 -27.2 L 2.6 -19.7 Z",
+     "fill": "#f1e6d0",
+     "stroke": "#6b4423",
+     "strokeWidth": 1
+    }
+   ],
+   "dynamic": {
+    "pivot": 1,
+    "min": 0.05,
+    "hide": true,
+    "only": "tip"
+   }
+  },
+  {
+   "part": "middle_tip",
+   "shapes": [
+    {
+     "d": "M -2.6 -21.5 L 0 -29.0 L 2.6 -21.5 Z",
+     "fill": "#f1e6d0",
+     "stroke": "#6b4423",
+     "strokeWidth": 1
+    }
+   ],
+   "dynamic": {
+    "pivot": 1,
+    "min": 0.05,
+    "hide": true,
+    "only": "tip"
+   }
+  },
+  {
+   "part": "ring_tip",
+   "shapes": [
+    {
+     "d": "M -2.6 -19.6 L 0 -27.1 L 2.6 -19.6 Z",
+     "fill": "#f1e6d0",
+     "stroke": "#6b4423",
+     "strokeWidth": 1
+    }
+   ],
+   "dynamic": {
+    "pivot": 1,
+    "min": 0.05,
+    "hide": true,
+    "only": "tip"
+   }
+  },
+  {
+   "part": "pinky_tip",
+   "shapes": [
     {
      "d": "M -2.6 -15.2 L 0 -22.7 L 2.6 -15.2 Z",
      "fill": "#f1e6d0",
      "stroke": "#6b4423",
      "strokeWidth": 1
     }
-   ]
+   ],
+   "dynamic": {
+    "pivot": 1,
+    "min": 0.05,
+    "hide": true,
+    "only": "tip"
+   }
   }
- },
- "overlays": [],
+ ],
  "category": "animal"
 }

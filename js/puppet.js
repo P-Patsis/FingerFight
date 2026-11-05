@@ -61,7 +61,8 @@ export function parseShapes(list, where) {
     for (const k of ['fill', 'stroke']) if (s[k] !== undefined && !(typeof s[k] === 'string' && COLOR.test(s[k]))) throw new Error(at + ': ' + k + ' must be a #colour or "none"');
     if (s.strokeWidth !== undefined && !(num(s.strokeWidth) && s.strokeWidth >= 0 && s.strokeWidth <= 40)) throw new Error(at + ': strokeWidth must be 0-40');
     if (s.opacity !== undefined && !(num(s.opacity) && s.opacity >= 0 && s.opacity <= 1)) throw new Error(at + ': opacity must be 0-1');
-    return { d: s.d, fill: s.fill ?? 'none', stroke: s.stroke ?? 'none', strokeWidth: s.strokeWidth ?? 0, opacity: s.opacity ?? 1, anim: parseAnim(s.anim, at) };
+    if (s.side !== undefined && !['back', 'palm', 'both'].includes(s.side)) throw new Error(at + ': side must be back, palm or both');
+    return { d: s.d, fill: s.fill ?? 'none', stroke: s.stroke ?? 'none', strokeWidth: s.strokeWidth ?? 0, opacity: s.opacity ?? 1, anim: parseAnim(s.anim, at), ...(s.side === undefined ? {} : { side: s.side }) };
   });
 }
 
@@ -182,9 +183,14 @@ export function sideShown(L, back) {
   if (side === 'both' || back === undefined || back === null) return true;
   return side === 'back' ? back === true : back === false;
 }
-/** HandLandmarker's "Left" / "Right" label assumes a MIRRORED image, but the camera frame is not mirrored (the page mirrors only the display), so the real hand is the other one.
- *  If a phone test shows nails on the palm side, flip this constant. */
-export const LABEL_MIRRORED = true;
+// Preserve the existing shape array unless a known facing actually hides a detail.
+function visibleShapes(shapes, back) {
+  if (back === undefined || back === null || !shapes.some(s => !sideShown(s, back))) return shapes;
+  return shapes.filter(s => sideShown(s, back));
+}
+/** Use the model label directly on raw camera landmarks. Phone review confirmed
+ * the previous label swap showed nails on palms. CSS display mirroring is separate. */
+export const LABEL_MIRRORED = false;
 /**
  * Which way a hand faces: true = the BACK of the hand is toward the camera, false = the palm is, undefined = cannot tell.
  * [lm]: 21 points of the raw (unmirrored) camera image, y down. [side]: the model's 'Left' / 'Right' label. The two knuckle edges and the wrist
@@ -398,6 +404,8 @@ export function rigPlan(lm, skin, layers = [], back, dyn = null) {
   };
   /** Pushes [shapes] on each target of part [name], honouring a dynamic setting (retract / hide with the finger). */
   const place = (name, shapes, tag, cfg, authored = name) => {
+    shapes = visibleShapes(shapes, back);
+    if (!shapes.length) return;
     const f = name.split('_')[0], kind = name.split('_')[1];
     for (const m0 of targets(authored)) {
       let m = m0;
@@ -408,9 +416,9 @@ export function rigPlan(lm, skin, layers = [], back, dyn = null) {
   for (const name of skin.order) {
     if (!matrices[name]) continue;
     if (!webDone && name !== 'palm') pushWeb();
-    plan.push({ part: name, m: matrices[name], shapes: skin.parts[name].shapes });
+    plan.push({ part: name, m: matrices[name], shapes: visibleShapes(skin.parts[name].shapes, back) });
     const f = name.split('_')[0];
-    if (name.endsWith('_tip') && links[f]) for (const l of links[f]) plan.push({ part: f + '_ext', m: l.m, shapes: skin.parts[f + '_' + l.kind].shapes });
+    if (name.endsWith('_tip') && links[f]) for (const l of links[f]) plan.push({ part: f + '_ext', m: l.m, shapes: visibleShapes(skin.parts[f + '_' + l.kind].shapes, back) });
     for (const o of skin.overlays) if (o.part === name) place(name, o.shapes, '+', o.dynamic);
   }
   if (!webDone) pushWeb();

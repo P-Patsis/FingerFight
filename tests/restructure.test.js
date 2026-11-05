@@ -247,7 +247,7 @@ test('which way a hand faces comes from the landmarks and the hand label; mirror
   assert.equal(PU.handBack(lm, 'Left'), !PU.handBack(mirrored, 'Left'), 'turning the hand over (mirror image) flips it');
   assert.equal(PU.handBack(lm, '?'), undefined); assert.equal(PU.handBack(lm, undefined), undefined); assert.equal(PU.handBack([], 'Left'), undefined);
   const flat = lm.map(p => ({ x: 5, y: 5 })); assert.equal(PU.handBack(flat, 'Left'), undefined, 'a degenerate hand gives no answer');
-  // a real right hand, palm to the camera (unmirrored frame): thumb side on the image right; the model labels it 'Left' (its label assumes a mirrored image)
+  // Mirroring landmarks and swapping the handedness label must preserve facing; explicit palm/back fixtures are covered in paw-facing-ui.test.js.
   const rightPalm = lm.map(p => ({ x: 1000 - p.x, y: p.y }));
   const sample = PU.handBack(rightPalm, 'Left');
   assert.equal(PU.handBack(lm, 'Right'), sample, 'consistent between the two ways of describing the same physical hand');
