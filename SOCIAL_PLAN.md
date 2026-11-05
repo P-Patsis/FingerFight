@@ -1,6 +1,6 @@
 # Optional accounts and the phone-app path
 
-Proposed design, 2026-11-05. Accounts, friends, reports, invitations, push and shared leaderboards are not implemented by this change. No backend has been created and no messages/notifications have been sent.
+Status update, 2026-11-05: the local backend MVP now implements passkey accounts, friendships, invites, blocks/reports and server-scored committed matches. See backend/README.md for tested scope and deployment gates. No backend has been deployed: Cloudflare account lookup was declined. Existing live P2P matches are not yet bridged into server standings; push and production recovery/moderation remain future work. The plan below describes the wider rollout.
 
 ## Keep guest play
 

@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-05 — Preview actions and width naming
+
+Customise and Try on are now under the preview in the lobby and Profile. While editing, the same row provides Try on/Stop camera and Done; it has no overlay corner buttons. Finger fatness is labelled **Finger width** (same validated fit data). Computer practice picks its random puppet once per match. Outgoing reveal/guess pictures retain validated generated geometry, fit and comic metadata. Optional backend account/social controls remain hidden until a real endpoint is configured; the backend never stores puppet camera pixels.
+
+
 ## 2026-11-05 — Customise from a match
 
 **Customise puppet** in the lobby and final result screen opens the existing selector, fitting, saved looks and camera try-on. Done/Back returns to the same room/result. Editing marks you not-ready until you return; active rounds retain their camera/countdown. The next match uses your saved loadout. Random-match views remain drawn-only. Computer practice also uses this editor, with a random drawn opponent puppet each round and separate practice statistics. The labelled result ad slot reserves space only and has no ad SDK.

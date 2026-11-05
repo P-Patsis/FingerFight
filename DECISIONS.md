@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Paired reductions and backend deployment gate
+
+- Simplify match setup to one Arena carousel and independent scrolling Music inside a collapsed Match settings disclosure. Always approve private joins. Put shared Customise/Try on and editor Try on/Stop camera/Done under the preview; keep camera controls explicit and comfortably sized.
+- Reduce per pair after the opening four rounds so both players use the same cap: 5/5/5/5, 4/4, 3/3, then 2. At that floor disallow zero; never silently turn a detected fist into one finger. Computer chooses one appearance per match.
+- Implement the backend as portable Worker/D1 modules with a Node/SQLite development adapter and a maintained passkey verifier; keep server dependencies out of the frontend. Sessions/challenges/authorization/rate limits and real crypto verification are required. Server match commits prevent post-disclosure changes; do not claim camera anti-cheat or import local/solo wins.
+- Respect the declined Cloudflare account lookup. Build/test locally and leave API_URL empty until deployment is approved and verified. Gate leaderboard UI until authenticated peer matching, server result use and reconnect/cancellation are wired into live matches. No fake online-account status or production backend claim. backend/README.md records the concrete remaining steps.
+
+
 ## 2026-11-05 — Reuse customiser and match loop for local computer practice
 
 - Reuse the shared Profile/try-on editor from lobby and final results. Preserve the room/result on return, signal not-ready during editing, and restore readiness/camera handlers before playing. Keep the editor before/between matches so it cannot consume an active round's camera or countdown. Re-arm random autostart after editing.

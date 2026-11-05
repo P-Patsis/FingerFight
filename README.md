@@ -11,7 +11,7 @@ player's phone does the same. Phone-to-phone over the internet with a 16-charact
 3. At zero both phones capture finger data; only private photo styles send a JPEG.
 4. A correct guess deals 1 damage to the pointer. A wrong guess or missing hand deals no damage.
    A closed fist is a valid zero. Gestures never score; the rude-gesture display filter defaults on.
-5. Health defaults to 2 hits. Matches start with a 5-finger limit; after round 4 it drops by one each round, stopping at 2. Three consecutive no-hand rounds by one player cause an idle forfeit
+5. Health defaults to 2 hits. Matches start with a 5-finger limit; after round 4 it drops by one per pair of turns, stopping at 2 (then only 1 or 2 are valid). Three consecutive no-hand rounds by one player cause an idle forfeit
    (warning after two); simultaneous idleness does not choose a loser. Private idle forfeits return
    both players to the lobby; random idle forfeits close the connection and return to the menu.
 
@@ -27,7 +27,7 @@ and the idle flow tests.
 - **Find a random opponent:** matchmaking with strangers. Strangers get generated names ("Fighter 4821"), and **no camera
   image is ever sent or shown**: phones exchange only finger data, and each phone *draws* the other's puppet hand or
   skeleton itself. A message carrying a photo is rejected, so a modified client can't push one at you.
-- In a private match the host sets seconds, hits, finger limit, shrinking cap (on by default; starts after round 4, floor 2) and one of five arenas.
+- In a private match the host sets seconds, hits, finger limit, shrinking cap (on by default; pairs of turns after round 4, floor 2) and one of five arenas.
   The lobby attempts camera setup automatically once; failures show a retry button. A random match starts when both players are ready.
 - No camera? Add `?sim=1` to the address to set the hand by tapping (also how the tests drive the game).
 
@@ -96,4 +96,7 @@ README-only changes do not require stamping.
 The Nails category has a shared length slider; Knuckle claws joins redesigned animal talons and five-blade Scissor fingers. Hotdog fingers has varied bends/springs and a warm tan default. Clear all sits above the equipped list. New hands: Comic book (big count/impact callouts), Elemental (Water/Fire/Earth/Air), Chameleon and Ghost. The latter reuse [Vanish](https://github.com/P-Patsis/Vanish)'s background learner locally with the existing hand landmarks, not another model. Their camera camouflage stays local; opponents receive safe drawn stills. Move the hand briefly to uncover room pixels for learning. See PROGRESS.md and COSMETICS.md for validation/performance limits and phone-review needs.
 
 
-Computer practice is available from the menu: a local opponent chooses its shown number and guess randomly within the current finger limit, with a random puppet each round. It creates no peer connection and keeps practice stats separate from player matches. Customise puppet is available in the lobby and after a match; return to the same room/result after choosing or trying on your hand. The result carousel has a labelled inactive banner-ad space below it (no advertising SDK). See [SOCIAL_PLAN.md](SOCIAL_PLAN.md) for the proposed optional-account, friends, invites, reporting and friend-leaderboard path; those social services are not implemented yet.
+Computer practice is available from the menu: a local opponent chooses its shown number and guess randomly within the current finger limit, with a random puppet chosen once per match. It creates no peer connection and keeps practice stats separate from player matches. Customise puppet is available in the lobby and after a match; return to the same room/result after choosing or trying on your hand. The result carousel has a labelled inactive banner-ad space below it (no advertising SDK). See [SOCIAL_PLAN.md](SOCIAL_PLAN.md) for the proposed optional-account, friends, invites, reporting and friend-leaderboard path; those social services are not implemented yet.
+
+
+The lobby now has collapsed Match settings, one Arena carousel and a horizontal Music carousel. Customise and Try on sit directly under the hand preview. Private-room joins always require approval. See [backend/README.md](backend/README.md) for the implemented, locally tested account/social/match API and its explicit deployment/integration gates; no backend is deployed yet.
