@@ -1,5 +1,12 @@
 # Puppet skins
 
+## 2026-11-05 — Fitting the real hand
+
+The Hand category includes **Finger fatness** (50–180%, default 100), **Palm width** (70–150%, default 100), **Coverage** (0–10% of palm width, default 0), and **Reset fit**. Sliders update live and persist under `ff-fit`. Fatness changes lateral rig width without moving tracked joints; Coverage pads edges and extends drawn tips. Accessories share the fitted rig. Elemental surfaces and Ghost/Chameleon masks also use these controls. Detection/counting never use fitted drawing coordinates.
+
+`js/fit.js` validates optional picture `fit:{f,p,c}` with exactly three bounded integers. Default 100/100/0 is omitted; received pictures without fit retain authored proportions regardless of local settings. No automatic skin-colour/edge estimation or extra segmentation model is enabled by these manual controls.
+
+
 ## 2026-11-05 — Hand-isolated camera textures and material surfaces
 
 Ghost/Chameleon **Puppet only** uses actual camera-derived texture clipped strictly to the hand mask, while hiding the full video; **Photo + puppet** displays the scene around that hand too. This supersedes the prior cartoon fallback interpretation. Ghost shows current hand pixels until the background is known. Outgoing ordinary puppet pictures remain image-free.

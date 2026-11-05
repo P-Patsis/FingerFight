@@ -1,5 +1,12 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Manual fit before automatic edge estimation
+
+- Expose independent finger fatness and palm width, plus a small coverage margin for edges/tips. Defaults reproduce existing proportions. Keep compact controls in Hand, persist locally, and provide Reset fit.
+- Apply fitting to drawing/mask geometry only; never change tracking coordinates, facing or scoring. Preserve finger mount positions and lengths when changing fatness; fit accessories on the same matrices. Procedural elements and cloak masks must share the preference.
+- Send optional validated bounded `fit:{f,p,c}` metadata so proportions match in received stills. Omit defaults and ignore receiver preferences when incoming data lacks fit. Add no new inference/model/readback loop; automatic fitting remains a separate future step requiring phone performance/edge testing.
+
+
 ## 2026-11-05 — Camera-derived hand isolation and procedural materials
 
 - Correct the prior mode interpretation: Puppet-only Ghost/Chameleon means camera-derived pixels INSIDE the hand, with the rest hidden, not cartoon fallback art. Photo + puppet retains the full camera scene. Clamp effect alpha to the current hand mask so temporal feathering cannot leak the surroundings; show the current real hand where Ghost has no learned background. Existing non-photo peer payloads remain image-free.

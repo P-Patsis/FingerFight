@@ -1,5 +1,14 @@
 # Finger Fight: progress
 
+## 2026-11-05 — Manual puppet fitting controls
+
+- Changed: Hand category has compact **Finger fatness** (50–180%, default 100), **Palm width** (70–150%, default 100) and **Coverage** (0–10% of palm width, default 0) sliders plus **Reset fit**. Input immediately updates preview and camera; changes save as `ff-fit`. Controls are available on fixed-colour hands too. Fitting rows reserve four characters for percentages inside the bounded grid.
+- Geometry: ordinary rig finger widths change laterally without shifting joints or finger lengths; palm width is separate. Coverage pads edges and extends rendered tips. Worn layers use the same fitted rig. Elemental material widths, palm surfaces and Earth source/return tiles share fitting. Ghost/Chameleon apply it to the real-camera mask; full-scene visibility still follows the selected view. Detection/facing/counting use unchanged landmarks.
+- Wire: optional strict `fit:{f,p,c}` has bounded integer values, no unknown keys. Default fit is omitted for compatibility; a received picture without fit always uses authored defaults, independently of receiver settings. Invalid saved/received data cannot set arbitrary geometry. Reset restores 100/100/0.
+- Verified: focused rig/metadata/UI/camera-mask/element/SW checks 18/18 pass; earlier geometry/skin/render checks 45/45 pass. Tests check independent widths, stable mounts/lengths, attached nails, tip padding, untouched landmarks, Earth tile dimensions, sender preference isolation, invalid input and actual UI live/persistence/reset behavior. Full suite **373/373 passes** (49.9 s). SW restamped and diff check clean.
+- Review: no new art or inference model. Phone fitting/slider layout still needs review, particularly extreme widths with stacked accessories and Ghost/Chameleon edges. This is the manual fitting step; automatic colour/edge fitting and extra AI segmentation are not enabled. Live https://p-patsis.github.io/FingerFight/ ; publishing SHA and served files checked at delivery.
+
+
 ## 2026-11-05 — Correct hand-only camera effects, readable Comic and material-built Elemental
 
 - Correction: Ghost/Chameleon puppet mode now samples and displays the real camera-derived hand texture, not authored cartoon art. The full video remains hidden; alpha is strictly clipped to the current landmark hand mask, including after temporal smoothing. Photo + puppet displays the entire scene underneath the same processed hand. Unlearned Ghost areas show the actual hand until the background is learned; no unknown-area holes. Empty masks clear every visible pixel. Ordinary peer pictures remain data-only safe stills, as before; no new photo permission or camera-pixel wire field.
