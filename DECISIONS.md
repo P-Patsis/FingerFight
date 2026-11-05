@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Camera-derived hand isolation and procedural materials
+
+- Correct the prior mode interpretation: Puppet-only Ghost/Chameleon means camera-derived pixels INSIDE the hand, with the rest hidden, not cartoon fallback art. Photo + puppet retains the full camera scene. Clamp effect alpha to the current hand mask so temporal feathering cannot leak the surroundings; show the current real hand where Ghost has no learned background. Existing non-photo peer payloads remain image-free.
+- Counter selfie mirroring for comic glyphs and mirror event positions once in photo/wire snapshots. Palm-relative size/placement is preferable to large screen-relative bursts. Queue stable counts through word cooldown; include initial and decreasing counts, zero and ten. No permanent finger labels.
+- Replace Elemental's recoloured segmented body with material-specific geometry while preserving the accessory rig. Water is rounded connected fluid volumes; Earth is explicit source tiles; Fire is layered flame tongues; Air is filaments without a solid glove. Use the same procedural material geometry for static pictures. Share Earth tile geometry between source, detached chunk and spring target.
+- Inspect rendered states before delivery. A simple local rasterizer supports visual inspection without installing a browser/system package; it is not evidence of phone/GPU fidelity. Cap and soften air wakes after reviewing their clutter.
+
+
 ## 2026-11-05 — Element-specific motion response
 
 - Water uses liquid deformation, on-body currents and momentum/gravity droplets; Air uses historical free-space wakes. Do not reuse hand-following orbit rings as both materials.

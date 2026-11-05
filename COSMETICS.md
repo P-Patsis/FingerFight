@@ -1,5 +1,14 @@
 # Layered cosmetics and the Store
 
+## 2026-11-05 — Hand-isolated camera textures and material surfaces
+
+Ghost/Chameleon **Puppet only** uses actual camera-derived texture clipped strictly to the hand mask, while hiding the full video; **Photo + puppet** displays the scene around that hand too. This supersedes the prior cartoon fallback interpretation. Ghost shows current hand pixels until the background is known. Outgoing ordinary puppet pictures remain image-free.
+
+Comic callouts use palm-relative size and nearby placement, upright glyphs under selfie mirroring, and once-mirrored photo/snapshot positions. Initial/stable count changes, including 0 and 10, survive cooldown. Temporary motion words remain. No constant fingertip text.
+
+`js/element-body.js` draws Elemental's native material surface instead of ordinary segmented base art: rounded layered Water with caustics, 46 irregular Earth tiles, overlapping Fire tongues, or Air filaments with no solid fill. Accessories retain their normal rig; still pictures use the same procedural surfaces. Earth particles use the exact detached tile geometry and leave an individual tile hole; no whole-finger fade. Air caps historical wakes at 14 per hand. All physics remains local/drawing-only, reduced motion static, counting based on unmodified 21 landmarks, and particles within 90 total / 6 emitters.
+
+
 ## 2026-11-05 — Motion-driven Elemental revision
 
 Water has translucent liquid layers, springy drawing-only deformation and flowing surface currents. Finger-born droplets inherit velocity and gravity; motion/finger articulation increases emission. Fire leans and sheds with motion; released flames retain world-space momentum. Air creates varied expanding delayed wakes at previous hand positions rather than tracking the current palm. Earth now sheds random rotating irregular chunks with local source-part opacity loss, gravitational fall/return springs and drifting dust. It no longer uses a periodic whole-hand Sand dissolve; ordinary Sand is unchanged.

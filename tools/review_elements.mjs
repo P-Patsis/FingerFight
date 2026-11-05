@@ -15,8 +15,6 @@ for(const [row,mode]of ['water','earth','fire','air'].entries())for(let col=0;co
  let hand;
  for(let i=0;i<60;i++){const dx=col===0?0:col===1?Math.max(-95,(i-59)*7):i<45?(i-30)*5:75-(i-45)*8;hand=base.map(p=>({...p,x:p.x+dx,y:p.y+(col?Math.sin(i*.2)*9:0)}));ps.update(1/30,[hand]);}
  svg+=`<g transform="translate(${col*360},${70+row*340})"><rect x="4" width="350" height="330" rx="12" fill="#0f172a"/><text x="14" y="25" fill="#e2e8f0" font-size="15">${mode} — ${['still','moving','reverse'][col]}</text>`;
- const parts=ps.partAlphas()?.[0]||{},visual=ps.visualHands([hand])[0];
- for(const step of P.rigPlan(visual,rec.skin,rec.layers,true))for(const shape of step.shapes){const a=shape.anim?P.animState(shape.anim,step.m,2):{m:step.m,k:1},alpha=parts[step.part]??1;svg+=`<path d="${esc(shape.d)}" transform="matrix(${a.m.map(f).join(' ')})" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${f(shape.opacity*a.k*alpha)}" stroke-linejoin="round"/>`;}
- const ctx=context();if(mode==='water')ps.material.drawWater(ctx,[visual]);drawParticles(ctx,ps.list);svg+='</g>';
+ const ctx=context();ps.drawBody(ctx,[hand]);drawParticles(ctx,ps.list);svg+='</g>';
 }
 svg+='</svg>\n';writeFileSync('artifacts/elemental-motion-review.svg',svg);console.log('Wrote artifacts/elemental-motion-review.svg; static states, not raster/device verification.');
