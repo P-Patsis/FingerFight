@@ -185,7 +185,7 @@ Items carry `side`: `back` | `palm` | `both` (default both). **Nail polish is al
 runes a palm tattoo, scar and every ring/glove are on both. `rigPlan(lm, skin, layers, back)` draws an item only when its side faces the camera:
 `back === true` (the back of the hand faces the camera) shows `back` items, `false` (palm) shows `palm` items, `undefined` (not known: the simulator
 poses, pictures from older phones) draws everything. The facing comes from `handBack(lm, label)` (js/puppet.js): the turn direction of wrist -> index knuckle -> pinky
-knuckle flips when the hand is turned over, and MediaPipe's Left/Right label (swapped, `LABEL_MIRRORED`) separates a left from a right hand. It runs every frame on the live
+knuckle flips when the hand is turned over, and MediaPipe's Left/Right label (used directly, `LABEL_MIRRORED=false`, corrected from phone feedback) separates a left from a right hand. It runs every frame on the live
 camera view and at the snap; the result travels as `bk` (up to two true / false / null) so the opponent's picture shows polish only when your back really faced the camera.
 
 ## Profile: one merged panel
@@ -291,3 +291,9 @@ Next cosmetic polish candidates (ideas, not changes in this build): sand texture
 Grains use three shades and tiny facet highlights without adding particles. The 84 swarm recipes are partitioned between tracked hands; spawned shed/effect particles remain inside the combined 90 cap and 6 emitters. The old pure `swarmGrains` helper is retained for deterministic reference geometry; live rendering uses `SandMotion.swarm` state.
 
 Run `python3 tools/make_visual_pass.py` last after rebuilding original assets and animations. It replaces its own normal-path accents, marked `detail: material-v1` in authoring JSON (ignored by `parseShapes`); all existing path/colour/animation validation and 12-shape caps still apply. `node tools/review_materials.mjs` generates `artifacts/material-review.svg` from before/after rig paths and prints JS-only rendering timings. This sheet is a static vector review, not a phone screenshot. Review Sand motion, stronger metal/nail highlights, glove folds and maximum stacks on a phone before considering the visual tuning finished.
+
+## Facing, Paw and compact browsing (2026-11-05)
+
+Paw claws now use five dynamic fingertip overlays (`pivot: 1`, `min: 0.05`, hide on curl) instead of permanent tip shapes. They extend independently, follow longer-finger endpoints and project from either side. Polish and long nails remain back-only; phone feedback corrected the global handedness-label inversion. The Cartoon hand's own nail-line shapes now carry validated `side: back` and use the same corrected facing. Shape `side` accepts only `back`, `palm`, `both`; absent means both, unknown hand facing retains legacy full drawing.
+
+Idle/Painting help paragraphs are removed. Slider label/range/value stay on one row; the range can shrink on narrow screens. Arena/music parentheticals are removed. Category/type clicks reset card scrolling after replacement and align the first new items beneath the Profile's sticky controls (or Store filters). Equipping/recolouring alone preserves the browsing position. Check facing, partial Paw curls and mobile layout on a phone.

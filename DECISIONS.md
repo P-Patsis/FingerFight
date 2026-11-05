@@ -1,5 +1,12 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Correct facing from phone feedback, retract Paw claws, compact controls
+
+- The previous label inversion put nails on palms on the user's phone. Use handedness labels directly against raw camera landmarks (`LABEL_MIRRORED=false`), separate from CSS display mirroring. Preserve stable-side hysteresis and existing `bk` snapshots; do not reverse each nail item individually. Allow validated per-shape `side` metadata so Cartoon's built-in nail lines follow the same back-only policy.
+- Move Paw's static claws into five dynamic tip overlays using the existing finger-extension rig. They show/project from either side, shrink/hide on curl, and ride extension endpoints; counting remains based on the original landmarks.
+- Remove redundant idle/Painting help and arena/music parentheticals; make slider label/range/value a single non-wrapping row with a shrinkable input. Keep accessible range labels and existing persistence.
+- Category switching resets new content after rebuild: horizontal/top position in the card container and vertical screen alignment beneath sticky category controls. Keep Store filters visible and do not reset scroll merely for equipping/colour changes.
+
 ## 2026-11-04 — Material pass, local idle strength and world-space Sand
 
 - Use bounded normal rig paths for material shading/glints, not shaders, images, gradients or extra particle emitters. Polish 23 metal, glove, nail/ring and Sand assets while retaining base silhouettes, draw order, side policy, dynamic extensions and colour roles. A final idempotent authoring pass is easier to maintain than rewriting every historical generator.

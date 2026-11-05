@@ -1,5 +1,15 @@
 # Finger Fight: progress
 
+## 2026-11-05 — Paw retracting claws, corrected nail facing and compact category controls
+
+- Changed: Paw's five fixed tip claws are now dynamic overlays: each extends with its finger, retracts/hides on curl, and follows longer-finger extensions. Existing rig stretch/hysteresis is reused; no landmark/count changes. Paw generator updated.
+- Changed: phone feedback showed all side-specific nails on palms. Removed the handedness-label inversion (`LABEL_MIRRORED=false`) while retaining raw-landmark orientation, stable facing and the existing validated snapshot `bk`. Polish/long nails now use corrected back-facing classification on every base hand. Added validated optional per-shape `side` for Cartoon's own fingernail lines, so they too hide on the palm. Unknown facing retains compatibility behavior; projecting claws remain visible from either side.
+- Changed: removed the idle-animation and Painting help paragraphs. All category sliders keep label, range and value on one non-wrapping row, with the range shrinking to fit. Removed the Favourite background/song and Arena preset parenthetical explanations.
+- Changed: switching Profile categories now resets the horizontal card row and vertically aligns its first items below the sticky controls after layout. Store category/type switches reset their cards and align both filter rows above the first items. Equipping/recolouring without changing category preserves scroll position.
+- Verified: **346/346 tests pass** (four new regressions: explicit left/right palm/back fixtures with polish/long nails on every base hand, independent Paw claws and extension following, screen/card scroll reset with equip-position retention, and removed help/retained slider labels). Extended the real-camera render-loop test to verify stable palm→back transitions and corrected snapshot `bk`; that test plus SW checks passes (4/4). Generator syntax and diff whitespace checks pass; SW hash restamped.
+- Device status: prior inversion reported by user on phone; this fix has not yet been checked on phone. Review both hands palm/back, partial Paw curls, slider fit on narrow screens, and first-card placement beneath the sticky controls. No new wire fields or particle emitters; match/connection implementation untouched.
+- Publishing: pushed to main; Pages commit and exact live runtime/assets verification reported with delivery. Live URL https://p-patsis.github.io/FingerFight/ .
+
 ## 2026-11-05 — Store and Stats share one menu row
 
 - Changed: grouped Store and Stats in the existing centred flex row beneath Profile & settings. Existing button ids and handlers retained.

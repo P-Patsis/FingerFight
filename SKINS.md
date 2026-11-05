@@ -151,3 +151,7 @@ Painting can be rerolled by clicking its owned tile or large preview, or closing
 ### Material detail and live Sand
 
 The final `tools/make_visual_pass.py` authoring pass adds ordinary validated paths/animations for metal shine, glove folds, nail/ring highlights and Sand shading. Run it after other generators. Its `detail` shape marker is ignored by the runtime; no new rig parts or network fields are required. Live idle strength is a local 0–10 preference (Hand category); snapshots remain still and reduced motion wins. Sand now uses momentum-driven world-space grain state and per-part rolling dissolve/reform, within the existing particle caps. See COSMETICS.md and the generated static `artifacts/material-review.svg` review sheet.
+
+### Shape facing and Paw claws (2026-11-05)
+
+An individual shape may optionally carry `side: back | palm | both` (validated; absent is both). The rig filters it only for known facing, retaining the original shape arrays otherwise. Cartoon's built-in nail lines use back-only shapes. Raw camera handedness labels are now used directly after phone feedback showed the previous inversion. Paw's pale claws moved to ordinary dynamic tip overlays, extending with each finger and retracting on curl; the asset generator preserves this design. No new rig parts or counting landmarks.
