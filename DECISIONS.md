@@ -1,5 +1,14 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Element-specific motion response
+
+- Water uses liquid deformation, on-body currents and momentum/gravity droplets; Air uses historical free-space wakes. Do not reuse hand-following orbit rings as both materials.
+- Keep material physics drawing-only and bound spring/velocity state; preserve all original landmarks for counting/facing. Reuse caller update/draw and existing particle cap, including worn items. Static peer snapshots do not gain physics state.
+- Earth sheds independently randomized chunks with local source-part loss and expanding dust, preserving its palm core. Remove the timed whole-hand dissolve; leave the separate Sand skin's shake/reassembly unchanged.
+- Fire momentum and lean respond to hand speed/direction, with world-space released particles. Air wakes retain their birth centres and expire instead of following the hand. Increase shedding with movement for all elements, within shared caps.
+- Review actual rig/particle states as a vector artifact and report CPU costs separately from unmeasured camera/GPU/phone FPS.
+
+
 ## 2026-11-05 — Camera mode boundary correction
 
 Ghost and Chameleon respect the selected view: **Puppet only** hides the camera, uses authored puppet art and never samples/draws Vanish textures. **Photo + puppet** explicitly enables the camera scene and Vanish background replacement/adaptation. Leaving that mode clears cached image/model buffers. This supersedes the earlier local-camera exception for puppet-only mode. Outgoing ordinary puppet pictures remain data-only.

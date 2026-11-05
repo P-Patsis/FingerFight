@@ -1,5 +1,17 @@
 # Finger Fight: progress
 
+## 2026-11-05 — Distinct motion-driven elemental materials
+
+- Changed Water: translucent layered liquid art, flowing white/cyan currents, per-landmark spring lag and bounded surface waves. Droplets originate from fingers, inherit velocity and fall under gravity. Motion increases shedding, including finger articulation, and springs settle when held still. Removed Water's air-like orbit swirl; small bubbles remain.
+- Changed Earth: removed periodic whole-hand Sand dissolve. Random independent 4–7-sided shaded chunks have varied sizes/profiles, spin, gravity, release sites and return timings. Their source parts temporarily lose opacity as chunks break away, then regain it during return. Palm retains a readable core. Movement sheds expanding low-alpha dust puffs with drift. Existing Sand hand behavior is unchanged.
+- Changed Fire: emitted flames inherit hand momentum, lean opposite motion, vary size with speed and drift in world space after release. Movement increases shedding; fire intensity remains supported.
+- Changed Air: emitted waves keep their historical world-space centres with slight drift; they expand, rotate and fade instead of following the current palm. Random radius, span, squash and spin create varied delayed wakes. The drawn hand is subtler and has bounded lag. Store preview demonstrates a smooth movement for all four elements.
+- Implementation: new local `ElementMotion` uses the existing frame loop, no model/timer/dependency. Drawing coordinates are copies, never modified detection landmarks. Physics substeps <=16 ms with bounded lag/velocity. Particle budget remains 90 total / 6 emitters, including worn cosmetics; reduced motion remains static. No new wire data or photo permissions.
+- Verified: **365/365 tests pass** (59 s). Four new behavior tests verify velocity-driven droplets, spring settling and finger motion, historical air wake retention/expiry, fire direction/inertia, varied chunks/source gaps/return springs/dust, two-hand caps, finite positions and reduced motion. Existing Earth regression updated for independent shedding instead of intentionally removed timed dissolve. Focused camera/render/expansion/SW tests 20/20 pass; diff check clean; SW restamped.
+- CPU-only performance: two hands, 600 measured frames after 100 warmup: Water 0.473, Fire 0.427, Earth 0.448, Air 0.384 ms/frame. Includes material update/rig/particle JS with no-op Canvas calls; excludes actual raster, camera readback and GPU. Not a phone FPS claim.
+- Review: `artifacts/elemental-motion-review.svg` exports actual still/moving/reversal rig+particle states (1,653 paths, valid XML); regenerate with `node tools/review_elements.mjs`. Updated expansion sheet is also valid XML. These are vector exports, not phone screenshots. Phone appearance, timing and FPS remain OPEN, especially liquid lag, Earth source gaps/dust density, fire lean and air wake persistence. Publishing SHA/live checks reported at delivery; https://p-patsis.github.io/FingerFight/ .
+
+
 ## 2026-11-05 — Keep Ghost/Chameleon camera effects inside photo views
 
 - Changed: puppet-only Ghost/Chameleon now keep the camera hidden and draw their authored rig, like peer stills. They neither sample nor draw Vanish textures. Only explicit Photo + puppet enables real-camera background replacement/adaptation. Switching back clears cached camera buffers immediately.

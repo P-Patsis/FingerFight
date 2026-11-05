@@ -1,5 +1,12 @@
 # Puppet skins
 
+## 2026-11-05 — Motion-driven Elemental revision
+
+Water has translucent liquid layers, springy drawing-only deformation and flowing surface currents. Finger-born droplets inherit velocity and gravity; motion/finger articulation increases emission. Fire leans and sheds with motion; released flames retain world-space momentum. Air creates varied expanding delayed wakes at previous hand positions rather than tracking the current palm. Earth now sheds random rotating irregular chunks with local source-part opacity loss, gravitational fall/return springs and drifting dust. It no longer uses a periodic whole-hand Sand dissolve; ordinary Sand is unchanged.
+
+`js/element-motion.js` owns bounded local material springs/energy. `ParticleSystem.visualHands()` supplies copies for local camera/store rendering; detection/counting uses untouched landmarks. All effects share 90 particles / 6 emitters and static reduced-motion behavior. No new network fields or camera-mode exceptions. Store previews demonstrate motion; `node tools/review_elements.mjs` exports static actual-render states to `artifacts/elemental-motion-review.svg`. Phone visuals/FPS still need review.
+
+
 ## 2026-11-05 — Camera mode boundary correction
 
 Ghost and Chameleon respect the selected view: **Puppet only** hides the camera, uses authored puppet art and never samples/draws Vanish textures. **Photo + puppet** explicitly enables the camera scene and Vanish background replacement/adaptation. Leaving that mode clears cached image/model buffers. This supersedes the earlier local-camera exception for puppet-only mode. Outgoing ordinary puppet pictures remain data-only.
