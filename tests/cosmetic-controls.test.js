@@ -65,3 +65,13 @@ test('Profile and settings occupies Store\'s former position above Store', () =>
   const html = fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   assert.ok(html.indexOf('id="profileBtn"') < html.indexOf('id="storeBtn"'));
 });
+
+test('compact manual fit controls update live, save immediately on change and reset all fit settings',async()=>{
+ $('storeBtn').onclick();await until(()=>card('cartoon'),'catalog');$('storeLayers').children.find(c=>c.dataset.value==='base').onclick();card('cartoon').onclick();await $('storeSnap').onclick();
+ for(const [key,value]of [['f',145],['p',120],['c',3]]){
+  const sl=find($('catColor'),'fit-'+key);assert.ok(sl);sl.value=String(value);sl.oninput();assert.equal(cam.overlay.rec.skin.fit[key],value);sl.onchange();assert.equal(JSON.parse(localStorage.getItem('ff-fit'))[key],value);
+ }
+ assert.deepEqual(C.gen.fit,{f:145,p:120,c:3});assert.deepEqual(C.genWire('cartoon').fit,C.gen.fit);
+ find($('catColor'),'fit-reset').onclick();assert.deepEqual(C.gen.fit,{f:100,p:100,c:0});assert.equal(cam.overlay.rec.skin.fit,undefined);assert.deepEqual(JSON.parse(localStorage.getItem('ff-fit')),C.gen.fit);
+ $('wearCamOff').onclick();$('storeBack').onclick();
+});

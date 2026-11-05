@@ -1,3 +1,4 @@
+import { cleanFit, defaultFit, FIT_DEFAULT } from './fit.js';
 import { cleanElement } from './special-skins.js';
 // Layered cosmetics (see COSMETICS.md): a catalogue of items (base hands from assets/skins, everything else from assets/items),
 // and the one function that turns what the player wears into what the rig draws.
@@ -237,8 +238,9 @@ export const colorOf = (id, picked) => { const e = entryOf(id); return e && e.ti
 /** The numbers for generated hands (`gc`, `sd`) and fire intensity (`fi`) on THIS phone; a received picture passes its own via [extra]. */
 export const cleanNl = n => Number.isInteger(n) && n >= 0 && n <= 10 ? n : null;
 export const FIRE_DEFAULT = 7;
-export const gen = { gc: GC_DEFAULT, sd: 1, fi: FIRE_DEFAULT, nl: 5, el: 'water' };
+export const gen = { gc: GC_DEFAULT, sd: 1, fi: FIRE_DEFAULT, nl: 5, el: 'water', fit: {...FIT_DEFAULT} };
 export function setGen(o = {}) {
+  const fit=cleanFit(o.fit);if(fit)gen.fit=fit;
   const gc = cleanGc(o.gc), sd = cleanSd(o.sd), fi = cleanIntensity(o.fi), nl = cleanNl(o.nl), el = cleanElement(o.el);
   if (gc) gen.gc = gc;
   if (sd !== null) gen.sd = sd;
@@ -259,7 +261,7 @@ function baseWire(id, p) {
   if (['flaming', 'burnbone'].includes(id)) return { fi: cleanIntensity(p.fi) || FIRE_DEFAULT };
   return {};
 }
-export const genWire = (id, p = gen) => ({ ...baseWire(id, p), ...((cleanNl(p.nl) ?? 5) !== 5 ? { nl: cleanNl(p.nl) } : {}) });
+export const genWire = (id, p = gen) => ({ ...baseWire(id, p), ...(!defaultFit(cleanFit(p.fit))?{fit:cleanFit(p.fit)}:{}), ...((cleanNl(p.nl) ?? 5) !== 5 ? { nl: cleanNl(p.nl) } : {}) });
 const genCache = new Map();
 function generatedSkin(id, p) {
   const key = id + ':' + paramsKey(id, p);
@@ -284,6 +286,8 @@ export function resolveLoadout(baseId, stack, baseColor = null, extra = null) {
     if (baseSkin.tint) { if (bc !== baseSkin.tint.default) baseSkin = tintedSkin(baseSkin, baseSkin.tint, bc); }
     else baseSkin = shiftedSkin(baseSkin, bc);                 // every other hand: a hue-shift, so the design stays
   }
+  const fit=cleanFit(extra?extra.fit:gen.fit)||FIT_DEFAULT;
+  if(!defaultFit(fit))baseSkin={...baseSkin,fit};
   const nailScale = (cleanNl(extra ? extra.nl : gen.nl) ?? 5) / 5;
   if (sid === 'paw' && nailScale !== 1) baseSkin = { ...baseSkin, nailScale };
   const layers = [];

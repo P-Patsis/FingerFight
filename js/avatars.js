@@ -121,7 +121,7 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
   const pts = lms.map(hand => hand.map(px));
   if (rec?.jolt) for (const hand of pts) for (const p of hand) { p.x += rec.jolt.x; p.y += rec.jolt.y; }        // the preview's demo shake (decoration)
   const hd = rec?.hd ? pts.map((hand, i) => (rec.hd[i] ??= new HandDynamics()).update(hand, rec.dt || 0, skin, rec.layers || [])) : null;   // a live preview: animations and physics run
-  if(skin.id==='elemental'&&(rec?.ps?rec.ps.drawBody(ctx,pts):drawElementBody(ctx,pts,rec?.element||'water',{reduced:true})))pts.forEach((lm,i)=>drawPlan(ctx,rigPlan(lm,skin,rec?.layers||[],rec?.backs?.[i],hd?.[i]).filter(s=>s.part.includes('@')),1,hd?.[i]?.animTime??null));
+  if(skin.id==='elemental'&&(rec?.ps?rec.ps.drawBody(ctx,pts):drawElementBody(ctx,pts,rec?.element||'water',{reduced:true,fit:skin.fit})))pts.forEach((lm,i)=>drawPlan(ctx,rigPlan(lm,skin,rec?.layers||[],rec?.backs?.[i],hd?.[i]).filter(s=>s.part.includes('@')),1,hd?.[i]?.animTime??null));
   else drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs, rec?.alphas, hd, rec?.partAlphas);
   if (skin.id === 'comic') { if (rec?.comic) rec.comic.draw(ctx,w,h); else if (rec?.cb) drawComic(ctx,rec.cb,w,h); }
   if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead

@@ -235,6 +235,7 @@ export class HandCam {
     if (!localCloak) this.cloak.clear();
     if (!v.endsWith('puppet')) this.comic.clear();
     this.particles.setElement(v.endsWith('puppet') && rec.skin.id === 'elemental' ? gen.el : null);
+    this.particles.setFit(rec.skin.fit);
     this.particles.setSand(v.endsWith('puppet') ? rec.skin.sand : null);       // a sand hand crumbles when shaken (js/sand.js)
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // Only explicitly selected photo views show camera pixels.
   }
@@ -245,7 +246,7 @@ export class HandCam {
     let cloakPts = null;
     if (this.overlay.cloak) {
       cloakPts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
-      this.cloak.update(this.video, cloakPts, w, h, this.overlay.rec.skin.id, performance.now());
+      this.cloak.update(this.video, cloakPts, w, h, this.overlay.rec.skin.id, performance.now(),this.overlay.rec.skin.fit);
     }
     if (this.overlay.puppet && hands.length) {
       try {

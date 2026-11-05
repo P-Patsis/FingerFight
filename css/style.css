@@ -555,3 +555,5 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 /* Keep native ranges and scrolling palettes inside the shared sticky panel. */
 #cCat, #sCat, #catColor, .cat-color .ctl, .cat-color .cprow { min-width: 0; max-width: 100%; }
 .cat-color .ctl > .fine { max-width: 7.5rem; overflow: hidden; text-overflow: ellipsis; }
+
+.cat-color .ctl.fit-control { grid-template-columns: max-content minmax(0, 1fr) 4ch; }

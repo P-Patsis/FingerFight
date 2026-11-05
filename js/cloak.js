@@ -1,3 +1,4 @@
+import { fitFactors, fitPalm, fitTips } from './fit.js';
 // Vanish's learned background + temporal/feathered mask, clipped to locally tracked hands.
 // Camera pixels never enter a game message. No extra model, timer, stream or full-resolution readback.
 import { Engine } from './vanish-engine.js';
@@ -57,7 +58,7 @@ export class CloakRenderer {
   this.image=null;this.raw=new Uint8Array(w*h);this.out=new Uint8ClampedArray(w*h*4);this.last=-Infinity;
   return true;
  }
- update(video,hands,width,height,mode,now){
+ update(video,hands,width,height,mode,now,fitValue){
   if(!CLOAK_SKINS.includes(mode)||!video?.videoWidth||!this.ensure(width,height))return false;
   if(now-this.last<CLOAK_INTERVAL)return !!this.image;
   const dt=Number.isFinite(this.last)?Math.min(0.25,Math.max(0,(now-this.last)/1000)):0;
@@ -70,9 +71,10 @@ export class CloakRenderer {
    if(!(frame?.data instanceof Uint8ClampedArray))return false;
    m.clearRect(0,0,w,h);m.fillStyle='#ffffff';m.strokeStyle='#ffffff';m.lineJoin='round';m.lineCap='round';
    for(const hand of hands){
-    const lm=hand.map(p=>({x:p.x*w/width,y:p.y*h/height})),palm=Math.hypot(lm[5].x-lm[17].x,lm[5].y-lm[17].y);
-    m.beginPath();[0,1,2,5,9,13,17].forEach((id,i)=>i?m.lineTo(lm[id].x,lm[id].y):m.moveTo(lm[id].x,lm[id].y));m.closePath();m.fill();m.lineWidth=Math.max(2,palm*0.18);m.stroke();
-    m.lineWidth=Math.max(2,palm*0.30);
+    const fit=fitFactors(fitValue),lm=fitTips(hand.map(p=>({x:p.x*w/width,y:p.y*h/height})),fitValue),palm=Math.hypot(lm[5].x-lm[17].x,lm[5].y-lm[17].y);
+    const outline=fitPalm([0,1,2,5,9,13,17].map(id=>lm[id]),lm,fitValue);
+    m.beginPath();outline.forEach((p,i)=>i?m.lineTo(p.x,p.y):m.moveTo(p.x,p.y));m.closePath();m.fill();m.lineWidth=Math.max(2,palm*(0.18+fit.margin*2));m.stroke();
+    m.lineWidth=Math.max(2,palm*(0.30*fit.finger+fit.margin*2));
     for(const ids of CHAINS){m.beginPath();ids.forEach((id,i)=>i?m.lineTo(lm[id].x,lm[id].y):m.moveTo(lm[id].x,lm[id].y));m.stroke();}
    }
    const mask=m.getImageData(0,0,w,h).data;for(let i=0;i<this.raw.length;i++)this.raw[i]=mask[i*4+3];

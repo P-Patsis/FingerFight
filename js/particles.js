@@ -1,3 +1,4 @@
+import { cleanFit } from './fit.js';
 // Particle effects for cosmetics: small canvas effects that ride on the puppet (see COSMETICS.md).
 // An item names EFFECTS presets (it cannot carry code); this module validates them, spawns, updates and draws them.
 // Cheap on purpose: one global cap, no gradients, no shadow blur, no timers of its own (the caller's frame loop drives update/draw),
@@ -78,12 +79,13 @@ export class ParticleSystem {
   constructor({ max = MAX_PARTICLES, reduced = reducedNow, random = Math.random } = {}) {
     this.max = max; this.reduced = reduced; this.rnd = random;
     this.list = []; this.emitters = []; this.carry = [];
-    this.material = new ElementMotion(); this.tiles = [];
+    this.fit=null; this.material = new ElementMotion(); this.tiles = [];
     this.element = null; this.elementAge = 0; this.centers = []; this.velocities = [];
     this.sand = null; this.motions = []; this.hands = []; this.time = 0;       // a sand hand: per-hand shake state (js/sand.js)
   }
 
   /** Turns the sand hand on ({color, color2} from the skin) or off (null): the hand then crumbles when shaken and re-forms when it settles. */
+  setFit(fit){this.fit=cleanFit(fit);this.tiles=[];}
   setSand(cfg) { this.sand = cfg ? { color: cfg.color, color2: cfg.color2, ...(cfg.chunks ? { chunks: true } : {}) } : null; this.motions = []; }
   setElement(mode) { mode = ['water','fire','earth','air'].includes(mode) ? mode : null; if (mode !== this.element) { this.material.clear();this.tiles=[];this.list=[];this.element = mode; this.elementAge = 0; this.centers = []; this.velocities = []; } }
   /** How much of each solid hand to draw (1 = all, 0 = all grains); 1 when there is no sand hand or reduced motion is on. */
@@ -131,7 +133,7 @@ export class ParticleSystem {
         p.x=a.x;p.y=a.y;p.vx=velocity.x*.45+Math.cos(ang)*palm*.45;p.vy=velocity.y*.32-palm*(1+rnd());p.bend=-velocity.x/palm;p.size*=1+Math.min(1,speed*.15);
       }
       if(p.kind==='stone'){
-        const tiles=this.tiles[hand]||earthTiles(lm),tile=tiles[Math.floor(rnd()*tiles.length)],index=Math.floor(rnd()*20)+1,q=tile,f=index<=4?'thumb':['index','middle','ring','pinky'][Math.floor((index-5)/4)];
+        const tiles=this.tiles[hand]||earthTiles(lm,this.fit),tile=tiles[Math.floor(rnd()*tiles.length)],index=Math.floor(rnd()*20)+1,q=tile,f=index<=4?'thumb':['index','middle','ring','pinky'][Math.floor((index-5)/4)];
         p.part=index<=4?'thumb_'+(['base','mid','tip'][Math.min(2,index-1)]):f+'_'+(['base','mid','tip'][Math.min(2,(index-5)%4)]);
         if(rnd()<.25)p.part='palm';p.home=index;p.x=q.x;p.y=q.y;p.vx=velocity.x*.55+(rnd()-.5)*palm*(.3+speed*.4);p.vy=velocity.y*.4+palm*(.1+rnd()*.4);p.g=palm*(2+rnd()*2);p.size*=.65+rnd()*1.9;p.life=1.5+rnd()*1.5;
         p.tile=tile.id;p.part=tile.part;p.x=tile.x;p.y=tile.y;p.size=Math.max(...tile.points.map(q=>Math.hypot(q.x-tile.x,q.y-tile.y)));p.source=tile.points.map(q=>({x:(q.x-tile.x)/p.size,y:(q.y-tile.y)/p.size}));
@@ -151,7 +153,7 @@ export class ParticleSystem {
     this.time += dt;
     this.hands = hands || [];
     if(this.element){
-      this.material.update(this.hands,dt);this.tiles=this.element==='earth'?this.hands.map(earthTiles):[];this.elementAge+=dt;
+      this.material.update(this.hands,dt);this.tiles=this.element==='earth'?this.hands.map(h=>earthTiles(h,this.fit)):[];this.elementAge+=dt;
       const centers=this.hands.map(palmCenter);
       this.velocities=centers.map((p,i)=>{const old=this.centers[i],max=dist(this.hands[i][5],this.hands[i][17])*8;return old&&dt>0?{x:Math.max(-max,Math.min(max,(p.x-old.x)/dt)),y:Math.max(-max,Math.min(max,(p.y-old.y)/dt))}:{x:0,y:0};});
       this.centers=centers;
@@ -169,7 +171,7 @@ export class ParticleSystem {
         if(p.wake){p.cx+=p.vx*dt;p.cy+=p.vy*dt;p.radius+=p.expand*dt;}else if(center){const k=1-Math.exp(-dt*7);p.cx+=(center.x-p.cx)*k;p.cy+=(center.y-p.cy)*k;}
         p.angle+=p.omega*dt;p.x=p.cx+Math.cos(p.angle)*p.radius;p.y=p.cy+Math.sin(p.angle)*p.radius*0.6;
       }else if(p.kind==='stone'&&center&&p.age/p.life>(p.returnAt??.5)){
-        const home=p.tile!==undefined?this.tiles[p.hand]?.[p.tile]||earthTiles(lm)[p.tile]:lm[p.home],steps=Math.max(1,Math.ceil(dt/0.016)),h=dt/steps;
+        const home=p.tile!==undefined?this.tiles[p.hand]?.[p.tile]||earthTiles(lm,this.fit)[p.tile]:lm[p.home],steps=Math.max(1,Math.ceil(dt/0.016)),h=dt/steps;
         for(let k=0;k<steps;k++){p.vx+=((home.x-p.x)*64-p.vx*16)*h;p.vy+=((home.y-p.y)*64-p.vy*16)*h;p.x+=p.vx*h;p.y+=p.vy*h;}
       }else{if(p.kind==='flame'&&this.element==='fire'){p.vx+=Math.sin(p.age*10+p.rot)*12*dt;p.vx*=Math.exp(-dt*.6);}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=p.g*dt*0.5;}
     }
@@ -192,7 +194,7 @@ export class ParticleSystem {
 
   drawBackdrop(ctx) { /* World wakes are drawn with particles; water currents overlay the body. */ }
 
-  drawBody(ctx,hands){return drawElementBody(ctx,this.visualHands(hands),this.element,{time:this.material.time,states:this.material.states,particles:this.list,reduced:this.reduced()});}
+  drawBody(ctx,hands){return drawElementBody(ctx,this.visualHands(hands),this.element,{time:this.material.time,states:this.material.states,particles:this.list,reduced:this.reduced(),fit:this.fit});}
 
   visualHands(hands){return this.element&&!this.reduced()?this.material.deform(hands,this.element):hands;}
 

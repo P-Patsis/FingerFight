@@ -1,3 +1,4 @@
+import { fitFactors } from './fit.js';
 // The puppet hand: a 2D rig that poses a SKIN (a set of named vector parts, see SKINS.md) on the 21 MediaPipe landmarks.
 // Pure geometry first (rigPlan: no canvas, testable), then a thin canvas renderer. No camera pixels, no 3D, no dependencies.
 //
@@ -378,10 +379,11 @@ export function rigPlan(lm, skin, layers = [], back, dyn = null) {
   const refW = Math.hypot(ref.index[0] - ref.pinky[0], ref.index[1] - ref.pinky[1]);
   const palmW = Math.hypot(lm[5].x - lm[17].x, lm[5].y - lm[17].y);
   if (!(refW > 0) || !(palmW > 0)) return [];
-  const sx = palmW / refW;                              // finger thickness follows the size of the hand, lengths follow the landmarks
+  const fit=fitFactors(skin.fit),sx = palmW / refW*(fit.finger+fit.margin*refW/7);                              // finger thickness follows the size of the hand, lengths follow the landmarks
   const matrices = {};
   matrices.palm = affineFrom3(ref.wrist, ref.index, ref.pinky, lm[0], lm[5], lm[17]);
-  for (const [name, [a, b]] of Object.entries(SEGMENTS)) matrices[name] = segmentMatrix(lm[a], lm[b], skin.parts[name].length, sx);
+  if(matrices.palm){const k=fit.palm+fit.margin*2;matrices.palm=mulM(matrices.palm,[k,0,0,1,ref.wrist[0]*(1-k),0]);}
+  for (const [name, [a, b]] of Object.entries(SEGMENTS)){matrices[name] = segmentMatrix(lm[a], lm[b], skin.parts[name].length, sx);if(name.endsWith('_tip')&&matrices[name]&&fit.margin){const length=Math.hypot(lm[b].x-lm[a].x,lm[b].y-lm[a].y)||1;matrices[name]=mulM(matrices[name],[1,0,0,1+palmW*fit.margin/length,0,0]);}}
   const ext = activeExtend(skin, layers);
   const stretch = f => dyn?.ext?.[f] ?? fingerExtension(lm, f);
   const links = {};                                     // finger -> [{m, last}] in the order out from the tip

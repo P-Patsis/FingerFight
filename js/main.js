@@ -1,3 +1,4 @@
+import { FIT_DEFAULT, FIT_LIMITS } from './fit.js';
 import { ComicMotion } from './handfx.js';
 import { ELEMENTS } from './special-skins.js';
 // Finger Fight: the controller. Screens (menu, lobby, game, over), the room link, and the round state machine.
@@ -87,6 +88,7 @@ let guestToken = null;                  // host: the resume token the pending gu
 
 const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 'Photo + skeleton', 'photo-puppet': 'Photo + puppet' };
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
+try{setGen({fit:JSON.parse(store_get('ff-fit')||'null')});}catch{ /* bad saved fit uses defaults */ }
 setGen({ gc: Number(store_get('ff-polylevel')), fi: Number(store_get('ff-fire')), nl: Number(store_get('ff-naillength') ?? 5), el: store_get('ff-element') });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
 setMotionStrength(Number(store_get('ff-motion') ?? 5));
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), skelStyle: cleanSkelStyle(store_get('ff-skelstyle')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
@@ -1286,6 +1288,17 @@ function skeletonColorRow(box) {
  * The colour picker of the CURRENT category (the Profile's type chip / the Store's type chip), ONE line: the full colour picker (any colour), a handful of
  * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
  */
+function renderFitControls(box){
+  for(const [key,label]of [['f','Finger fatness'],['p','Palm width'],['c','Coverage']]){
+    const ctl=el('div','ctl fit-control'),val=el('b','',gen.fit[key]+'%'),sl=document.createElement('input');
+    sl.type='range';sl.min=String(FIT_LIMITS[key][0]);sl.max=String(FIT_LIMITS[key][1]);sl.step=key==='c'?'1':'5';sl.value=String(gen.fit[key]);sl.dataset.act='fit-'+key;sl.setAttribute('aria-label',label);
+    sl.oninput=()=>{setGen({fit:{...gen.fit,[key]:Number(sl.value)}});val.textContent=gen.fit[key]+'%';liveColor();};
+    sl.onchange=()=>{store.set('ff-fit',JSON.stringify(gen.fit));syncStyle();};
+    ctl.append(el('span','fine',label),sl,val);box.append(ctl);
+  }
+  const reset=el('button','btn small','Reset fit');reset.dataset.act='fit-reset';reset.onclick=()=>{setGen({fit:{...FIT_DEFAULT}});store.set('ff-fit',JSON.stringify(gen.fit));syncStyle();};box.append(reset);
+}
+
 function renderCatColor() {
   const box = $('catColor'), layer = inProfileCust() ? profileView.layer : storeView.layer;
   if (picker.layer && picker.layer !== layer) picker.layer = null;        // the panel belongs to one category
@@ -1295,11 +1308,10 @@ function renderCatColor() {
   if (layer === 'skeleton') { skeletonColorRow(box); return; }
   if (layer === 'base' && !inv.handTintable) {
     box.append(el('p', 'fine', 'This hand keeps its own colours. Pick Cartoon, Neon or Dragon to recolour it.'));
-    return;
   }
   const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
   const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
-  colorRow(box, layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); });
+  if(layer!=='base'||inv.handTintable)colorRow(box, layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); });
   if (layer === 'nails') {
     const ctl = el('div', 'ctl'), val = el('b', '', String(gen.nl));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = '0'; sl.max = '10'; sl.step = '1'; sl.value = String(gen.nl); sl.dataset.act = 'naillength'; sl.setAttribute('aria-label', 'Nail length');
@@ -1308,6 +1320,7 @@ function renderCatColor() {
     ctl.append(el('span', 'fine', 'Nail length'), sl, val); box.append(ctl);
   }
   if (layer === 'base') {
+    renderFitControls(box);
     const ctl = el('div', 'ctl'), val = el('b', '', String(motionStyle.strength));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = '0'; sl.max = '10'; sl.step = '1'; sl.value = String(motionStyle.strength); sl.dataset.act = 'motion'; sl.setAttribute('aria-label', 'Idle animation strength');
     sl.oninput = () => { if (setMotionStrength(Number(sl.value))) { val.textContent = String(motionStyle.strength); refreshPreview(); } };
@@ -1379,6 +1392,7 @@ function refreshPreview() {
   storeAnim.ps.setEmitters(rec.emitters);
   storeAnim.ps.setElement(rec.skin.id === 'elemental' ? gen.el : null);
   if (rec.skin.id !== 'comic') storeAnim.comic.clear();
+  storeAnim.ps.setFit(rec.skin.fit);
   storeAnim.ps.setSand(rec.skin.sand);
   startStoreAnim();
 }
