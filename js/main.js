@@ -1,3 +1,4 @@
+import { Computer } from './computer.js';
 import { FIT_DEFAULT, FIT_LIMITS } from './fit.js';
 import { ComicMotion } from './handfx.js';
 import { ELEMENTS } from './special-skins.js';
@@ -72,6 +73,7 @@ let idle = newIdle();                          // consecutive rounds each player
 let token = 0;                          // bumped to cancel pending timeouts from an old round or game
 let bannerTimer = null;
 
+let computer=null,customiseReturn='menu',editingMatch=false;
 let matchKind = null;                   // 'private' (friends, long code) | 'random' (strangers: puppet/skeleton only)
 let roomCodeRaw = '';                   // the private match code, without dashes
 let pendingGuest = null;                // private match: a guest waiting for the host to accept
@@ -102,6 +104,8 @@ const store = {
 /** Copies what the inventory says is worn into the style that is drawn and sent. */
 function takeLoadout() { const L = inv.loadout(); style.skin = L.base; style.baseColor = L.baseColor; style.stack = L.stack; }
 const stats = new Stats({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // local play statistics (this phone only)
+const practiceStats=new Stats({getItem:store_get,setItem:(k,v)=>store.set(k,v)},'ff-practice-stats');
+const matchStats=()=>matchKind==='computer'?practiceStats:stats;
 const looks = new Looks({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // saved looks (this phone only)
 const inv = new Inventory({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // owned items and equipment (this phone only)
 takeLoadout();
@@ -131,6 +135,7 @@ globalThis.addEventListener?.('popstate', () => {
   if (currentScreen === 'lobby' || currentScreen === 'game' || currentScreen === 'over') {
     if (askLeave(currentScreen)) leave(); else navPush();   // "stay": put the entry back, the room and the connection are untouched
   } else if (currentScreen === 'calib') closeCalib();
+  else if(currentScreen==='profile'&&editingMatch)closeMatchCustomise();
   else show('menu');
 });
 
@@ -286,8 +291,22 @@ $('countryInput').oninput = e => {
   const c = countryFromText(e.target.value);      // the box keeps what was typed; only the matching code is saved
   profile.country = c; store.set('ff-country', c); $('countryHint').textContent = flagEmoji(c);
 };
-$('profileBtn').onclick = () => { if (!inGame) setGen({ sd: newSeed() }); buildStyleCard(); renderProfile(); show('profile'); };
-$('profileBack').onclick = () => show('menu');
+$('profileBtn').onclick = () => { customiseReturn='menu';editingMatch=false; if (!inGame) setGen({ sd: newSeed() }); buildStyleCard(); renderProfile(); show('profile'); };
+$('profileBack').onclick = () => editingMatch?closeMatchCustomise():show('menu');
+function openMatchCustomise(){
+  if(inGame)return;
+  customiseReturn=currentScreen;editingMatch=true;autoStarted=false;
+  if(me){ready[me]=false;send({t:'ready',ready:false});}
+  buildStyleCard();renderProfile();show('profile');enterCust();
+}
+function closeMatchCustomise(){
+  const destination=customiseReturn;editingMatch=false;
+  show(destination);
+  if(me){ready[me]=camReady;send({t:'ready',ready:camReady});}
+  if(destination==='lobby'||destination==='over')renderLobby();
+}
+$('lobbyCustomise').onclick=openMatchCustomise;
+$('overCustomise').onclick=openMatchCustomise;
 renderWho();
 
 function menuMsg(text, err = false) {
@@ -331,6 +350,14 @@ function cleanupLink(only) {
   link = null; me = null; names = { host: '', guest: '' }; flags = { host: '', guest: '' };
   clearTimeout(helloTimer);
 }
+
+$('computerBtn').onclick=async()=>{
+  sfx.unlock();resetAll();clearSession();matchKind='computer';me='host';names={host:myName(),guest:'Computer'};settings=freshSettings();
+  await loadCatalog();
+  if(matchKind!=='computer')return;
+  computer=new Computer({skins:()=>skinIds()});
+  link={open:true,send(){},close(){this.open=false;}};ready.guest=true;enterLobby();
+};
 
 // ---- private match: a long unique code to share
 $('createBtn').onclick = async () => {
@@ -558,6 +585,7 @@ function hostSeatFreed(reason) {
 function backToLobby(msg, keepGuest = false, keepReady = false) {
   token++;
   releaseCamera();
+  editingMatch=false;customiseReturn='menu';
   round = null; inGame = false; game = null; autoStarted = false; opponentGone = false;
   fightLog = []; streak = { side: null, n: 0 };
   idle = newIdle();
@@ -661,7 +689,7 @@ function onMessage(m) {
       break;
     case 'lobby':                                   // the opponent went back to the lobby to change settings (never in the middle of a fight)
       if (!me || matchKind !== 'private' || !names.host || !names.guest || (inGame && game && !game.over)) break;
-      backToLobby(names[other(me)] + ' went back to the lobby. Change anything you like, then press ready.', true);
+      backToLobby(names[other(me)] + ' went back to the lobby. Change anything you like, then press ready.', true, true);
       break;
     case 'rejoined':                                // host: the guest reloaded their page, so their side of any fight is gone
       if (me === 'host' && inGame && !game?.over) { send({ t: 'abort' }); backToLobby('The fight was cancelled because ' + (names.guest || 'your opponent') + ' reloaded their page. Press ready to start again.', true); }
@@ -709,7 +737,7 @@ function onMessage(m) {
       renderLobby();
       break;
     case 'start':
-      if (me !== 'guest' || !names.host) break;
+      if (me !== 'guest' || !names.host || editingMatch) break;
       settings = normalizeSettings(m.settings);
       startGame();
       break;
@@ -776,8 +804,8 @@ function buildBgPicker() {
 // ---- what my opponent sees of my hand
 // The whole matrix: friends (private) may get any of VIEWS; strangers (random) only the drawn ones. A photo choice is KEPT while a
 // random match is on screen (only displayed as its drawn twin), so it is back for the next private match.
-const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
-const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
+const matchTypeNow = () => ((matchKind === 'random'||matchKind==='computer') ? 'random' : 'private');
+const effectiveStyle = () => ((matchKind === 'random'||matchKind==='computer') && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
 /** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
 /** The STORE's try-on has no view choice: a photo view shows my live camera picture behind the puppet, any other view the puppet alone (the items are what is tried on).
  *  The Profile's top window shows the selected view itself (skeleton, puppet, with or without the live photo); its puppet fitting lives in the customise controls. Preview only, never sent. */
@@ -857,7 +885,7 @@ function renderLobby() {
   $('dotHost').classList.toggle('on', !!names.host);
   $('dotGuest').classList.toggle('on', !!names.guest);
   $('stHost').textContent = names.host ? (ready.host ? 'ready' : 'camera off') : '';
-  $('stGuest').textContent = names.guest ? (ready.guest ? 'ready' : 'camera off') : '';
+  $('stGuest').textContent = matchKind==='computer'?'computer ready':names.guest ? (ready.guest ? 'ready' : 'camera off') : '';
   $('valSeconds').textContent = settings.seconds;
   $('valHits').textContent = settings.hits;
   $('valMax').textContent = settings.maxFingers;
@@ -876,13 +904,16 @@ function renderLobby() {
   if (pendingGuest) $('joinPrompt').scrollIntoView?.({ block: 'nearest' });
   if (pendingGuest) $('joinText').textContent = pendingGuest + ' wants to join your match.';
   $('camBtn').hidden = camReady || camBusy;
-  const canStart = me === 'host' && link?.open && !!names.guest && ready.host && ready.guest;
+  const canStart = !editingMatch && me === 'host' && link?.open && !!names.guest && ready.host && ready.guest;
   $('startBtn').hidden = me !== 'host' || random;           // a random match starts by itself
   $('startBtn').disabled = !canStart;
+  $('lobbyCustomise').disabled=camBusy;
+  if(!$('over').hidden)$('againBtn').disabled=!canStart;
   $('lobbyMsg').textContent = me === 'guest' ? (names.host ? (random ? 'Starts when you both have your camera on.' : 'The host starts the fight.') : 'Waiting for the host to accept you…')
     : pendingGuest ? 'Accept or decline the player above.'
     : !names.guest ? (random ? 'Waiting…' : 'Send the code to your friend. Waiting for them to join…')
-    : !(ready.host && ready.guest) ? 'Both players need to enable their camera.' : '';
+    : !(ready.host && ready.guest) ? (matchKind==='computer'?'Enable your camera to play against the computer.':'Both players need to enable their camera.') : (matchKind==='computer'?'Local practice: random guesses and a random puppet.':'');
+  if(random&&!canStart)autoStarted=false;
   if (random && canStart && !autoStarted) {
     autoStarted = true;
     setTimeout(() => { if (me === 'host' && !inGame && !$('lobby').hidden) $('startBtn').onclick(); }, 1500);
@@ -958,14 +989,14 @@ async function enableCameraNow() {
   if (err) { status(err); failed(); return; }
   cam.stopCamera();                              // permission and model are checked; the camera stays OFF until a guess window opens
   camReady = true;
-  ready[me] = true;
+  ready[me] = !editingMatch;
   status('Camera ready. It switches on only while you guess, and off at the snap.');
-  send({ t: 'ready', ready: true });
+  send({ t: 'ready', ready: !editingMatch });
   renderLobby();
 }
 
 $('startBtn').onclick = () => {
-  if (me !== 'host') return;
+  if (me !== 'host'||editingMatch||!ready.host||!ready.guest||!link?.open) return;
   send({ t: 'start', settings });
   startGame();
 };
@@ -1209,7 +1240,7 @@ function leaveCust() {
   $('custArea').hidden = true;
   layoutPreview();
 }
-$('custDone').onclick = () => { if (cust.on) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
+$('custDone').onclick = () => { if(editingMatch){closeMatchCustomise();return;} if (cust.on) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
 /** Opens the customise area WITHOUT the camera (the camera only starts through a Try-on button). */
 function enterCust() {
   if (cust.on) return;
@@ -1502,6 +1533,7 @@ function updateTryOnButtons() {
 }
 
 function renderStats() {
+  $('practiceStats').textContent='Computer practice: '+practiceStats.wins+' wins · '+practiceStats.losses+' losses (separate from player matches).';
   const m = stats.matches, fav = f => (f ? f.n + '  (' + f.times + '×)' : '-');
   $('stMatches').textContent = String(m); $('stWins').textContent = String(stats.wins); $('stLosses').textContent = String(stats.losses);
   $('stRate').textContent = m ? Math.round(100 * stats.wins / m) + '%' : '-';
@@ -1509,7 +1541,7 @@ function renderStats() {
 }
 $('statsBtn').onclick = () => { renderStats(); show('stats'); };
 $('statsBack').onclick = () => show('menu');
-$('statsReset').onclick = () => { if (typeof globalThis.confirm !== 'function' || globalThis.confirm('Reset all your stats?')) { stats.reset(); renderStats(); } };
+$('statsReset').onclick = () => { if (typeof globalThis.confirm !== 'function' || globalThis.confirm('Reset all your stats?')) { stats.reset();practiceStats.reset(); renderStats(); } };
 $('storePreview').onclick = () => { if (inv.baseId === 'painting') { rerollPainting(); liveColor(); } };
 $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
@@ -1573,6 +1605,7 @@ function nextRound() {
 function beginRound(n) {
   token++;                                              // cancels anything left over from the previous round
   game.round = n;
+  if(matchKind==='computer')computer?.begin(n,settings);
   const pointer = pointerFor(n);
   round = { n, pointer, phase: 'intro', reveal: null, guessMsg: null, resolved: false };
   $('roundLabel').textContent = 'ROUND ' + n;
@@ -1596,6 +1629,7 @@ async function startGuessPhase() {
   round.phase = 'guess';
   contentEl(other(me)).replaceChildren(el('div', 'thinking', '✋ ???'));   // their hand stays hidden until the reveal
   if (!SIM) {
+    hookCamera(); // Restore match error/loss handlers after a local try-on.
     const err = await cam.startCamera();                             // the camera is switched on only now, for this one guess window
     if (t !== token || !round) { cam.release(); camIndicator(false); return; }
     if (err) $('camStatus').textContent = err;
@@ -1771,6 +1805,7 @@ function endGuessPhase() {
     contentEl(me).replaceChildren(el('div', 'hint', snap.noHand ? 'Time! No hand seen, so no guess.' : 'Locked in: ' + snap.count));
     send({ t: 'guess', n: round.n, ...round.guessMsg });
   }
+  if(matchKind==='computer'){const reply=computer?.message();if(reply)onMessage(reply);}
   later(9000, () => { if (round && !round.resolved) { showBanner('LOST CONNECTION?', 'Waiting for your opponent…', 2500); } });
   tryResolve();
 }
@@ -1779,7 +1814,7 @@ function endGuessPhase() {
 function endOfMatch(won) {
   if (!game || game.statsDone) return;
   game.statsDone = true;
-  stats.recordMatch(won);
+  matchStats().recordMatch(won);
 }
 
 /** The finger limit for the round on screen (the host's setting, lower later in the match when "fewer fingers" is on). */
@@ -1796,8 +1831,8 @@ function tryResolve() {
   const reveal = round.reveal.count > max ? { ...plain(round.reveal, max), count: max } : round.reveal;
   const guessMsg = round.guessMsg.guess !== null && round.guessMsg.guess > max ? { ...plain(round.guessMsg, max), guess: max } : round.guessMsg;
   const result = resolveRound({ pointer, count: reveal.count, guess: guessMsg.guess, noHand: reveal.noHand });
-  if (pointer === me) { if (!reveal.noHand) stats.recordShown(reveal.count); }          // what I held up
-  else if (guessMsg.guess !== null) stats.recordGuess(guessMsg.guess);                  // what I guessed
+  if (pointer === me) { if (!reveal.noHand) matchStats().recordShown(reveal.count); }          // what I held up
+  else if (guessMsg.guess !== null) matchStats().recordGuess(guessMsg.guess);                  // what I guessed
   fightLog.push({ n: round.n, pointer, reveal, guessMsg, reason: result.reason });
   const before = { ...game.health };
   game = applyResult(game, result);
@@ -1970,7 +2005,7 @@ function knockout() {
         menuMsg(why + ' Find another opponent when you are ready.', won ? false : true);
         return;
       }
-      if (matchKind === 'private' && link && !(me === 'guest' && opponentGone)) {   // friends: both go back to the lobby, the room is kept
+      if (['private','computer'].includes(matchKind) && link && !(me === 'guest' && opponentGone)) {   // friends: both go back to the lobby, the room is kept
         backToLobby(why + ' The host can start another fight.', !opponentGone, !opponentGone);
         return;
       }
@@ -1995,16 +2030,16 @@ function knockout() {
 
 /** After a fight: back to the lobby WITH the opponent still connected, to change arena / hands / sound before the next one. */
 $('settingsBtn').onclick = () => {
-  if (matchKind !== 'private' || !link || (inGame && game && !game.over)) return;
+  if (!['private','computer'].includes(matchKind) || !link || (inGame && game && !game.over)) return;
   if (me === 'host' && opponentGone) { backToLobby(''); return; }
   if (!link.open) return;
   send({ t: 'lobby' });
-  backToLobby('Back in the lobby: change anything you like, then press ready.', true);
+  backToLobby('Back in the lobby: change anything you like, then press ready.', true, true);
 };
 
 $('againBtn').onclick = () => {
   if (me === 'host' && opponentGone && matchKind === 'private' && link) { backToLobby(''); return; }     // the guest left: reopen the room
-  if (me !== 'host' || !link?.open) return;
+  if (me !== 'host' || !link?.open||editingMatch||!ready.host||!ready.guest) return;
   send({ t: 'start', settings });
   startGame();
 };
@@ -2028,6 +2063,7 @@ function resetAll() {
   settings = freshSettings();
   if (cam && !SIM) { try { cam.stream?.getTracks().forEach(t => t.stop()); } catch { /* ignore */ } }
   cam = null; camReady = false; camBusy = false; camAutoFailed = false;
+  computer?.clear();computer=null;editingMatch=false;customiseReturn='menu';
   matchKind = null; roomCodeRaw = ''; pendingGuest = null; autoStarted = false;
   clearTimeout(helloTimer);
   guestToken = null; opponentGone = false; netBadge(''); camIndicator(false);

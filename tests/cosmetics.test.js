@@ -337,11 +337,11 @@ test('no ad SDK or payment code anywhere in the web app', () => {
   for (const f of files) assert.ok(!/adsbygoogle|googletag|admob|ca-app-pub|stripe\.com|paypal|billingclient|googlesyndication/i.test(read(f).replace(/\/\/.*$/gm, '')), f + ' has no ad/payment SDK');
 });
 
-test('the end screen reserves an empty ad slot at the bottom, with no ad code', () => {
+test('the end screen reserves a labelled inactive ad slot below the carousel, with no ad code', () => {
   const html = read('index.html');
   const over = html.slice(html.indexOf('<section id="over"'), html.indexOf('</section>', html.indexOf('<section id="over"')));
-  assert.ok(/<div id="adSlot"[^>]*><\/div>/.test(over), 'an empty div');
-  assert.ok(over.indexOf('id="adSlot"') > over.indexOf('id="settingsBtn"'), 'at the bottom of the result screen');
+  assert.ok(/<div id="adSlot"[^>]*>Advertisement<\/div>/.test(over), 'a visible labelled placeholder');
+  assert.ok(over.indexOf('id="adSlot"') > over.indexOf('id="collage"')&&over.indexOf('id="adSlot"')<over.indexOf('id="againBtn"'), 'below the photos, above match actions');
   assert.ok(!/<(script|iframe|img|ins)\b/.test(over));
   assert.match(read('css/style.css'), /\.ad-slot \{[^}]*min-height: 50px/);
 });

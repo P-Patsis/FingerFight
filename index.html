@@ -30,6 +30,7 @@
     </div>
     <div class="or">or</div>
     <button id="rejoinBtn" class="btn" hidden>Rejoin your last match</button>
+    <button id="computerBtn" class="btn">Play against computer</button>
     <button id="randomBtn" class="btn">Find a random opponent</button>
     <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>
@@ -92,6 +93,7 @@
       <div class="set"><span>Favourite guess <em class="fine-inline">(guessed most)</em></span><b id="stFavGuess">-</b></div>
     </div>
     <p class="fine">Saved on this phone only. Nothing is sent to anyone.</p>
+    <p id="practiceStats" class="fine"></p>
     <button id="statsReset" class="btn small ghost">Reset stats</button>
   </section>
 
@@ -163,6 +165,7 @@
     </div></div>
     <p id="camStatus" class="msg" role="status"></p>
     <button id="camBtn" class="btn">Enable camera</button>
+    <button id="lobbyCustomise" class="btn ghost">Customise puppet</button>
     <button id="startBtn" class="btn big" disabled>Start fight</button>
     <p id="lobbyMsg" class="msg" role="status"></p>
   </section>
@@ -202,10 +205,11 @@
     <h2 id="overTitle" class="logo small">K.O.</h2>
     <p id="overText" class="tag"></p>
     <div id="collage" class="collage" hidden></div>
+    <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-label="Advertisement space">Advertisement</div>
+    <button id="overCustomise" class="btn ghost">Customise puppet</button>
     <button id="againBtn" class="btn big">Play again</button>
     <button id="settingsBtn" class="btn">Back to lobby (change settings)</button>
     <p id="overMsg" class="msg"></p>
-    <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-hidden="true"></div>   <!-- reserved for a native banner ad later: empty on purpose, no ad code -->
   </section>
 
   <!-- the "Wearing" pieces are shared by the Store (inside #wearCard) and the Profile (inside #custArea): the top (preview or live try-on), the category colour panel, and the worn list.

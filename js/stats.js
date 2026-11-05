@@ -16,18 +16,19 @@ export function favouriteOf(h) {
 }
 
 export class Stats {
-  constructor(storage) {
+  constructor(storage, key=STATS_KEY) {
+    this.key=key;
     this.storage = storage || memoryStore();
     this.load();
   }
   load() {
     let j = null;
-    try { j = JSON.parse(this.storage.getItem(STATS_KEY)); } catch { j = null; }
+    try { j = JSON.parse(this.storage.getItem(this.key)); } catch { j = null; }
     j = j && typeof j === 'object' && !Array.isArray(j) ? j : {};
     this.wins = cnt(j.w); this.losses = cnt(j.l);
     this.shown = hist(j.shown); this.guessed = hist(j.guessed);
   }
-  #save() { try { this.storage.setItem(STATS_KEY, JSON.stringify({ w: this.wins, l: this.losses, shown: this.shown, guessed: this.guessed })); } catch { /* blocked storage: kept in memory only */ } }
+  #save() { try { this.storage.setItem(this.key, JSON.stringify({ w: this.wins, l: this.losses, shown: this.shown, guessed: this.guessed })); } catch { /* blocked storage: kept in memory only */ } }
   get matches() { return this.wins + this.losses; }
   /** A finished match: [won] true or false. */
   recordMatch(won) { if (won) this.wins++; else this.losses++; this.#save(); }
