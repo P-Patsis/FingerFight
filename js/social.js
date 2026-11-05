@@ -1,0 +1,20 @@
+// Optional account/friends screen. Only enabled after a backend URL has been deployed/configured.
+export function initSocial(api,{getName,invite,join,onBack,leaderboards=false}){
+ const $=id=>document.getElementById(id),msg=text=>{$('socialMsg').textContent=text;},button=(text,action)=>{const b=document.createElement('button');b.className='btn small';b.textContent=text;b.onclick=()=>run(action);return b;},line=text=>{const e=document.createElement('div');e.className='social-row';e.textContent=text;return e;};
+ $('socialBoardTitle').hidden=!leaderboards;$('socialBoard').hidden=!leaderboards;
+ const run=async fn=>{try{msg('');await fn();}catch(e){msg(e.message||'Could not complete request');}};
+ async function render(){
+  $('socialName').value=api.user?.name||getName();$('socialIdentity').textContent=api.user?.registered?`${api.user.name} · Friend code: ${api.user.code}`:'Play as a guest or create an optional passkey account.';
+  $('accountCreate').hidden=!!api.user?.registered;$('accountLogin').hidden=!!api.user?.registered;$('accountLogout').hidden=!api.token;$('accountDelete').hidden=!api.user?.registered;
+  $('socialBlocks').replaceChildren();$('socialFriends').replaceChildren();$('socialInvites').replaceChildren();$('socialBoard').replaceChildren();$('friendAdd').disabled=!api.user?.registered;
+  if(!api.user?.registered)return;
+  const [f,i,l,b]=await Promise.all([api.request('/friends'),api.request('/invites'),leaderboards?api.request('/leaderboard'):Promise.resolve({leaderboard:[]}),api.request('/blocks')]);
+  for(const r of b.blocks){const row=line(r.name);row.append(button('Unblock',async()=>{await api.request('/blocks/'+r.target,'DELETE');await render();}));$('socialBlocks').append(row);}
+  for(const r of f.friends){const row=line(r.name+(r.status==='pending'?' · pending':''));if(r.status==='pending'&&r.recipient===api.user.id)row.append(button('Accept',async()=>{await api.request('/friends/'+r.id,'PATCH',{accept:true});await render();}));if(r.status==='accepted')row.append(button('Invite',()=>invite(r.other)));row.append(button('Remove',async()=>{await api.request('/friends/'+r.id,'DELETE');await render();}));row.append(button('Block',async()=>{await api.request('/blocks','POST',{target:r.other});await render();}));row.append(button('Report',async()=>{const reason=globalThis.prompt?.('Reason: abuse, cheating, name, or other','other');if(!reason)return;const detail=globalThis.prompt?.('Describe what happened (up to 500 characters)','');if(detail===null)return;await api.request('/reports','POST',{target:r.other,reason,detail:(detail||'').slice(0,500)});msg('Report received.');}));$('socialFriends').append(row);}
+  for(const r of i.invites){const row=line(r.name+' invited you');row.append(button('Join',async()=>{const accepted=await api.request('/invites/'+r.id,'PATCH',{accept:true});await join(accepted.code);}));row.append(button('Decline',async()=>{await api.request('/invites/'+r.id,'PATCH',{accept:false});await render();}));$('socialInvites').append(row);}
+  for(const r of l.leaderboard)$('socialBoard').append(line(`${r.name}: ${r.wins} wins / ${r.matches} verified matches`));
+ }
+ $('accountCreate').onclick=()=>run(async()=>{await api.register($('socialName').value);await render();});$('accountLogin').onclick=()=>run(async()=>{await api.login();await render();});$('accountLogout').onclick=()=>run(async()=>{await api.logout();await render();});$('accountDelete').onclick=()=>run(async()=>{if(!globalThis.confirm?.('Delete your account, friends and match history?'))return;await api.request('/me','DELETE',{confirm:true});await api.logout();await render();});$('socialRefresh').onclick=()=>run(render);$('socialBack').onclick=onBack;
+ $('friendAdd').onclick=()=>run(async()=>{await api.request('/friends','POST',{code:$('friendCode').value.trim()});msg('Friend request sent.');await render();});
+ return {open:()=>run(async()=>{if(api.token){try{const result=await api.request('/me');api.user=result.user;}catch{await api.logout();}}await render();})};
+}

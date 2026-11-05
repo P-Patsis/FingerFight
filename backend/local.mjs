@@ -1,0 +1,10 @@
+import http from 'node:http';
+import {readFileSync,existsSync,mkdirSync} from 'node:fs';
+import {openDB} from './sqlite.mjs';
+import app from './worker.mjs';
+const data=new URL('./.data/',import.meta.url);if(!existsSync(data))mkdirSync(data);const DB=openDB(new URL('./.data/backend.sqlite',import.meta.url).pathname);DB.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
+const port=Number(process.env.FF_API_PORT)||8787,origin=process.env.FF_APP_ORIGIN||'http://localhost:8788';
+const env={DB,APP_ORIGIN:origin,RP_ID:new URL(origin).hostname,ALLOWED_ORIGINS:origin};
+const server=http.createServer(async(req,res)=>{try{const controller=new AbortController();req.on('aborted',()=>controller.abort());const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);headers.set('CF-Connecting-IP',req.socket.remoteAddress||'local');const request=new Request('http://localhost:'+port+req.url,{method:req.method,headers,signal:controller.signal,...(!['GET','HEAD'].includes(req.method)?{body:req,duplex:'half'}:{})});const response=await app.fetch(request,env);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}catch{res.writeHead(500,{'Content-Type':'application/json'});res.end('{"error":"Request failed"}');}});
+server.listen(port,'0.0.0.0',()=>console.log(`Local API http://localhost:${port} (bound to 0.0.0.0); allowed app ${origin}`));
+const close=()=>server.close(()=>{DB.close();process.exit(0);});process.on('SIGTERM',close);process.on('SIGINT',close);

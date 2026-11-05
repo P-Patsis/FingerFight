@@ -5,3 +5,7 @@ node_modules/
 # Generated Python bytecode
 __pycache__/
 *.py[cod]
+
+# Local backend state and generated bundle
+backend/.data/
+backend/dist/
