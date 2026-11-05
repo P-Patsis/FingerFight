@@ -1384,6 +1384,7 @@ function refreshPreview() {
 }
 /** The still preview has no real hand to shake, so a sand hand is jolted for a moment every few seconds to show its collapse (decoration only). */
 function demoJolt(rec, now) {
+  if(rec.skin.id==='elemental'){const t=now/1000;return {x:Math.sin(t*2.1)*22,y:Math.sin(t*3.2)*9};}
   if (!rec.skin.sand && !rec.skin.extend?.physics && rec.skin.id !== 'comic') return null;
   const phase = (now / 1000) % 6;
   return phase > 1.2 ? null : { x: Math.sin(now / 26) * 26, y: 0 };
@@ -1403,7 +1404,7 @@ function startStoreAnim() {
       storeAnim.ps.update(dt, jolt ? hands.map(lm => lm.map(p => ({ x: p.x + jolt.x, y: p.y + jolt.y }))) : hands);
       if (rec.skin.id === 'comic') storeAnim.comic.update(jolt ? hands.map(lm => lm.map(p => ({x:p.x+jolt.x,y:p.y+jolt.y}))) : hands, 5, dt, c.width, c.height);
       storeAnim.ps.drawBackdrop(ctx);
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), partAlphas: storeAnim.ps.partAlphas(), hd: storeAnim.hd, comic: storeAnim.comic, dt, jolt });
+      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, ps: storeAnim.ps, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), partAlphas: storeAnim.ps.partAlphas(), hd: storeAnim.hd, comic: storeAnim.comic, dt, jolt });
       ctx.restore();
       storeAnim.ps.draw(ctx);
     } catch { /* decoration */ }

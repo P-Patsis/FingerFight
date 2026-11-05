@@ -29,16 +29,17 @@ export function comicJson(){
 export function elementalJson(value='water'){
  const e=cleanElement(value)||'water';
  const pal={water:['#278bb8','#0b416b','#b9f5ff'],fire:['#c34b16','#69210e','#ffda68'],earth:['#9b7045','#453624','#d2bb86'],air:['#b5d9e5','#52849c','#f0fcff']}[e];
- const particles=e==='fire'?[{effect:'flame',color:'#f97316',where:'hand',rate:32},{effect:'flame',color:'#fde047',where:'tips',rate:26},{effect:'flame',color:'#fb923c',where:'palm',rate:22}]:e==='water'?[{effect:'splash',color:'#38bdf8',where:'hand',rate:26},{effect:'ripple',color:'#7dd3fc',where:'palm',rate:8}]:e==='earth'?[{effect:'stone',color:'#9b7045',where:'hand',rate:6},{effect:'grain',color:'#c9a675',where:'hand',rate:8}]:[{effect:'gust',color:'#bdefff',where:'hand',rate:22}];
+ const particles=e==='fire'?[{effect:'flame',color:'#f97316',where:'hand',rate:32},{effect:'flame',color:'#fde047',where:'tips',rate:26},{effect:'flame',color:'#fb923c',where:'palm',rate:22}]:e==='water'?[{effect:'splash',color:'#38bdf8',where:'hand',rate:26},{effect:'bubbles',color:'#b7f5ff',where:'hand',rate:10}]:e==='earth'?[{effect:'stone',color:'#9b7045',where:'hand',rate:6},{effect:'dust',color:'#c9a675',where:'hand',rate:18}]:[{effect:'gust',color:'#bdefff',where:'hand',rate:22}];
  const skin=build('elemental','Elemental',(f,w,L)=>{
-  const base={d:f?cap(w,L):PALM,fill:pal[0],stroke:pal[1],strokeWidth:2.2,opacity:e==='air'?0.38:0.95};
+  const base={d:f?cap(w,L):PALM,fill:pal[0],stroke:pal[1],strokeWidth:2.2,opacity:e==='air'?0.20:e==='water'?0.62:0.95};
   if(e==='earth')return [base,{d:f?`M ${-w} ${-L*.3} L ${w*.4} ${-L*.58} L ${w} ${-L*.2} L 0 -1 Z`:'M 14 59 L 40 39 L 61 66 L 38 88 Z M 58 78 L 80 61 L 73 97 L 47 103 Z',fill:pal[2],opacity:0.65},stroke(f?`M ${-w*.8} ${-L*.7} L 0 ${-L*.55} L ${w*.7} ${-L*.8}`:'M 22 76 L 37 65 L 49 76 L 65 64 M 41 91 L 55 84',pal[1],1.5)];
   const d=f?`M ${-w*.7} ${-L*.2} C ${w} ${-L*.4} ${-w} ${-L*.6} ${w*.55} ${-L*.83}`:'M 20 64 C 35 40 65 91 81 57 M 20 83 C 40 56 61 107 77 78';
+  if(e==='water')return [base,{d:f?`M ${-w*.9} -2 C ${-w*1.4} ${-L*.3} ${w*.6} ${-L*.5} ${-w*.5} ${-L*.8} Q 0 ${-L*1.2} ${w*.8} ${-L*.8} C ${w*1.4} ${-L*.5} ${-w*.4} ${-L*.3} ${w*.6} 0 Z`:'M 15 86 C 2 63 34 44 31 37 C 54 31 81 41 84 57 C 67 40 71 80 52 83 C 32 66 37 101 21 95 Z',fill:'#67e8f9',opacity:.48,anim:{drift:[.9,.4,.65,0]}},stroke(d,'#e8ffff',2.4,.9,{drift:[1.1,.6,.85,1]}),stroke(f?`M ${w*.5} ${-L*.2} Q ${-w} ${-L*.5} ${w*.3} ${-L*.9}`:'M 22 89 C 46 112 81 71 72 52 M 19 69 Q 39 43 55 62','#0798bb',3,.7,{drift:[.8,.7,.55,2]})];
   const lines=[base,stroke(d,pal[2],e==='air'?2.7:2,0.9,{drift:[0.4,0.6,e==='fire'?0.7:0.2,0]})];
   if(e==='fire')lines.push({d:f?`M ${-w*.6} ${-L*.5} Q ${-w} ${-L*.95} 0 ${-L*1.5} Q ${w*.8} ${-L} ${w*.5} ${-L*.5} Z`:'M 21 94 Q 18 70 34 53 Q 39 80 49 57 Q 55 35 64 46 Q 57 75 78 62 L 73 98 Z',fill:pal[2],opacity:0.85,anim:{pulse:[0.6,0.25,0]}});
   if(e==='air')lines.push(stroke(f?`M ${-w*.5} ${-L*.35} Q ${w*.75} ${-L*.6} ${-w*.1} ${-L*.8}`:'M 32 57 C 70 37 77 97 39 90 C 14 85 33 61 58 73',pal[2],1.3,0.8,{drift:[0.7,0.4,0.17,1.4]}));
   return lines;
  },'fantasy',particles);
- if(e==='earth')skin.sand={color:'#9b7045',color2:'#d2bb86',chunks:true};
+ // Earth sheds independent chunks; retain a readable solid core instead of a timed whole-hand dissolve.
  return skin;
 }

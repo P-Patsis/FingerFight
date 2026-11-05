@@ -33,7 +33,7 @@ test('only bounded, whitelisted comic event metadata is accepted from peers',()=
  for(const cb of [[{s:'<img>',x:500,y:200}],[{s:'POW',x:-1,y:0}],[{s:'POW',x:1.5,y:0}],[{s:'POW',x:0,y:NaN}],[{s:'POW',x:0,y:0,photo:'x'}],Array(3).fill({s:'POW',x:0,y:0})])assert.equal(validPicture({...m,cb},false),false);
 });
 
-test('elemental effects occupy space outside the hand; Earth crumbles and reforms without exceeding the shared cap',()=>{
+test('elemental effects occupy space outside the hand; Earth sheds independent chunks without exceeding the shared cap',()=>{
  const lm=hand(),before=JSON.stringify(lm),palm=Math.hypot(lm[5].x-lm[17].x,lm[5].y-lm[17].y),center={x:[0,5,9,13,17].reduce((s,i)=>s+lm[i].x,0)/5,y:[0,5,9,13,17].reduce((s,i)=>s+lm[i].y,0)/5};
  for(const element of ['water','fire','earth','air']){
   const rec=C.resolveLoadout('elemental',[],null,{el:element}),ps=new ParticleSystem({reduced:()=>false});ps.setEmitters(rec.emitters);ps.setElement(element);ps.setSand(rec.skin.sand);
@@ -43,7 +43,7 @@ test('elemental effects occupy space outside the hand; Earth crumbles and reform
   assert.ok(ps.list.every(p=>[p.x,p.y,p.vx,p.vy].every(Number.isFinite)));
   if(element==='water'){assert.ok(ps.list.some(p=>p.kind==='splash'));assert.ok(ps.list.some(p=>Math.hypot(p.x-center.x,p.y-center.y)>palm));}
   if(element==='air')assert.ok(ps.list.some(p=>p.kind==='gust'&&p.radius>palm));
-  if(element==='earth'){assert.ok(rec.skin.sand.chunks);assert.equal(minBody,0);assert.equal(ps.bodyAlphas()[0],1,'whole hand reformed');}
+  if(element==='earth'){assert.equal(rec.skin.sand,null);assert.equal(minBody,1,'solid core never disappears on a timer');assert.ok(ps.list.some(p=>p.kind==='stone'));assert.ok(ps.list.some(p=>p.kind==='dust'));}
   const rm=new ParticleSystem({reduced:()=>true});rm.setEmitters(rec.emitters);rm.setElement(element);rm.setSand(rec.skin.sand);rm.update(0.1,[lm]);assert.equal(rm.list.length+rm.swarmSize,0);
  }
  assert.equal(JSON.stringify(lm),before);

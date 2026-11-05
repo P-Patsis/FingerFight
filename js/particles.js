@@ -3,6 +3,7 @@
 // Cheap on purpose: one global cap, no gradients, no shadow blur, no timers of its own (the caller's frame loop drives update/draw),
 // nothing at all under reduced motion except a still snapshot.
 
+import { ElementMotion } from './element-motion.js';
 import { SandMotion, sandPartAlphas, SAND } from './sand.js';
 
 export const MAX_PARTICLES = 90;                     // for the whole system, however many items are equipped (a sand hand's swarm is counted inside it)
@@ -10,6 +11,7 @@ export const MAX_EMITTERS = 6;
 
 /** The presets an item may use. life = seconds [min, max]; speed in palm-widths per second; size in 1/60 of a palm width. */
 export const EFFECTS = Object.freeze({
+  dust: { kind: 'dust', life: [0.7, 1.5], speed: [0.2, 0.6], size: 13, gravity: -0.1 },
   splash: { kind: 'splash', life: [0.7, 1.25], speed: [1.1, 2.4], size: 5, gravity: 1.4 },
   ripple: { kind: 'ripple', life: [0.7, 1.3], speed: [0, 0], size: 4, gravity: 0 },
   stone: { kind: 'stone', life: [1.3, 2.2], speed: [0.3, 1.4], size: 6, gravity: 2 },
@@ -75,16 +77,19 @@ export class ParticleSystem {
   constructor({ max = MAX_PARTICLES, reduced = reducedNow, random = Math.random } = {}) {
     this.max = max; this.reduced = reduced; this.rnd = random;
     this.list = []; this.emitters = []; this.carry = [];
-    this.element = null; this.elementAge = 0; this.lastEarth = 0; this.centers = []; this.velocities = [];
+    this.material = new ElementMotion();
+    this.element = null; this.elementAge = 0; this.centers = []; this.velocities = [];
     this.sand = null; this.motions = []; this.hands = []; this.time = 0;       // a sand hand: per-hand shake state (js/sand.js)
   }
 
   /** Turns the sand hand on ({color, color2} from the skin) or off (null): the hand then crumbles when shaken and re-forms when it settles. */
   setSand(cfg) { this.sand = cfg ? { color: cfg.color, color2: cfg.color2, ...(cfg.chunks ? { chunks: true } : {}) } : null; this.motions = []; }
-  setElement(mode) { mode = ['water','fire','earth','air'].includes(mode) ? mode : null; if (mode !== this.element) { this.element = mode; this.elementAge = 0; this.lastEarth = 0; this.centers = []; this.velocities = []; } }
+  setElement(mode) { mode = ['water','fire','earth','air'].includes(mode) ? mode : null; if (mode !== this.element) { this.material.clear();this.list=[];this.element = mode; this.elementAge = 0; this.centers = []; this.velocities = []; } }
   /** How much of each solid hand to draw (1 = all, 0 = all grains); 1 when there is no sand hand or reduced motion is on. */
   bodyAlphas() { return this.sand && !this.reduced() ? this.motions.map(m => m.body) : []; }
-  partAlphas() { return this.sand && !this.reduced() ? this.motions.map(m => sandPartAlphas(m.c)) : null; }
+  partAlphas() {
+    if(this.element==='earth'&&!this.reduced())return this.hands.map((_,i)=>{const out={};for(const p of this.list)if(p.kind==='stone'&&p.hand===i){const t=p.age/p.life,loss=Math.min(1,Math.sin(Math.PI*t)*1.5)*(p.part==='palm'?.45:1);out[p.part]=Math.min(out[p.part]??1,1-loss);}return out;});
+    return this.sand && !this.reduced() ? this.motions.map(m => sandPartAlphas(m.c)) : null; }
   /** Grains of the swarm that exist right now (they count toward the cap with everything else). */
   get swarmSize() { return this.sand && this.motions.some(m => m.c > 0.01) ? SAND.GRAINS : 0; }
 
@@ -93,7 +98,7 @@ export class ParticleSystem {
     this.emitters = (emitters || []).slice(0, MAX_EMITTERS);
     this.carry = this.emitters.map(() => 0);
   }
-  get active() { return this.emitters.length > 0 || !!this.sand; }
+  get active() { return !!this.element || this.emitters.length > 0 || !!this.sand; }
 
   spawn(em, lm, rnd) {
     if (this.list.length + this.swarmSize >= this.max) return;
@@ -111,6 +116,29 @@ export class ParticleSystem {
       if(p.kind==='stone')p.home=[5,9,13,17][Math.floor(rnd()*4)];
       if(p.kind==='flame'){p.vy=-palm*(1.1+rnd()*1.8)+velocity.y*0.3;p.g=-palm*1.1;p.size*=1.5;p.life*=1.3;}
     }
+    if(this.element){
+      const state=this.material.states[hand],speed=state?.speed||0;
+      if(p.kind==='splash'){
+        const q=lm[TIP_IDS[Math.floor(rnd()*5)]];p.x=q.x+(rnd()-.5)*palm*.12;p.y=q.y;
+        p.vx=velocity.x*.8+Math.cos(ang)*palm*(.3+speed*.35);p.vy=velocity.y*.65-palm*(.3+rnd()*.9);p.g=palm*3.5;p.size*=.4+rnd()*.9;
+      }
+      if(p.kind==='gust'||p.kind==='ripple'){
+        p.cx=center.x-velocity.x*.07;p.cy=center.y-velocity.y*.07;p.radius=palm*(.55+rnd()*1.1);p.wake=true;
+        p.vx=velocity.x*.06;p.vy=velocity.y*.06;p.angle=Math.atan2(velocity.y,velocity.x)+Math.PI*.5+(rnd()-.5);p.omega=(rnd()-.5)*3;p.span=.6+rnd()*2;p.squash=.25+rnd()*.45;p.life=1.1+rnd()*.9;p.expand=palm*(.18+rnd()*.45);
+      }
+      if(p.kind==='flame'){
+        p.x=a.x;p.y=a.y;p.vx=velocity.x*.45+Math.cos(ang)*palm*.45;p.vy=velocity.y*.32-palm*(1+rnd());p.bend=-velocity.x/palm;p.size*=1+Math.min(1,speed*.15);
+      }
+      if(p.kind==='stone'){
+        const index=Math.floor(rnd()*20)+1,q=lm[index],f=index<=4?'thumb':['index','middle','ring','pinky'][Math.floor((index-5)/4)];
+        p.part=index<=4?'thumb_'+(['base','mid','tip'][Math.min(2,index-1)]):f+'_'+(['base','mid','tip'][Math.min(2,(index-5)%4)]);
+        if(rnd()<.25)p.part='palm';p.home=index;p.x=q.x;p.y=q.y;p.vx=velocity.x*.55+(rnd()-.5)*palm*(.3+speed*.4);p.vy=velocity.y*.4+palm*(.1+rnd()*.4);p.g=palm*(2+rnd()*2);p.size*=.65+rnd()*1.9;p.life=1.5+rnd()*1.5;
+        p.sides=4+Math.floor(rnd()*4);p.profile=Array.from({length:p.sides},()=>.6+rnd()*.5);p.spin=(rnd()-.5)*7;p.returnAt=.55+rnd()*.2;
+      }
+      if(p.kind==='dust'){
+        p.hand=hand;p.x=a.x;p.y=a.y;p.vx=velocity.x*.2+(rnd()-.5)*palm*.8;p.vy=velocity.y*.1-palm*.25;p.g=-palm*.12;p.size=palm*(.08+rnd()*.12);p.rot=ang;
+      }
+    }
     p.prevX=p.x;p.prevY=p.y;this.list.push(p);
   }
 
@@ -121,16 +149,14 @@ export class ParticleSystem {
     this.time += dt;
     this.hands = hands || [];
     if(this.element){
-      this.elementAge+=dt;
+      this.material.update(this.hands,dt);this.elementAge+=dt;
       const centers=this.hands.map(palmCenter);
       this.velocities=centers.map((p,i)=>{const old=this.centers[i],max=dist(this.hands[i][5],this.hands[i][17])*8;return old&&dt>0?{x:Math.max(-max,Math.min(max,(p.x-old.x)/dt)),y:Math.max(-max,Math.min(max,(p.y-old.y)/dt))}:{x:0,y:0};});
       this.centers=centers;
     }
     if (this.sand) {                                     // one shake detector per hand, fed by the landmarks the tracker already made
       this.motions.length = this.hands.length;
-      const burst=this.element==='earth'&&this.elementAge>0.8&&(!this.lastEarth||this.elementAge-this.lastEarth>4.8);
-      if(burst)this.lastEarth=this.elementAge;
-      this.hands.forEach((lm,i)=>{const m=this.motions[i]??=new SandMotion();if(burst)m.burst();m.update(lm,dt,i,this.hands.length);});
+      this.hands.forEach((lm,i)=>{const m=this.motions[i]??=new SandMotion();m.update(lm,dt,i,this.hands.length);});
     }
     // Reserve space as the swarm appears, including already-live shed particles.
     this.list.length = Math.min(this.list.length, Math.max(0, this.max - this.swarmSize));
@@ -138,18 +164,20 @@ export class ParticleSystem {
       p.age+=dt;p.prevX=p.x;p.prevY=p.y;
       const lm=this.hands[p.hand],center=lm?palmCenter(lm):null;
       if(p.kind==='gust'||p.kind==='ripple'){
-        if(center){const k=1-Math.exp(-dt*7);p.cx+=(center.x-p.cx)*k;p.cy+=(center.y-p.cy)*k;}
+        if(p.wake){p.cx+=p.vx*dt;p.cy+=p.vy*dt;p.radius+=p.expand*dt;}else if(center){const k=1-Math.exp(-dt*7);p.cx+=(center.x-p.cx)*k;p.cy+=(center.y-p.cy)*k;}
         p.angle+=p.omega*dt;p.x=p.cx+Math.cos(p.angle)*p.radius;p.y=p.cy+Math.sin(p.angle)*p.radius*0.6;
-      }else if(p.kind==='stone'&&center&&p.age/p.life>0.5){
+      }else if(p.kind==='stone'&&center&&p.age/p.life>(p.returnAt??.5)){
         const home=lm[p.home],steps=Math.max(1,Math.ceil(dt/0.016)),h=dt/steps;
         for(let k=0;k<steps;k++){p.vx+=((home.x-p.x)*64-p.vx*16)*h;p.vy+=((home.y-p.y)*64-p.vy*16)*h;p.x+=p.vx*h;p.y+=p.vy*h;}
-      }else{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=p.g*dt*0.5;}
+      }else{if(p.kind==='flame'&&this.element==='fire'){p.vx+=Math.sin(p.age*10+p.rot)*12*dt;p.vx*=Math.exp(-dt*.6);}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=p.g*dt*0.5;}
     }
     this.list = this.list.filter(p => p.age < p.life);
     if (!hands?.length) return;
     this.emitters.forEach((em, i) => {
       if (!em.rate) return;
-      this.carry[i] += em.rate * dt;
+      const speed=this.element?Math.max(0,...this.material.states.map(s=>s.speed)):0;
+      const boost=this.element?Math.min(3.5,.25+speed*.8):1;
+      this.carry[i] += em.rate * dt * boost;
       while (this.carry[i] >= 1) { this.carry[i] -= 1; this.spawn(em, hands[Math.floor(this.rnd() * hands.length)], this.rnd); }
     });
   }
@@ -160,20 +188,13 @@ export class ParticleSystem {
     for (const em of this.emitters) if (em.trigger === name) for (let k = 0; k < em.burst; k++) this.spawn(em, hands[k % hands.length], this.rnd);
   }
 
-  drawBackdrop(ctx) {
-    if(this.reduced()||!['water','air'].includes(this.element))return;
-    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.lineCap='round';
-    for(const lm of this.hands){const c=palmCenter(lm),r=dist(lm[5],lm[17])*1.5;
-      for(let n=0;n<2;n++){const a=this.time*(n?1.25:-1.1)+n*2.5;
-        ctx.beginPath();ctx.ellipse(c.x,c.y,r*(1+n*0.12),r*(0.5+n*0.1),0.2*Math.sin(this.time),a,a+2.2);
-        ctx.globalAlpha=this.element==='water'?0.55:0.45;ctx.strokeStyle=this.element==='water'?'#38bdf8':'#c4f1ff';ctx.lineWidth=Math.max(3,r*(this.element==='water'?0.09:0.06));ctx.stroke();
-        ctx.globalAlpha=0.8;ctx.strokeStyle='#e7fbff';ctx.lineWidth=Math.max(1,r*0.02);ctx.stroke();
-      }
-    }ctx.restore();
-  }
+  drawBackdrop(ctx) { /* World wakes are drawn with particles; water currents overlay the body. */ }
+
+  visualHands(hands){return this.element&&!this.reduced()?this.material.deform(hands,this.element):hands;}
 
   draw(ctx) {
     if (this.reduced()) return;
+    if(this.element==='water')this.material.drawWater(ctx,this.visualHands(this.hands));
     if (this.list.length) drawParticles(ctx, this.list);
     if (this.sand && this.motions.length) {
       const grains = [];
@@ -211,17 +232,20 @@ export function drawParticles(ctx, list) {
       ctx.fillStyle=p.color;ctx.beginPath();ctx.moveTo(p.x+ux*r*1.5,p.y+uy*r*1.5);ctx.quadraticCurveTo(p.x-uy*r,p.y+ux*r,p.x-ux*tail,p.y-uy*tail);ctx.quadraticCurveTo(p.x+uy*r,p.y-ux*r,p.x+ux*r*1.5,p.y+uy*r*1.5);ctx.fill();
       ctx.strokeStyle='#d8f8ff';ctx.lineWidth=Math.max(1,r*0.25);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-ux*tail*0.6,p.y-uy*tail*0.6);ctx.stroke();
     } else if(p.kind==='gust'||p.kind==='ripple'){
-      const r=p.radius*(p.kind==='ripple'?1+t*0.3:1);ctx.beginPath();ctx.ellipse(p.cx,p.cy,r,r*0.6,0.1,p.angle,p.angle+p.span);
+      const r=p.radius*(p.kind==='ripple'?1+t*0.3:1);ctx.beginPath();ctx.ellipse(p.cx,p.cy,r,r*(p.squash??.6),p.rot*.15,p.angle,p.angle+p.span);
       ctx.strokeStyle=p.color;ctx.lineWidth=Math.max(2,p.size*(p.kind==='gust'?1.7:1));ctx.stroke();ctx.strokeStyle='#effcff';ctx.lineWidth=Math.max(1,p.size*0.3);ctx.stroke();
     } else if(p.kind==='stone'){
-      const r=p.size,pts=Array.from({length:5},(_,i)=>{const a=p.rot+p.age+i*Math.PI*2/5;return{x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r*0.8};});
+      const r=p.size,n=p.sides||5,pts=Array.from({length:n},(_,i)=>{const a=p.rot+p.age*(p.spin??1)+i*Math.PI*2/n,k=p.profile?.[i]??1;return{x:p.x+Math.cos(a)*r*k,y:p.y+Math.sin(a)*r*.8*k};});
       ctx.fillStyle=p.color;ctx.beginPath();pts.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath();ctx.fill();ctx.fillStyle='#d9bf8f';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);ctx.lineTo(p.x,p.y);ctx.closePath();ctx.fill();
+    } else if(p.kind==='dust'){
+      ctx.globalAlpha=Math.sin(Math.PI*t)*.18;ctx.fillStyle=p.color;const r=p.size*(.5+t*1.8);
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(p.x+Math.cos(p.rot+i*2)*r*.45,p.y+Math.sin(p.rot+i*2)*r*.25,r*.75,r*.5,0,0,7);ctx.fill();}
     } else if (p.kind === 'flame') {
       const r = Math.max(2, p.size * (1 - 0.65 * t)), wob = Math.sin(p.age * 16 + p.rot) * r * 0.22;
       ctx.globalAlpha = Math.max(0, 0.9 * (1 - t * t));
       ctx.fillStyle = p.color; ctx.beginPath();
-      ctx.moveTo(p.x + wob, p.y - r * 1.7); ctx.quadraticCurveTo(p.x + r * 1.1, p.y - r * 0.2, p.x, p.y + r * 0.7);
-      ctx.quadraticCurveTo(p.x - r * 1.1, p.y - r * 0.2, p.x + wob, p.y - r * 1.7); ctx.fill();
+      const lean=(p.bend||0)*r*.5;ctx.moveTo(p.x + wob+lean, p.y - r * 1.7); ctx.quadraticCurveTo(p.x + r * 1.1, p.y - r * 0.2, p.x, p.y + r * 0.7);
+      ctx.quadraticCurveTo(p.x - r * 1.1, p.y - r * 0.2, p.x + wob+lean, p.y - r * 1.7); ctx.fill();
     } else if (p.kind === 'grain') {
       ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     } else {                                                                              // ember

@@ -273,7 +273,7 @@ export class HandCam {
   }
 
   #drawStyled(ctx, pts, rec, backs, dynamics = null, cloak = this.overlay.cloak) {
-    if (!cloak || !CLOAK_SKINS.includes(rec.skin.id)) return drawPuppet(ctx, pts, rec.skin, rec.layers, backs, this.particles.bodyAlphas(), dynamics, this.particles.partAlphas());
+    if (!cloak || !CLOAK_SKINS.includes(rec.skin.id)) return drawPuppet(ctx, this.particles.visualHands(pts), rec.skin, rec.layers, backs, this.particles.bodyAlphas(), dynamics, this.particles.partAlphas());
     // Cloak is real local camera compositing. Never repaint a cartoon hand over it.
     pts.forEach((lm,i) => drawPlan(ctx, rigPlan(lm, rec.skin, rec.layers, backs?.[i], dynamics?.[i]).filter(s => s.part.includes('@')), 1, dynamics?.[i]?.animTime ?? null));
   }
