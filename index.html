@@ -119,10 +119,10 @@
       <div class="set"><span>Seconds to guess</span>
         <div class="stepper"><button data-step="seconds:-1" class="step">−</button><b id="valSeconds">5</b><button data-step="seconds:1" class="step">+</button></div></div>
       <div class="set"><span>Hits to win</span>
-        <div class="stepper"><button data-step="hits:-1" class="step">−</button><b id="valHits">3</b><button data-step="hits:1" class="step">+</button></div></div>
+        <div class="stepper"><button data-step="hits:-1" class="step">−</button><b id="valHits">2</b><button data-step="hits:1" class="step">+</button></div></div>
       <div class="set"><span>Max fingers <em class="fine-inline">(5 = one hand)</em></span>
-        <div class="stepper"><button data-step="maxFingers:-1" class="step">−</button><b id="valMax">10</b><button data-step="maxFingers:1" class="step">+</button></div></div>
-      <div class="set"><span>Fewer fingers as the match goes on <em class="fine-inline">(easier later)</em></span><button id="shrinkBtn" class="toggle">Off</button></div>
+        <div class="stepper"><button data-step="maxFingers:-1" class="step">−</button><b id="valMax">5</b><button data-step="maxFingers:1" class="step">+</button></div></div>
+      <div class="set"><span>Fewer fingers as the match goes on <em class="fine-inline">(after round 4, minimum 2)</em></span><button id="shrinkBtn" class="toggle on">On</button></div>
       <div class="set" id="approveRow"><span>Ask before someone joins</span><button id="approveBtn" class="toggle on">On</button></div>
       <div class="set col"><span>Arena preset</span><div id="presetPicker" class="chips"></div></div>
       <div class="set col"><span>Background</span><div id="bgPicker" class="bg-picker"></div></div>
@@ -184,7 +184,7 @@
       <div class="content" id="bottomContent"></div>
       <div class="hud"><span class="pname" id="botName"></span><div class="hp" id="botHp"></div></div>
     </div>
-    <div id="banner"></div>
+    <div id="banner" role="status" aria-live="polite"></div>
     <div id="fx"></div>
   </section>
 

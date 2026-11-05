@@ -5,7 +5,7 @@ import { COMIC_LABELS } from './handfx.js';
 // A round: one player is the POINTER (holds up fingers), the other is the GUESSER (guesses the total number
 // of fingers). Roles swap every round. Both sides run resolveRound() on the same inputs, so both get the same answer.
 
-export const DEFAULTS = Object.freeze({ seconds: 5, hits: 3, maxFingers: 5, background: 0, music: 0, shrink: false });
+export const DEFAULTS = Object.freeze({ seconds: 5, hits: 2, maxFingers: 5, background: 0, music: 0, shrink: true });
 export const ARENAS = 5;                   // arena backgrounds and music tracks: both are picked from 0..ARENAS-1, independently of each other
 export const LIMITS = Object.freeze({ seconds: [3, 20], hits: [1, 10], maxFingers: [1, 10] });
 export const MAX_FINGERS = 10;
@@ -32,29 +32,29 @@ export function normalizeSettings(s = {}) {
     background: Math.max(0, Math.min(ARENAS - 1, Math.round(Number(s.background) || 0))),
     // the music track is its own choice; an older client that only sends the background gets that arena's own track (the old bundle)
     music: Math.max(0, Math.min(ARENAS - 1, Math.round(Number(s.music === undefined || s.music === null ? s.background : s.music) || 0))),
-    shrink: s.shrink === true,                                // optional: the finger limit drops as the match goes on (default OFF)
+    shrink: s.shrink === undefined ? DEFAULTS.shrink : s.shrink === true,                                // explicit false disables the default reduction
   };
 }
 
 // ---- reduce fingers over time (optional host setting) --------------------------------------------------------------
-// THE RULE: with "fewer fingers" ON, rounds 1-5 use the host's limit, rounds 6-10 one less, rounds 11-15 two less, and so on
-// (the ceiling drops by 1 after every 5 rounds), but never below 3 and never above the host's own limit.
-export const SHRINK_EVERY = 5;   // the limit drops by one every this many rounds ...
-export const SHRINK_FLOOR = 3;   // ... but never below this (0..3), so a long match stays playable
+// Rounds 1–4 retain the chosen limit. Each following round removes one finger, down to two.
+export const SHRINK_AFTER = 4;
+export const SHRINK_EVERY = 1;
+export const SHRINK_FLOOR = 2;
 
 /** Text for the banner when the ceiling is lower in round [round] than in the round before; '' when it did not change. */
 export function shrinkNotice(settings, round) {
   const n = Number(round) || 1;
   if (n < 2) return '';
   const now = effectiveMax(settings, n);
-  return now < effectiveMax(settings, n - 1) ? 'Max fingers is now ' + now : '';
+  return now < effectiveMax(settings, n - 1) ? 'Fingers reduced to ' + now : '';
 }
 
 /** The finger limit for round [round] (1-based): the host's maxFingers, or less once the shrink option is on. */
 export function effectiveMax(settings, round) {
-  const max = normalizeSettings(settings).maxFingers;
-  if (settings?.shrink !== true) return max;
-  const drop = Math.floor((Math.max(1, Number(round) || 1) - 1) / SHRINK_EVERY);
+  const normalized=normalizeSettings(settings),max = normalized.maxFingers;
+  if (!normalized.shrink) return max;
+  const drop = Math.max(0, Math.floor((Math.max(1, Number(round) || 1) - SHRINK_AFTER) / SHRINK_EVERY));
   return Math.min(max, Math.max(SHRINK_FLOOR, max - drop));
 }
 

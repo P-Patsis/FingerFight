@@ -1585,7 +1585,8 @@ function beginRound(n) {
   for (const side of ['host', 'guest']) { contentEl(side).replaceChildren(); fighterEl(side).className = 'fighter idle'; }
   releaseCamera();
   fx.wipe();
-  showBanner('ROUND ' + n, shrinkNotice(settings, n), 1000);   // a lower finger ceiling is announced here and stays in the middle bar
+  const reduction=shrinkNotice(settings,n);
+  showBanner(reduction || 'ROUND ' + n, reduction ? 'ROUND ' + n : '', 1000);   // a lower finger ceiling is announced here and stays in the middle bar
   later(1100, () => { showBanner(turnMessage(pointer === me), pointer === me ? 'Hold up your fingers! They will guess the number.' : 'Show your guess with your fingers!', 1000); sfx.roundStart(); });
   later(1900, startGuessPhase);
 }

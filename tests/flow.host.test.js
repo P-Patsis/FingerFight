@@ -77,11 +77,11 @@ test('a friend joins and is accepted; both get ready; the host configures the fi
   const { music } = await import('../js/audio.js');
   const played = []; const origArena = music.setArena.bind(music); music.setArena = i => { played.push(i); return origArena(i); };
   $('bgPicker').children[3].onclick();
-  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, maxFingers: 5, background: 3, music: 0, shrink: false }, 'the background alone: the music stays');
+  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, maxFingers: 5, background: 3, music: 0, shrink: true }, 'the background alone: the music stays');
   assert.equal($('stage').className, 'bg-3');
   // the music is its own choice: Sci-fi background with Dojo music, then Neon music with the same background
   $('musicPicker').children[1].onclick();
-  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, maxFingers: 5, background: 3, music: 1, shrink: false });
+  assert.deepEqual(sentOf(conn, 'settings').at(-1).settings, { seconds: 3, hits: 1, maxFingers: 5, background: 3, music: 1, shrink: true });
   assert.equal($('stage').className, 'bg-3', 'changing the music leaves the background'); assert.equal(played.at(-1), 1, 'and plays that track');
   $('bgPicker').children[4].onclick();
   assert.equal(sentOf(conn, 'settings').at(-1).settings.music, 1, 'changing the background leaves the music'); assert.equal(sentOf(conn, 'settings').at(-1).settings.background, 4);

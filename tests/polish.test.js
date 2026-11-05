@@ -58,20 +58,20 @@ test('anti-grief: an idle round never scores for or against anyone', () => {
 });
 
 // ---- reduce fingers over time -----------------------------------------------------------------------------------
-test('shrink is OFF by default and survives normalisation only when exactly true', () => {
-  assert.equal(normalizeSettings({}).shrink, false);
+test('new matches reduce fingers by default; explicit Off still stays off', () => {
+  assert.equal(normalizeSettings({}).shrink, true);
   assert.equal(normalizeSettings({ shrink: 'yes' }).shrink, false);
-  assert.equal(normalizeSettings({ shrink: true }).shrink, true);
-  assert.equal(effectiveMax(normalizeSettings({}), 50), 5, 'off = never changes');
+  assert.equal(normalizeSettings({ shrink: false }).shrink, false);
+  assert.equal(effectiveMax(normalizeSettings({shrink:false}),50),5);
 });
 
-test('shrink lowers the limit every 5 rounds down to the floor of 3, never above the host limit', () => {
-  const on = normalizeSettings({ shrink: true, maxFingers: 10 });
-  assert.deepEqual([1, 5, 6, 10, 11, 16, 30, 31, 40].map(r => effectiveMax(on, r)), [10, 10, 9, 9, 8, 7, 5, 4, SHRINK_FLOOR]);
-  const five = normalizeSettings({ shrink: true, maxFingers: 5 });
-  assert.deepEqual([1, 5, 6, 10, 11, 99].map(r => effectiveMax(five, r)), [5, 5, 4, 4, 3, 3]);
-  assert.equal(effectiveMax(normalizeSettings({ shrink: true, maxFingers: 2 }), 30), 2, 'a limit already below the floor stays');
-  assert.equal(effectiveMax(normalizeSettings({ maxFingers: 10 }), 40), 10, 'off: never drops');
+test('after round four each round lowers the limit by one, stopping at two', () => {
+  const five=normalizeSettings({maxFingers:5});
+  assert.deepEqual([1,2,3,4,5,6,7,8,99].map(r=>effectiveMax(five,r)),[5,5,5,5,4,3,2,2,2]);
+  const ten=normalizeSettings({maxFingers:10});
+  assert.deepEqual([4,5,6,7,12,13,99].map(r=>effectiveMax(ten,r)),[10,9,8,7,2,2,2]);
+  assert.equal(effectiveMax(normalizeSettings({maxFingers:1}),99),1,'never increase a custom limit already below the floor');
+  assert.equal(effectiveMax(normalizeSettings({maxFingers:10,shrink:false}),99),10);
 });
 
 // ---- wake lock --------------------------------------------------------------------------------------------------

@@ -58,7 +58,7 @@ test('a drop in the middle of a fight: the round is replayed, hit points are re-
   c.emit('data', { t: 'resume', token: TOKEN });
   const sync = sentOf(c, 'sync')[0];
   assert.ok(sync, 'host sends a sync');
-  assert.deepEqual(sync.health, { host: 3, guest: 3 }, 'default 3 hits each');
+  assert.deepEqual(sync.health, { host: 2, guest: 2 }, 'default 2 hits each');
   assert.equal(sync.round, 0, 'round 1 had not finished, so it is replayed');
   await until(() => sentOf(c, 'round').length === 1, 'the round is announced again', 6000);
   assert.equal(sentOf(c, 'round')[0].n, 1);

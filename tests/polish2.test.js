@@ -1,4 +1,4 @@
-// Playtest polish: default max 5, fewer fingers every 5 rounds (with a notice), warning text, turn messages, HIT! timing,
+// Playtest polish: default max 5, fewer fingers after round four (with a notice), warning text, turn messages, HIT! timing,
 // camera auto-start rule, profile preview.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,21 +15,15 @@ test('the default finger limit is 5 and can still be raised to 10', () => {
   assert.equal(normalizeSettings({ maxFingers: 7 }).maxFingers, 7);
 });
 
-test('fewer fingers: the ceiling drops by 1 after every 5 rounds, floor 3', () => {
-  assert.equal(SHRINK_EVERY, 5); assert.equal(SHRINK_FLOOR, 3);
-  const s = normalizeSettings({ shrink: true, maxFingers: 8 });
-  const seq = []; for (let r = 1; r <= 31; r++) seq.push(effectiveMax(s, r));
-  assert.deepEqual(seq.slice(0, 5), [8, 8, 8, 8, 8]);
-  assert.deepEqual(seq.slice(5, 10), [7, 7, 7, 7, 7]);
-  assert.deepEqual(seq.slice(10, 15), [6, 6, 6, 6, 6]);
-  assert.equal(seq[25], 3); assert.equal(seq[30], 3);
+test('default matches have two lives and shrink after round four to two fingers',()=>{
+  assert.equal(DEFAULTS.hits,2);assert.equal(DEFAULTS.shrink,true);assert.equal(SHRINK_EVERY,1);assert.equal(SHRINK_FLOOR,2);
+  const s=normalizeSettings({maxFingers:8});assert.deepEqual(Array.from({length:12},(_,i)=>effectiveMax(s,i+1)),[8,8,8,8,7,6,5,4,3,2,2,2]);
 });
 
-test('players are told when the ceiling changes, and only then', () => {
-  const s = normalizeSettings({ shrink: true, maxFingers: 5 });
-  const notes = [1, 2, 5, 6, 7, 10, 11, 12, 30].map(r => shrinkNotice(s, r));
-  assert.deepEqual(notes, ['', '', '', 'Max fingers is now 4', '', '', 'Max fingers is now 3', '', '']);
-  assert.equal(shrinkNotice(normalizeSettings({ maxFingers: 5 }), 6), '', 'nothing when the option is off');
+test('players get the exact notice only when fingers actually decrease',()=>{
+  const s=normalizeSettings({maxFingers:5});
+  assert.deepEqual([1,4,5,6,7,8,99].map(r=>shrinkNotice(s,r)),['','','Fingers reduced to 4','Fingers reduced to 3','Fingers reduced to 2','','']);
+  assert.equal(shrinkNotice({...s,shrink:false},6),'');
 });
 
 test('photo warning text is exact and only photo views carry it', () => {
