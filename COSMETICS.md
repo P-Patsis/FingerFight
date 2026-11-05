@@ -315,3 +315,12 @@ Hotdog fingers uses a warm tan default and `extend.spread: 1` (optional validate
 Camera camouflage is local only. The receiver gets safe authored Ghost/Chameleon art from ids/landmarks, not room textures. Existing opt-in private photo modes can contain the local composite; photo-free stranger messages stay photo-free and reject every JPEG. No camera/background pixel fields were added.
 
 Clear all now sits beside the equipped summary, before the long list; it removes all accessories/effects while keeping the selected base hand and ownership. Run `node tools/make_expansion.mjs` LAST after historical/material generators; it reproducibly generates the new/reworked assets. `node tools/review_expansion.mjs` exports `artifacts/expansion-review.svg` (16 static vector panels) and JS-only timings. All new visual/camera behavior still needs phone review, especially mask edges/readback cost, large claws, hotdog dynamics and comic labels.
+
+
+## Reactive effects update (2026-11-05)
+
+Comic has no resting labels. Stable finger extension or fast hand movement produces a large, short-lived screen-space burst; up to two, 0.9 s lifetime, 0.65 s cooldown. Generic words include POW/BOOM/ZAP/WHAM/BAM/WHOOSH/WOW/CRASH/KAPOW/SWISH. Optional validated `cb` picture metadata is an array (max 2) of `{s,x,y}`; `s` is a known word or 0–10, `x/y` are integers 0–1000. No arbitrary text/paths. Reduced motion suppresses live bursts.
+
+Elemental uses external splashes, flame jets, air streams and Earth rocks/sand with timed collapse/reassembly. `setElement` selects runtime world effects; Earth uses validated optional `sand.chunks` and the existing 84-grain/90-total/6-emitter budget. Store/live camera update particles before drawing the body and its dissolve alpha. Ordinary peer stills remain static.
+
+Ghost/Chameleon local camera views display the camera scene beneath Vanish compositing and draw only accessories over it. Ghost replaces known masked pixels exactly with learned background; move the hand aside first to reveal/learn the room. Chameleon sweeps over roughly three seconds into coarse triangular quantized background colours, with slow ongoing adaptation. No tinted puppet body. Masks come from existing 21 landmarks. Sample <=10 Hz, 320 px long edge with adaptive 240/160 fallback. Ordinary peer messages never carry these pixels; safe authored still art remains. Phone edge/timing/FPS review is still required.

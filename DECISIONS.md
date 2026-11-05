@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Respond to phone feedback on effects
+
+- Use a bounded grid for compact category controls; a range must shrink within its parent.
+- Comic callouts are brief motion/extension events in screen space, never constant finger labels. Send only max-two strict label/position records with a picture; opponents remain still snapshots.
+- Give Elemental spatial presence using shared capped particles and stream arcs; Earth reuses Sand collapse/reform and the same pool, without changing landmarks or scoring.
+- Local Ghost/Chameleon puppet views show the camera behind the composite. Ghost substitutes actual learned room pixels and leaves unlearned areas alone. Chameleon deliberately approximates the room with slow phased coarse triangular colours. No puppet body covers these effects; accessories remain.
+- Start Vanish at 320 px and adapt downward on sustained slow samples, retaining the learned background. Keep <=10 Hz sampling and local-only camera data. This supersedes the previous tinted/translucent 160 px treatment. Device appearance and readback cost remain unverified.
+
 ## 2026-11-05 — Nails, generic comic/elemental art and Vanish reuse
 
 - Rename only the Nails category label, retaining layer/id/storage compatibility. Use one saved 0–10 length preference, with checked optional `nl` on pictures; default 5 stays omitted. Scale authored nail tips about their mounts and knuckle blades about their palm anchor; keep metal sleeves fixed. Zero removes nail layers from the draw recipe. Paw intrinsic claws share the preference. Check authored oversized-item fitting points and transform them using the real rig matrices.
