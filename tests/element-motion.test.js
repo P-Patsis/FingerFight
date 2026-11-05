@@ -5,6 +5,7 @@ import {makeHand,ALL,FAN} from './helpers.js';
 installBrowser('?');
 const C=await import('../js/cosmetics.js');
 const {ParticleSystem}=await import('../js/particles.js');
+const {earthTiles}=await import('../js/element-body.js');
 await C.loadCatalog();
 const base=makeHand(ALL,FAN).map(p=>({x:p.x*640,y:p.y*480}));
 const moved=(dx,dy=0)=>base.map(p=>({...p,x:p.x+dx,y:p.y+dy}));
@@ -35,9 +36,9 @@ test('fire leans opposite hand movement, increases shedding and keeps released f
 });
 test('Earth sheds varied rotating shards from different parts with temporary holes, dust and gravity, then returns them',()=>{
  const ps=simulate(system('earth'),true),stones=ps.list.filter(p=>p.kind==='stone');assert.ok(stones.length>4);
- assert.ok(new Set(stones.map(p=>p.size.toFixed(2))).size>4);assert.ok(new Set(stones.map(p=>p.part)).size>2);assert.ok(new Set(stones.map(p=>p.sides)).size>1);
- assert.ok(ps.list.some(p=>p.kind==='dust'));assert.equal(ps.swarmSize,0);assert.ok(Object.values(ps.partAlphas()[0]).some(a=>a<.5));
- const p=stones[0],h=moved(261);p.age=p.life*.8;p.x=h[p.home].x+80;p.y=h[p.home].y+80;p.vx=0;p.vy=0;const distance=()=>Math.hypot(p.x-h[p.home].x,p.y-h[p.home].y),d=distance();
+ assert.ok(new Set(stones.map(p=>p.size.toFixed(2))).size>4);assert.ok(new Set(stones.map(p=>p.part)).size>2);assert.ok(new Set(stones.map(p=>p.source.length)).size>1);
+ assert.ok(ps.list.some(p=>p.kind==='dust'));assert.equal(ps.swarmSize,0);assert.equal(ps.partAlphas(),null,'individual tile holes replace whole-finger alpha');
+ const p=stones[0],h=moved(261),home=earthTiles(h)[p.tile];p.age=p.life*.8;p.x=home.x+80;p.y=home.y+80;p.vx=0;p.vy=0;const distance=()=>Math.hypot(p.x-home.x,p.y-home.y),d=distance();
  ps.update(.1,[h]);assert.ok(distance()<d,'return spring attracts shard to its current home');
  for(const mode of ['earth','water','fire','air']){const s=system(mode);for(let i=0;i<300;i++){s.update(1/30,[moved(Math.sin(i*.5)*200),moved(-Math.sin(i*.5)*200)]);assert.ok(s.list.length+s.swarmSize<=90);assert.ok(s.list.every(p=>[p.x,p.y,p.vx,p.vy].every(Number.isFinite)));}s.reduced=()=>true;s.update(.1,[base]);assert.equal(s.list.length,0);assert.deepEqual(s.visualHands([base]),[base]);}
 });

@@ -15,7 +15,7 @@ export function cloakPixels(engine,frame,mode,image,{elapsed=4,dt=0.1,state={},r
   if(alpha[i]>30){const x=i%w,y=Math.floor(i/w);minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
  }
  if(mode==='ghost'){
-  for(let i=0,p=0;i<alpha.length;i++,p+=4){image[p]=model.bg[p];image[p+1]=model.bg[p+1];image[p+2]=model.bg[p+2];image[p+3]=model.n[i]?alpha[i]:0;}
+  for(let i=0,p=0;i<alpha.length;i++,p+=4){image[p]=model.bg[p];image[p+1]=model.bg[p+1];image[p+2]=model.bg[p+2];image[p+3]=alpha[i];if(!model.n[i]){image[p]=frame[p];image[p+1]=frame[p+1];image[p+2]=frame[p+2];}}
   return image;
  }
  const fallback=n?[r/n,g/n,b/n]:[65,80,90],tile=Math.max(8,Math.round(w/22)),cols=Math.ceil(w/tile),rows=Math.ceil(h/tile),size=cols*rows*2;
@@ -79,6 +79,7 @@ export class CloakRenderer {
    this.engine.step(frame.data,this.raw,this.out);
    const t=this.texture.getContext('2d');this.image??=t.createImageData(w,h);
    cloakPixels(this.engine,frame.data,mode,this.image.data,{elapsed:this.waveAge,dt,state:this.material,reduced:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
+   for(let i=0;i<this.raw.length;i++)this.image.data[i*4+3]=Math.min(this.image.data[i*4+3],this.raw[i]);
    t.putImageData(this.image,0,0);
    this.slow=performance.now()-start>14?this.slow+1:Math.max(0,this.slow-1);
    if(this.slow>=3&&this.side>160){this.side-=80;this.slow=0;}

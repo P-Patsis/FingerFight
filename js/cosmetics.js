@@ -303,7 +303,7 @@ export function resolveLoadout(baseId, stack, baseColor = null, extra = null) {
       } else layers.push(drawn);
     }
   }
-  return { skin: baseSkin, layers, emitters };
+  return { skin: baseSkin, layers, emitters, ...(sid==='elemental'?{element:cleanElement(extra?extra.el:gen.el)||'water'}:{}) };
 }
 
 export { LAYERS, MAX_STACK };

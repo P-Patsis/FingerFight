@@ -23,8 +23,9 @@ test('local cloak renderer stays low-resolution, throttles sampling, learns with
  try{
   const c=new CloakRenderer(),lm=Array.from({length:21},(_,i)=>({x:200+i*5,y:180+i*3})),video={videoWidth:640};
   assert.equal(c.update(video,[lm],640,480,'chameleon',1000),true);assert.ok(c.engine.w<=CLOAK_SIDE&&c.engine.h<=CLOAK_SIDE);
+  assert.equal(c.image.data[3],0,'no camera-derived pixel outside the hand mask');
   const count=reads;c.update(video,[lm],640,480,'chameleon',1050);assert.equal(reads,count);
-  c.update(video,[],640,480,'chameleon',1200);assert.ok(reads>count);
+  c.update(video,[],640,480,'chameleon',1200);assert.ok(reads>count);assert.ok(c.image.data.every((v,i)=>i%4!==3||v===0),'an empty mask clears every visible camera pixel despite temporal history');
   const image=c.image;c.update(video,[lm],480,640,'ghost',1400);assert.notEqual(c.image,image,'resize replaces ImageData');
   c.clear();assert.equal(c.engine,null);assert.equal(c.image,null);assert.equal(c.raw,null);assert.equal(c.texture,null);
   assert.equal(c.draw({},640,480),false);

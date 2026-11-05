@@ -22,7 +22,7 @@ test('Comic is quiet while held still, reacts to opening/motion, stays screen-an
  for(let i=0;i<5;i++)c.update([hand(30+i*20)],5,dt,640,480);
  assert.ok(c.events.some(e=>comicWords.includes(e.s)));assert.ok(comicWords.includes('WOW')&&comicWords.length>=8);
  const fonts=[],ctx=new Proxy({}, {get:()=>()=>{},set:(t,k,v)=>{t[k]=v;if(k==='font')fonts.push(v);return true;}});
- c.draw(ctx,640,480);assert.ok(fonts.some(f=>parseInt(f.match(/\d+px/)[0])>=70),'large screen-space text');
+ c.draw(ctx,640,480);assert.ok(fonts.some(f=>parseInt(f.match(/\d+px/)[0])>=15&&parseInt(f.match(/\d+px/)[0])<70),'palm-sized text');
  for(let i=0;i<8;i++)c.trigger(null,[hand()],640,480);assert.equal(c.events.length,2);
  const rm=new ComicMotion({reduced:()=>true});rm.trigger('POW',[hand()],640,480);assert.deepEqual(rm.events,[]);
 });
@@ -53,7 +53,7 @@ test('Ghost replaces known pixels exactly and leaves unknown areas alone; Chamel
  const w=40,h=40,n=w*h,room=frame(n,[80,120,160]),skin=frame(n,[210,130,75]),e=new Engine(w,h),out=new Uint8ClampedArray(n*4),mask=new Uint8Array(n);
  e.step(room,mask,out);e.alpha.fill(255);const state={},image=new Uint8ClampedArray(n*4);
  cloakPixels(e,skin,'ghost',image);assert.deepEqual([...image.slice(0,4)],[80,120,160,255]);
- e.model.n[0]=0;cloakPixels(e,skin,'ghost',image);assert.equal(image[3],0);e.model.n[0]=1;
+ e.model.n[0]=0;cloakPixels(e,skin,'ghost',image);assert.equal(image[3],255);assert.deepEqual([...image.slice(0,3)],[210,130,75]);e.model.n[0]=1;
  cloakPixels(e,skin,'chameleon',image,{elapsed:0,dt:0.1,state});assert.deepEqual([...image.slice(0,3)],[210,130,75]);
  for(let t=0.1;t<0.91;t+=0.1)cloakPixels(e,skin,'chameleon',image,{elapsed:t,dt:0.1,state});
  const top=(2*w+12)*4,bottom=(36*w+12)*4;
@@ -63,7 +63,7 @@ test('Ghost replaces known pixels exactly and leaves unknown areas alone; Chamel
  assert.notEqual(image[(1*w+1)*4],image[(6*w+6)*4],'coarse triangular facets have distinct shades');
 });
 
-test('Ghost and Chameleon keep camera pixels exclusive to photo views',()=>{
+test('Ghost and Chameleon show only the processed hand in puppet mode and the scene in photo mode',()=>{
  const oldRaf=globalThis.requestAnimationFrame,video=b.byId.get('video');let next,painted=0,patches=0;
  globalThis.requestAnimationFrame=cb=>{next=cb;return 1;};
  const ctx=new Proxy({}, {get:(_,k)=>k==='fill'?()=>painted++:()=>{},set:()=>true});
@@ -74,12 +74,12 @@ test('Ghost and Chameleon keep camera pixels exclusive to photo views',()=>{
   for(const skin of ['ghost','chameleon']){
    cam.setOverlay('puppet',skin,[]);assert.equal(video.classList.contains('feed-hidden'),true);
    painted=0;patches=0;cam.run();video.currentTime++;next();
-   assert.equal(patches,0,'no camera-derived patch in puppet-only mode');assert.ok(painted>0,'authored puppet remains visible');
+   assert.ok(patches>0,'puppet uses a clipped real-camera texture');assert.equal(painted,0,'no cartoon body covers the texture');
    assert.equal(cam.snap({mode:'puppet',skin}).photo,'');
    cam.setOverlay('photo-puppet',skin,[]);assert.equal(video.classList.contains('feed-hidden'),false);
    painted=0;video.currentTime++;next();assert.ok(patches>0);assert.equal(painted,0,'photo view uses Vanish without puppet body');
    cam.setOverlay('puppet',skin,[]);assert.equal(video.classList.contains('feed-hidden'),true);
-   patches=0;video.currentTime++;next();assert.equal(patches,0,'switching back removes cached camera patches');cam.pause();
+   patches=0;video.currentTime++;next();assert.ok(patches>0,'switching back retains hand texture while hiding the full video');cam.pause();
   }
  }finally{cam.pause();globalThis.requestAnimationFrame=oldRaf;}
 });

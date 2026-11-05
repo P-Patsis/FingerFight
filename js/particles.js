@@ -3,6 +3,7 @@
 // Cheap on purpose: one global cap, no gradients, no shadow blur, no timers of its own (the caller's frame loop drives update/draw),
 // nothing at all under reduced motion except a still snapshot.
 
+import { drawElementBody, earthTiles } from './element-body.js';
 import { ElementMotion } from './element-motion.js';
 import { SandMotion, sandPartAlphas, SAND } from './sand.js';
 
@@ -15,7 +16,7 @@ export const EFFECTS = Object.freeze({
   splash: { kind: 'splash', life: [0.7, 1.25], speed: [1.1, 2.4], size: 5, gravity: 1.4 },
   ripple: { kind: 'ripple', life: [0.7, 1.3], speed: [0, 0], size: 4, gravity: 0 },
   stone: { kind: 'stone', life: [1.3, 2.2], speed: [0.3, 1.4], size: 6, gravity: 2 },
-  gust: { kind: 'gust', life: [0.8, 1.5], speed: [0, 0], size: 5, gravity: 0 },
+  gust: { kind: 'gust', life: [0.8, 1.5], speed: [0, 0], size: 2.5, gravity: 0 },
   sparks: { kind: 'spark', life: [0.18, 0.4], speed: [1.5, 4], size: 6, gravity: 0 },     // short jagged bolts: electricity
   glow: { kind: 'glow', life: [0.7, 1.3], speed: [0, 0.2], size: 16, gravity: 0 },         // a soft pulsing halo
   embers: { kind: 'ember', life: [0.7, 1.4], speed: [0.4, 1], size: 2.2, gravity: -1.2 },  // little dots that float up
@@ -77,18 +78,17 @@ export class ParticleSystem {
   constructor({ max = MAX_PARTICLES, reduced = reducedNow, random = Math.random } = {}) {
     this.max = max; this.reduced = reduced; this.rnd = random;
     this.list = []; this.emitters = []; this.carry = [];
-    this.material = new ElementMotion();
+    this.material = new ElementMotion(); this.tiles = [];
     this.element = null; this.elementAge = 0; this.centers = []; this.velocities = [];
     this.sand = null; this.motions = []; this.hands = []; this.time = 0;       // a sand hand: per-hand shake state (js/sand.js)
   }
 
   /** Turns the sand hand on ({color, color2} from the skin) or off (null): the hand then crumbles when shaken and re-forms when it settles. */
   setSand(cfg) { this.sand = cfg ? { color: cfg.color, color2: cfg.color2, ...(cfg.chunks ? { chunks: true } : {}) } : null; this.motions = []; }
-  setElement(mode) { mode = ['water','fire','earth','air'].includes(mode) ? mode : null; if (mode !== this.element) { this.material.clear();this.list=[];this.element = mode; this.elementAge = 0; this.centers = []; this.velocities = []; } }
+  setElement(mode) { mode = ['water','fire','earth','air'].includes(mode) ? mode : null; if (mode !== this.element) { this.material.clear();this.tiles=[];this.list=[];this.element = mode; this.elementAge = 0; this.centers = []; this.velocities = []; } }
   /** How much of each solid hand to draw (1 = all, 0 = all grains); 1 when there is no sand hand or reduced motion is on. */
   bodyAlphas() { return this.sand && !this.reduced() ? this.motions.map(m => m.body) : []; }
   partAlphas() {
-    if(this.element==='earth'&&!this.reduced())return this.hands.map((_,i)=>{const out={};for(const p of this.list)if(p.kind==='stone'&&p.hand===i){const t=p.age/p.life,loss=Math.min(1,Math.sin(Math.PI*t)*1.5)*(p.part==='palm'?.45:1);out[p.part]=Math.min(out[p.part]??1,1-loss);}return out;});
     return this.sand && !this.reduced() ? this.motions.map(m => sandPartAlphas(m.c)) : null; }
   /** Grains of the swarm that exist right now (they count toward the cap with everything else). */
   get swarmSize() { return this.sand && this.motions.some(m => m.c > 0.01) ? SAND.GRAINS : 0; }
@@ -102,6 +102,7 @@ export class ParticleSystem {
 
   spawn(em, lm, rnd) {
     if (this.list.length + this.swarmSize >= this.max) return;
+    if(this.element==='air'&&this.list.filter(p=>p.kind==='gust').length>=14*Math.max(1,this.hands.length))return;
     const fx = EFFECTS[em.effect], s = handScale(lm), a = anchor(em.where, lm, rnd);
     if (fx.jitter) { a.x += (rnd() - 0.5) * 2 * fx.jitter * 60 * s; a.y += (rnd() - 0.5) * 2 * fx.jitter * 60 * s; }       // sand leaves from the EDGES, not the bones
     const ang = rnd() * Math.PI * 2, sp = (fx.speed[0] + rnd() * (fx.speed[1] - fx.speed[0])) * 60 * s;
@@ -130,10 +131,11 @@ export class ParticleSystem {
         p.x=a.x;p.y=a.y;p.vx=velocity.x*.45+Math.cos(ang)*palm*.45;p.vy=velocity.y*.32-palm*(1+rnd());p.bend=-velocity.x/palm;p.size*=1+Math.min(1,speed*.15);
       }
       if(p.kind==='stone'){
-        const index=Math.floor(rnd()*20)+1,q=lm[index],f=index<=4?'thumb':['index','middle','ring','pinky'][Math.floor((index-5)/4)];
+        const tiles=this.tiles[hand]||earthTiles(lm),tile=tiles[Math.floor(rnd()*tiles.length)],index=Math.floor(rnd()*20)+1,q=tile,f=index<=4?'thumb':['index','middle','ring','pinky'][Math.floor((index-5)/4)];
         p.part=index<=4?'thumb_'+(['base','mid','tip'][Math.min(2,index-1)]):f+'_'+(['base','mid','tip'][Math.min(2,(index-5)%4)]);
         if(rnd()<.25)p.part='palm';p.home=index;p.x=q.x;p.y=q.y;p.vx=velocity.x*.55+(rnd()-.5)*palm*(.3+speed*.4);p.vy=velocity.y*.4+palm*(.1+rnd()*.4);p.g=palm*(2+rnd()*2);p.size*=.65+rnd()*1.9;p.life=1.5+rnd()*1.5;
-        p.sides=4+Math.floor(rnd()*4);p.profile=Array.from({length:p.sides},()=>.6+rnd()*.5);p.spin=(rnd()-.5)*7;p.returnAt=.55+rnd()*.2;
+        p.tile=tile.id;p.part=tile.part;p.x=tile.x;p.y=tile.y;p.size=Math.max(...tile.points.map(q=>Math.hypot(q.x-tile.x,q.y-tile.y)));p.source=tile.points.map(q=>({x:(q.x-tile.x)/p.size,y:(q.y-tile.y)/p.size}));
+        p.spin=(rnd()-.5)*7;p.returnAt=.55+rnd()*.2;
       }
       if(p.kind==='dust'){
         p.hand=hand;p.x=a.x;p.y=a.y;p.vx=velocity.x*.2+(rnd()-.5)*palm*.8;p.vy=velocity.y*.1-palm*.25;p.g=-palm*.12;p.size=palm*(.08+rnd()*.12);p.rot=ang;
@@ -149,7 +151,7 @@ export class ParticleSystem {
     this.time += dt;
     this.hands = hands || [];
     if(this.element){
-      this.material.update(this.hands,dt);this.elementAge+=dt;
+      this.material.update(this.hands,dt);this.tiles=this.element==='earth'?this.hands.map(earthTiles):[];this.elementAge+=dt;
       const centers=this.hands.map(palmCenter);
       this.velocities=centers.map((p,i)=>{const old=this.centers[i],max=dist(this.hands[i][5],this.hands[i][17])*8;return old&&dt>0?{x:Math.max(-max,Math.min(max,(p.x-old.x)/dt)),y:Math.max(-max,Math.min(max,(p.y-old.y)/dt))}:{x:0,y:0};});
       this.centers=centers;
@@ -167,7 +169,7 @@ export class ParticleSystem {
         if(p.wake){p.cx+=p.vx*dt;p.cy+=p.vy*dt;p.radius+=p.expand*dt;}else if(center){const k=1-Math.exp(-dt*7);p.cx+=(center.x-p.cx)*k;p.cy+=(center.y-p.cy)*k;}
         p.angle+=p.omega*dt;p.x=p.cx+Math.cos(p.angle)*p.radius;p.y=p.cy+Math.sin(p.angle)*p.radius*0.6;
       }else if(p.kind==='stone'&&center&&p.age/p.life>(p.returnAt??.5)){
-        const home=lm[p.home],steps=Math.max(1,Math.ceil(dt/0.016)),h=dt/steps;
+        const home=p.tile!==undefined?this.tiles[p.hand]?.[p.tile]||earthTiles(lm)[p.tile]:lm[p.home],steps=Math.max(1,Math.ceil(dt/0.016)),h=dt/steps;
         for(let k=0;k<steps;k++){p.vx+=((home.x-p.x)*64-p.vx*16)*h;p.vy+=((home.y-p.y)*64-p.vy*16)*h;p.x+=p.vx*h;p.y+=p.vy*h;}
       }else{if(p.kind==='flame'&&this.element==='fire'){p.vx+=Math.sin(p.age*10+p.rot)*12*dt;p.vx*=Math.exp(-dt*.6);}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=p.g*dt*0.5;}
     }
@@ -190,11 +192,13 @@ export class ParticleSystem {
 
   drawBackdrop(ctx) { /* World wakes are drawn with particles; water currents overlay the body. */ }
 
+  drawBody(ctx,hands){return drawElementBody(ctx,this.visualHands(hands),this.element,{time:this.material.time,states:this.material.states,particles:this.list,reduced:this.reduced()});}
+
   visualHands(hands){return this.element&&!this.reduced()?this.material.deform(hands,this.element):hands;}
 
   draw(ctx) {
     if (this.reduced()) return;
-    if(this.element==='water')this.material.drawWater(ctx,this.visualHands(this.hands));
+
     if (this.list.length) drawParticles(ctx, this.list);
     if (this.sand && this.motions.length) {
       const grains = [];
@@ -233,9 +237,9 @@ export function drawParticles(ctx, list) {
       ctx.strokeStyle='#d8f8ff';ctx.lineWidth=Math.max(1,r*0.25);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-ux*tail*0.6,p.y-uy*tail*0.6);ctx.stroke();
     } else if(p.kind==='gust'||p.kind==='ripple'){
       const r=p.radius*(p.kind==='ripple'?1+t*0.3:1);ctx.beginPath();ctx.ellipse(p.cx,p.cy,r,r*(p.squash??.6),p.rot*.15,p.angle,p.angle+p.span);
-      ctx.strokeStyle=p.color;ctx.lineWidth=Math.max(2,p.size*(p.kind==='gust'?1.7:1));ctx.stroke();ctx.strokeStyle='#effcff';ctx.lineWidth=Math.max(1,p.size*0.3);ctx.stroke();
+      ctx.globalAlpha*=p.kind==='gust'?.55:1;ctx.strokeStyle=p.color;ctx.lineWidth=Math.max(1,p.size*(p.kind==='gust'?1.2:1));ctx.stroke();ctx.strokeStyle='#effcff';ctx.lineWidth=Math.max(1,p.size*0.3);ctx.stroke();
     } else if(p.kind==='stone'){
-      const r=p.size,n=p.sides||5,pts=Array.from({length:n},(_,i)=>{const a=p.rot+p.age*(p.spin??1)+i*Math.PI*2/n,k=p.profile?.[i]??1;return{x:p.x+Math.cos(a)*r*k,y:p.y+Math.sin(a)*r*.8*k};});
+      const r=p.size,n=p.source?.length||p.sides||5,pts=p.source?p.source.map(q=>{const a=p.age*(p.spin??1);return{x:p.x+(q.x*Math.cos(a)-q.y*Math.sin(a))*r,y:p.y+(q.x*Math.sin(a)+q.y*Math.cos(a))*r};}):Array.from({length:n},(_,i)=>{const a=p.rot+p.age*(p.spin??1)+i*Math.PI*2/n,k=p.profile?.[i]??1;return{x:p.x+Math.cos(a)*r*k,y:p.y+Math.sin(a)*r*.8*k};});
       ctx.fillStyle=p.color;ctx.beginPath();pts.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath();ctx.fill();ctx.fillStyle='#d9bf8f';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);ctx.lineTo(p.x,p.y);ctx.closePath();ctx.fill();
     } else if(p.kind==='dust'){
       ctx.globalAlpha=Math.sin(Math.PI*t)*.18;ctx.fillStyle=p.color;const r=p.size*(.5+t*1.8);

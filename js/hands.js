@@ -229,7 +229,7 @@ export class HandCam {
     if (this.overlay.skin !== skinIdOf(skin)) { this.paintFist = new PaintingFist(); this.lastPaint = 0; }
     const rec = resolveLoadout(skin, stack, baseColor);
     this.overlay = { puppet: v.endsWith('puppet') && !this.puppetBroken, skin: skinIdOf(skin), rec, stack, baseColor };
-    const localCloak = v === 'photo-puppet' && CLOAK_SKINS.includes(rec.skin.id);
+    const localCloak = v.endsWith('puppet') && CLOAK_SKINS.includes(rec.skin.id);
     this.overlay.cloak = localCloak;
     this.particles.setEmitters(v.endsWith('puppet') ? (localCloak ? rec.emitters.slice(rec.skin.particles.length) : rec.emitters) : []);
     if (!localCloak) this.cloak.clear();
@@ -241,6 +241,7 @@ export class HandCam {
 
   #drawOverlay(hands, scores = [], count = 0) {
     const w = this.canvas.width, h = this.canvas.height;
+    if(!hands.length&&this.overlay.rec?.skin.id==='comic')this.comic.clear();
     let cloakPts = null;
     if (this.overlay.cloak) {
       cloakPts = hands.map(lm => lm.map(p => ({ x: p.x * w, y: p.y * h })));
@@ -258,7 +259,7 @@ export class HandCam {
         if (this.overlay.cloak) this.cloak.draw(this.ctx, w, h);
         this.particles.drawBackdrop(this.ctx);
         this.#drawStyled(this.ctx, pts, rec, hs.map(h => h.back), hs);   // nails only when the back of that hand faces the camera (held steady); a crumbling sand hand fades
-        if (rec.skin.id === 'comic') { this.comic.update(pts, count, dt, w, h); this.comic.draw(this.ctx, w, h); }
+        if (rec.skin.id === 'comic') { this.comic.update(pts, count, dt, w, h); this.comic.draw(this.ctx, w, h, { mirrorGlyphs: this.facing === 'user' }); }
         if (this.particles.active) {                       // effects ride the same frame: no second loop, capped, off under reduced motion
           this.particles.draw(this.ctx);
         }
@@ -273,7 +274,8 @@ export class HandCam {
   }
 
   #drawStyled(ctx, pts, rec, backs, dynamics = null, cloak = this.overlay.cloak) {
-    if (!cloak || !CLOAK_SKINS.includes(rec.skin.id)) return drawPuppet(ctx, this.particles.visualHands(pts), rec.skin, rec.layers, backs, this.particles.bodyAlphas(), dynamics, this.particles.partAlphas());
+    const elemental=rec.skin.id==='elemental'&&this.particles.drawBody(ctx,pts);
+    if (!elemental && (!cloak || !CLOAK_SKINS.includes(rec.skin.id))) return drawPuppet(ctx, this.particles.visualHands(pts), rec.skin, rec.layers, backs, this.particles.bodyAlphas(), dynamics, this.particles.partAlphas());
     // Cloak is real local camera compositing. Never repaint a cartoon hand over it.
     pts.forEach((lm,i) => drawPlan(ctx, rigPlan(lm, rec.skin, rec.layers, backs?.[i], dynamics?.[i]).filter(s => s.part.includes('@')), 1, dynamics?.[i]?.animTime ?? null));
   }
@@ -331,7 +333,7 @@ export class HandCam {
     const photo = photoMode && hands.length ? this.#photo(hands, states, mode, ar, skinIdOf(style.skin), style.stack, style.baseColor, style.skel, backs, style.skelStyle) : '';
     // photo-based views without a photo (no hand) are shown as a cartoon by the receiver
     if (this.lastPts) this.particles.trigger('snap', this.lastPts);   // the snap effect of an equipped item (the live view is about to switch off; the reveal shows a still of it)
-    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), ...genWire(skinIdOf(style.skin)), ...(style.skin === 'comic' && this.comic.snapshot().length ? { cb: this.comic.snapshot() } : {}), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
+    return { count, gesture, noHand, photo, view: mode, skin: skinIdOf(style.skin), ...genWire(skinIdOf(style.skin)), ...(style.skin === 'comic' && this.comic.snapshot().length ? { cb: this.comic.snapshot(mirror) } : {}), lay: stackToWire(style.stack), bc: cleanColor(style.baseColor), sk: cleanColor(style.skel) || undefined, ss: cleanSkelStyle(style.skelStyle) || undefined, bk: backs.some(x => x !== undefined) ? backs.map(x => (x === undefined ? null : x)) : undefined, hands: states, lm, ar };
   }
 
   #photo(hands, states, mode, ar, skinId, stack, baseColor, skel = null, backs = [], skelStyle = null) {
@@ -351,7 +353,7 @@ export class HandCam {
       const rec = resolveLoadout(skinId, stack, baseColor);
       if (CLOAK_SKINS.includes(skinId)) this.cloak.draw(ctx, w, h, mirror);
       this.#drawStyled(ctx, hands.map(lm => lm.map(p => ({ x: (mirror ? 1 - p.x : p.x) * w, y: p.y * h }))), rec, backs, null, true);
-      if (skinId === 'comic') this.comic.draw(ctx, w, h);
+      if (skinId === 'comic') this.comic.draw(ctx, w, h, { mirrorPositions: mirror });
     }
     const tips = [];
     hands.forEach((lm, i) => {
