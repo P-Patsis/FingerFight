@@ -1,5 +1,16 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Nails, generic comic/elemental art and Vanish reuse
+
+- Rename only the Nails category label, retaining layer/id/storage compatibility. Use one saved 0–10 length preference, with checked optional `nl` on pictures; default 5 stays omitted. Scale authored nail tips about their mounts and knuckle blades about their palm anchor; keep metal sleeves fixed. Zero removes nail layers from the draw recipe. Paw intrinsic claws share the preference. Check authored oversized-item fitting points and transform them using the real rig matrices.
+- Redesign animal claws as keratin talons; add a thumb to Scissor fingers and a separate free generic Knuckle claws item with three large palm-mounted metal blades. Preserve back-only nail/polish policy and both-side projecting claws. Keep the selected base hand/ownership when Clear all removes worn layers; move it above the list for discoverability.
+- Hotdog: use stable per-finger curve variation, per-finger spring response and small time-based flutter rather than frame-by-frame random positions. Choose a stable sag side near vertical to prevent tracker-noise flips. Warm tan is the new authored default; saved explicit colours remain untouched.
+- Comic: count/word starbursts use the existing tracking count or validated finger-state data; never infer a score from the puppet. Original generic ink/halftone art and POW/BOOM/ZAP labels only. Leave normal skeleton annotations unchanged.
+- Elemental: one generic hand id with four enum modes (Water, Fire, Earth, Air), generated ordinary shapes and existing capped particles. Persist locally and send checked `el`; Fire reuses the fire-intensity control. No branded characters, logos or trademarked hand names.
+- Adapt the user's Vanish background/engine code (dc529d777ee45b447a6599299db6b5c46cdaf32d). Reuse existing hand landmarks as the mask, avoiding another inference model. Limit camera readback to 160 px long edge and 10 updates/s; learn even when the hand leaves, reset on camera/skin changes and release all pixel buffers on pause. Vanish cannot invent a background never observed; use surrounding colour until learned.
+- Chameleon/Ghost camera textures remain local. Stranger puppet snapshots remain safe authored vector hands, not textures or photos. Existing opt-in private photo modes retain their JPEG rules and can include the local composite. Preserve masks/temporal smoothing without a new timer/stream; report pixel math separately from unmeasured camera readback/GPU cost.
+- Ship a static vector review sheet and require phone review of cloak edges, large blades, hotdog dynamics and comic/elemental styling. The bounded JS benchmarks are not evidence of real camera FPS or successful raster appearance.
+
 ## 2026-11-05 — Correct facing from phone feedback, retract Paw claws, compact controls
 
 - The previous label inversion put nails on palms on the user's phone. Use handedness labels directly against raw camera landmarks (`LABEL_MIRRORED=false`), separate from CSS display mirroring. Preserve stable-side hysteresis and existing `bk` snapshots; do not reverse each nail item individually. Allow validated per-shape `side` metadata so Cartoon's built-in nail lines follow the same back-only policy.

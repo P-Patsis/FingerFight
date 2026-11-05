@@ -155,3 +155,9 @@ The final `tools/make_visual_pass.py` authoring pass adds ordinary validated pat
 ### Shape facing and Paw claws (2026-11-05)
 
 An individual shape may optionally carry `side: back | palm | both` (validated; absent is both). The rig filters it only for known facing, retaining the original shape arrays otherwise. Cartoon's built-in nail lines use back-only shapes. Raw camera handedness labels are now used directly after phone feedback showed the previous inversion. Paw's pale claws moved to ordinary dynamic tip overlays, extending with each finger and retracting on curl; the asset generator preserves this design. No new rig parts or counting landmarks.
+
+### Nails, Comic/Elemental and Vanish expansion
+
+New hand ids: `comic`, `elemental`, `chameleon`, `ghost`; new item `knuckleclaws`. Comic callouts use existing count/state data, not pose scoring. Elemental is generated from checked `el` (water/fire/earth/air). Optional checked `nl` is the 0–10 Nails length preference; length 5 remains the authored default. Item `nailAnchor` (finite -100..100) and checked `fit` points support palm-mounted/oversized blades without changing the 16-part rig. Optional `extend.spread` (0–1) gives Hotdog varied stable bends; springs remain local/drawing-only.
+
+Chameleon/Ghost reuse the user's Vanish background/mask engine locally with a hand-landmark mask, 160 px/10 Hz limits and buffer cleanup. No new segmentation model or pixel-bearing game field. Opponent stills use authored vector art. Read COSMETICS.md for wire bounds, privacy scope, generation order and device review; `artifacts/expansion-review.svg` is a static review, not a camera test.

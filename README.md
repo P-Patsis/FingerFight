@@ -90,3 +90,7 @@ There is no bundler/build step or npm dependency installation required for tests
 is vendored; MediaPipe 0.10.14 and its model are loaded externally. Python asset generators use Pillow.
 For application asset changes, `node tools/stamp.mjs` updates the service-worker hash;
 README-only changes do not require stamping.
+
+## New cosmetic controls (2026-11-05)
+
+The Nails category has a shared length slider; Knuckle claws joins redesigned animal talons and five-blade Scissor fingers. Hotdog fingers has varied bends/springs and a warm tan default. Clear all sits above the equipped list. New hands: Comic book (big count/impact callouts), Elemental (Water/Fire/Earth/Air), Chameleon and Ghost. The latter reuse [Vanish](https://github.com/P-Patsis/Vanish)'s background learner locally with the existing hand landmarks, not another model. Their camera camouflage stays local; opponents receive safe drawn stills. Move the hand briefly to uncover room pixels for learning. See PROGRESS.md and COSMETICS.md for validation/performance limits and phone-review needs.
