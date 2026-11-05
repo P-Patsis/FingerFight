@@ -1,5 +1,10 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Camera mode boundary correction
+
+Ghost and Chameleon respect the selected view: **Puppet only** hides the camera, uses authored puppet art and never samples/draws Vanish textures. **Photo + puppet** explicitly enables the camera scene and Vanish background replacement/adaptation. Leaving that mode clears cached image/model buffers. This supersedes the earlier local-camera exception for puppet-only mode. Outgoing ordinary puppet pictures remain data-only.
+
+
 ## 2026-11-05 — Respond to phone feedback on effects
 
 - Use a bounded grid for compact category controls; a range must shrink within its parent.

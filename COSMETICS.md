@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-05 — Camera mode boundary correction
+
+Ghost and Chameleon respect the selected view: **Puppet only** hides the camera, uses authored puppet art and never samples/draws Vanish textures. **Photo + puppet** explicitly enables the camera scene and Vanish background replacement/adaptation. Leaving that mode clears cached image/model buffers. This supersedes the earlier local-camera exception for puppet-only mode. Outgoing ordinary puppet pictures remain data-only.
+
+
 The puppet (see SKINS.md) is a **base hand plus a stack of worn items**. Every item is data (a JSON file), none needs a code change,
 and everything rigs to the same 16 named puppet parts.
 

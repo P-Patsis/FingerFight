@@ -63,17 +63,23 @@ test('Ghost replaces known pixels exactly and leaves unknown areas alone; Chamel
  assert.notEqual(image[(1*w+1)*4],image[(6*w+6)*4],'coarse triangular facets have distinct shades');
 });
 
-test('live Ghost displays the local camera and never draws a puppet body over its background replacement',()=>{
+test('Ghost and Chameleon keep camera pixels exclusive to photo views',()=>{
  const oldRaf=globalThis.requestAnimationFrame,video=b.byId.get('video');let next,painted=0,patches=0;
  globalThis.requestAnimationFrame=cb=>{next=cb;return 1;};
  const ctx=new Proxy({}, {get:(_,k)=>k==='fill'?()=>painted++:()=>{},set:()=>true});
  Object.assign(video,{videoWidth:640,videoHeight:480,readyState:2,currentTime:1});
  const cam=new HandCam(video,{width:640,height:480,getContext:()=>ctx});cam.landmarker={detectForVideo:()=>({landmarks:[makeHand(ALL,FAN)]})};
  try{
-  cam.setOverlay('puppet','ghost',[]);assert.equal(video.classList.contains('feed-hidden'),false);
-  cam.cloak.update=()=>true;cam.cloak.draw=()=>{patches++;return true;};cam.run();video.currentTime++;next();
-  assert.ok(patches>0);assert.equal(painted,0,'no translucent ghost body or default glow painted over Vanish');
-  assert.equal(cam.snap({mode:'puppet',skin:'ghost'}).photo,'','local camera never becomes a stranger photo');
-  cam.setOverlay('puppet','cartoon',[]);assert.equal(video.classList.contains('feed-hidden'),true);
+  cam.cloak.update=()=>true;cam.cloak.draw=()=>{patches++;return true;};
+  for(const skin of ['ghost','chameleon']){
+   cam.setOverlay('puppet',skin,[]);assert.equal(video.classList.contains('feed-hidden'),true);
+   painted=0;patches=0;cam.run();video.currentTime++;next();
+   assert.equal(patches,0,'no camera-derived patch in puppet-only mode');assert.ok(painted>0,'authored puppet remains visible');
+   assert.equal(cam.snap({mode:'puppet',skin}).photo,'');
+   cam.setOverlay('photo-puppet',skin,[]);assert.equal(video.classList.contains('feed-hidden'),false);
+   painted=0;video.currentTime++;next();assert.ok(patches>0);assert.equal(painted,0,'photo view uses Vanish without puppet body');
+   cam.setOverlay('puppet',skin,[]);assert.equal(video.classList.contains('feed-hidden'),true);
+   patches=0;video.currentTime++;next();assert.equal(patches,0,'switching back removes cached camera patches');cam.pause();
+  }
  }finally{cam.pause();globalThis.requestAnimationFrame=oldRaf;}
 });

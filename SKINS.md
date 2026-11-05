@@ -1,5 +1,10 @@
 # Puppet skins
 
+## 2026-11-05 — Camera mode boundary correction
+
+Ghost and Chameleon respect the selected view: **Puppet only** hides the camera, uses authored puppet art and never samples/draws Vanish textures. **Photo + puppet** explicitly enables the camera scene and Vanish background replacement/adaptation. Leaving that mode clears cached image/model buffers. This supersedes the earlier local-camera exception for puppet-only mode. Outgoing ordinary puppet pictures remain data-only.
+
+
 The puppet is a 2D hand posed on the 21 MediaPipe hand landmarks. **What it looks like is data**: a skin is one JSON file in
 `assets/skins/`, listed in `assets/skins/manifest.json`. The rig (`js/puppet.js`) never changes when a skin is added.
 

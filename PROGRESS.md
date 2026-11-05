@@ -1,5 +1,12 @@
 # Finger Fight: progress
 
+## 2026-11-05 — Keep Ghost/Chameleon camera effects inside photo views
+
+- Changed: puppet-only Ghost/Chameleon now keep the camera hidden and draw their authored rig, like peer stills. They neither sample nor draw Vanish textures. Only explicit Photo + puppet enables real-camera background replacement/adaptation. Switching back clears cached camera buffers immediately.
+- Verified: 9/9 focused camera-loop, mode-switch, reactive-effect and service-worker checks pass. Both skins tested puppet → photo-puppet → puppet for hidden video, no camera patches in puppet mode and preserved photo compositing. SW restamped. Device visual review remains open; no counting/network changes.
+- Publishing: committed/pushed and Pages SHA/live files checked at delivery. Live https://p-patsis.github.io/FingerFight/ .
+
+
 ## 2026-11-05 — Reactive comic, elemental world effects and real Vanish replacement
 
 - Changed: intensity controls now use a bounded three-column grid (label, shrinking slider, value). Removed competing flex rules responsible for horizontal overflow. Needs narrow-phone visual confirmation.

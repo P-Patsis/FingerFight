@@ -69,7 +69,7 @@ test('real camera render loop animates a stationary hand at 12.5 tracking fps, i
       const shot = cam.snap({ mode: 'puppet', skin }); assert.equal(shot.photo, ''); assert.equal(shot.nl, 9);
       if (skin === 'elemental') assert.equal(shot.el, 'air');
       if (skin === 'comic') { assert.deepEqual(texts, [], 'quiet hand has no permanent labels'); tracked = makeHand({}); frame(4); tracked = hand; texts = []; frame(4); assert.ok(texts.includes('5'), 'opening hand triggers a temporary count'); assert.ok(cam.snap({mode:'puppet',skin}).cb.some(e=>e.s==='5')); frame(16); assert.equal(cam.comic.events.length,0,'event expires while held still'); }
-      if (['chameleon', 'ghost'].includes(skin)) { tracked = null; frame(2); assert.ok(captures.some(c => c.hands === 0), 'uncovered scene still reaches background learner'); tracked = hand; }
+      if (['chameleon', 'ghost'].includes(skin)) { assert.equal(captures.length,0,'puppet-only never samples camera pixels'); cam.setOverlay('photo-puppet',skin,[]); tracked = null; frame(2); assert.ok(captures.some(c => c.hands === 0), 'uncovered scene still reaches background learner'); tracked = hand; }
       cam.pause();
     }
     C.setGen({ nl: 5, el: 'water' });
