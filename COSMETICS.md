@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-05 — Customise from a match
+
+**Customise puppet** in the lobby and final result screen opens the existing selector, fitting, saved looks and camera try-on. Done/Back returns to the same room/result. Editing marks you not-ready until you return; active rounds retain their camera/countdown. The next match uses your saved loadout. Random-match views remain drawn-only. Computer practice also uses this editor, with a random drawn opponent puppet each round and separate practice statistics. The labelled result ad slot reserves space only and has no ad SDK.
+
+
 ## 2026-11-05 — Fitting the real hand
 
 The Hand category includes **Finger fatness** (50–180%, default 100), **Palm width** (70–150%, default 100), **Coverage** (0–10% of palm width, default 0), and **Reset fit**. Sliders update live and persist under `ff-fit`. Fatness changes lateral rig width without moving tracked joints; Coverage pads edges and extends drawn tips. Accessories share the fitted rig. Elemental surfaces and Ghost/Chameleon masks also use these controls. Detection/counting never use fitted drawing coordinates.

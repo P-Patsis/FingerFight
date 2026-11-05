@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-05 — Reuse customiser and match loop for local computer practice
+
+- Reuse the shared Profile/try-on editor from lobby and final results. Preserve the room/result on return, signal not-ready during editing, and restore readiness/camera handlers before playing. Keep the editor before/between matches so it cannot consume an active round's camera or countdown. Re-arm random autostart after editing.
+- Computer is an explicit local practice mode, not a fake remote player. Choose answer and RNG guess before seeing the human snap, use the current shrinking limit, randomise the bot puppet and reuse the ordinary game loop. No signaling service, native build, extra model or new dependency. Store practice statistics separately; they cannot feed player leaderboards.
+- Expose only an inactive ad-space label under the result carousel. Advertising integration is a separate decision.
+- Keep accounts optional/guest-first. Record a concrete social plan rather than shipping nonfunctional friends/report/invite buttons. Real identity, moderation, invitations/push and shared standings need backend authorization and operational ownership; current P2P counts are not cheat-proof ranked results. See SOCIAL_PLAN.md for staged scope and primary references.
+
+
 ## 2026-11-05 — Default two lives, shrinking finger limit after round four
 
 - New match defaults are 2 hits/lives, 5 fingers and shrink enabled. Interpret “after round 4” as round 5 reducing to 4, round 6 to 3, round 7 onward to 2. Keep custom host settings, explicit Off and limits already below the floor.

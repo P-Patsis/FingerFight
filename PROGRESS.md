@@ -1,5 +1,15 @@
 # Finger Fight: progress
 
+## 2026-11-05 — Between-match customisation, local computer practice and result ad space
+
+- Changed: **Customise puppet** buttons in the lobby and final result screen open the existing Profile customiser (selection, saved looks, fitting and local camera try-on). Done/Back returns to the same lobby or result without losing the connection or carousel. Editing sends not-ready; closing restores validated camera readiness. Start/rematch guards respect both players' readiness. Random autostart pauses and re-arms around editing; next-round camera hooks are restored after a try-on. Customisation is before/between matches, preserving active round timing.
+- New: **Play against computer** from the menu. Local host flow reuses rounds, timing, counting, scoring, shrinking limits, collage, rematch and settings. Computer chooses its shown value and RNG guess uniformly in 0..current limit BEFORE the human snap; a loaded puppet skin is random each round. It has no camera, signaling peer or remote service. Local practice keeps safe drawn views and separate `ff-practice-stats`; player wins/losses/histograms are not inflated. Stats shows a separate practice summary; Reset stats clears both stores.
+- Changed: moved the existing reserved ad slot directly below the result carousel and labelled it **Advertisement**, with a small dashed reserved area. No ad network, tracking call, SDK or payment integration.
+- Design: `SOCIAL_PLAN.md` proposes guest-first optional accounts, progress migration/recovery, accepted friends, expiring invites and opt-in push, block/report with a real moderation queue, and casual friend leaderboards. Current P2P/local stats are not trusted ranked results. Backend/auth/provider/moderation decisions remain open; no social backend or notification was created/sent. PWA remains the phone-app target; no Android build.
+- Verified: initial full suite **378/378 passed** (59.8 s). Focused final lifecycle checks 11/11 pass, including real HandCam-method try-on → round safety callbacks and random autostart after editor. New tests cover committed RNG values/limits, valid data-only bot pictures, no peer creation, complete solo match/result/customise/rematch/leave, separate stats, private room preservation/readiness, and ad placement. Final full suite **379/379 passes** (63 s). SW restamped; diff checks clean.
+- Device review OPEN: lobby/result customiser return and real try-on, computer round pacing and result carousel/ad spacing. No new raster art or tracking inference. Live https://p-patsis.github.io/FingerFight/ ; pushed Pages SHA/live file checks reported at delivery.
+
+
 ## 2026-11-05 — Faster default matches and visible finger reductions
 
 - Changed: new matches start with **2 lives per player**, **5 fingers**, and the fewer-fingers option **On**. Rounds 1–4 retain the chosen limit; it drops by one each following round. Default sequence: round 5 → 4, round 6 → 3, round 7+ → 2. Floor 2; an explicitly chosen limit already below the floor is never raised. Host overrides and Off remain supported.
