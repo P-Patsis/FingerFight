@@ -1,5 +1,14 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — One guest-first queue for Android and website
+
+- Keep the APK's bundled web game and existing validated PeerJS/WebRTC protocol. GitHub Pages hosts files; it is not the game relay. Both updated clients will use the same API URL and signaling service.
+- Replace fixed public random slots only when a verified backend is configured. Use ready tickets and an atomic D1 batch to claim two seats/create a pairing, with unique peer IDs, pairing secrets, both-client acknowledgement, blocks and expiring leases. Avoid another coordinator/dependency. A 40-player local test is not a production capacity guarantee.
+- Require relay-only ICE for strangers. Mint managed TURN credentials server-side; the provider API token never ships to clients. Do not fall back to legacy slots or direct ICE if the configured service fails. Keep legacy behavior while API_URL is empty, and require an APK update when activating the new queue.
+- Preserve peer reconnect behavior and photo rejection. Queue records are not verified scores; leaderboard activation still requires the separate round commit/reveal/recovery bridge. Hide native account UI until native passkeys are integrated, independently of guest matching.
+- Cloudflare GET /accounts was explicitly rejected (`user rejected MCP tool call`). Finish implementation, test and package locally; do not retry through another credential or imply deployment. Obtain renewed approval for the concrete deployment before setting a real API URL. No resources or paid plan were created.
+
+
 ## 2026-11-06 — Gesture-powered cosmetic effects and a compact preview workspace
 
 - Keep only the custom colour picker in the toolbar; put hand fitting beside it, and Original reset inside the picker. Put labelled icon controls inside the preview rather than below it. Replace misleading Store Snapshot with a true camera toggle. Mirror Customise's sticky preview/categories + horizontal items layout in Store; move the equipped stack/Clear all below the items.

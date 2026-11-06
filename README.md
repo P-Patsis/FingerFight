@@ -48,11 +48,15 @@ a stranger they are not even offered, and a message carrying a photo is rejected
 ## Run it locally
 ```
 scripts/start.sh            # serves http://localhost:8082 (use ?sim=1 for no camera)
-npm test                    # Node test runner; 223 tests at the last recorded run (Node 22 verified)
+npm test                    # Node test runner; 392 tests at the last recorded run (Node 22 verified)
 ```
 The camera needs **https or localhost**. To play with someone else, host it on https (GitHub Pages) and share the match code.
 Both players need internet: the hand model (about 17 MB: 9.4 MB wasm + 7.8 MB model, from jsDelivr / Google, cached by the
 browser) and the PeerJS introduction server.
+
+## Multiplayer and Android
+
+The APK bundles the game locally and shares PeerJS/WebRTC multiplayer with website players. The current random matcher uses eight public slots. A common authenticated server queue is implemented but awaits hosting approval and deployment; it stays disabled while `API_URL` is empty. See [MULTIPLAYER.md](MULTIPLAYER.md) for data routing, crossplay, rollout and test limits.
 
 ## Privacy and security, honestly
 - Static game files and bundled configuration are visible to visitors. There are no user accounts or live camera feeds.

@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Shared matchmaking integration
+
+No cosmetic format, landmark/counting, drawing loop, snapshot validation or particle budget changed. Updated server-queue random matches retain drawing-only opponent pictures and relay-only transport. Camera pixels are not sent to the new API. Existing visual/FPS review remains open; protocol tests do not substitute for phone review.
+
+
 ## 2026-11-06 — Fist charge/release and compact controls
 
 Hold a fist for about a second to charge; extend any finger to release. Water freezes/releases ice, Fire flares, Earth gains orbiting/flying chunks, Air releases expanding wakes, and Sandman sheds warm tiles with dust and grain spray. Other hand families use matching sparks, paint/ink, slashes, elastic waves, eye motes, crystal glints or cloak ripples. This is local drawing only: counting and peer validation are unchanged; no charge metadata is sent. Tracking loss/camera stop cancels the charge, and reduced-motion disables it. The global 90-particle/6-emitter caps still include Sand's 84-grain swarm.

@@ -4,6 +4,8 @@ Capacitor 8 packages the existing web game in Android System WebView. It is sepa
 
 Verified build: `assembleDebug` succeeds; Android v2 signature and APK contents verify; game tests **392/392 pass**. APK is 17,230,071 bytes (about 16.4 MiB), SHA-256 `7cc484686271aa007068b079acb1be035f4b16d2ef7910e30a5603558e3de3e7`. Current APK: version code 4 / `0.1.3-prototype`, also copied to phone Downloads as `FingerFight-0.1.3-debug.apk`. Device testing below is still pending. No FPS measurements have been taken for this APK.
 
+Shared server matchmaking is now implemented in source and tested with the native and website origins, but `API_URL` stays empty until deployment is approved and verified. The installed 0.1.3 APK still uses legacy PeerJS slots. See [MULTIPLAYER.md](MULTIPLAYER.md). This change assembles/checks the Android web shell; a new APK should be built after configuring the real shared API URL. No updated APK or real two-device result is claimed for this queue yet.
+
 ## Build on this ARM64 phone
 
 Node 22+, Java 21, Android SDK 36 and build-tools 35.0.0 (AGP default; 36.0.0 is also installed locally) are required. Do not replace the shared SDK or remove the ARM aapt2 override in `android/gradle.properties`. The old shared ARM binary cannot read SDK 36 resources. The build script verifies/downloads a newer project-local ARM aapt2 from lzhiyong/android-sdk-tools 35.0.2, pinned by SHA-256; the original shared binary is untouched. Gradle is project-local, one worker, with a 1 GB heap. No emulator, NDK or Android Studio is required for this command-line build.

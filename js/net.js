@@ -32,9 +32,9 @@ const PING_MS = 3000;           // heartbeat: a silent link is declared dead aft
 const DEAD_MS = 10000;
 const GRACE_MS = 45000;         // how long a dropped link keeps trying before the match is given up
 /** [relay]: only ever talk through a TURN relay, so the other phone never learns this phone's IP address. */
-export const newPeer = (id, relay = false) => {
+export const newPeer = (id, relay = false, iceServers = null) => {
   const config = {
-    iceServers: [...STUN_SERVERS, ...turnServers()],       // see ice.js: the relay list lives there
+    iceServers: [...STUN_SERVERS, ...(iceServers || turnServers())],       // see ice.js: the relay list lives there
     sdpSemantics: 'unified-plan',
     ...(relay ? { iceTransportPolicy: 'relay' } : {}),
   };
@@ -52,6 +52,7 @@ export class Link {
   constructor(handlers, opts = {}) {
     this.h = handlers;
     this.relay = !!opts.relay;
+    this.iceServers = opts.iceServers || null;
     this.peer = null;
     this.conn = null;
     this.closed = false;
@@ -67,13 +68,22 @@ export class Link {
 
   get open() { return !!this.conn && this.conn.open && !this.grace; }
 
+  /** Refresh credentials for future dials without replacing a healthy channel or private-match defaults. */
+  setRelayServers(list) {
+    this.iceServers = list;
+    if (this.peer?.options?.config) this.peer.options.config.iceServers = [...STUN_SERVERS, ...list];
+  }
+
+  expectPair(pair) { this.pairGuard = pair; }
+  pairProof() { return this.pairGuard ? { id: this.pairGuard.id, key: this.pairGuard.key } : undefined; }
+
   setToken(t) { this.token = validToken(t) ? t : null; }
 
   /** Opens a room under [peerId]. Resolves with the id, rejects ('taken') if someone already uses it. */
   host(peerId) {
     this.role = 'host'; this.roomId = peerId;
     return new Promise((resolve, reject) => {
-      this.peer = newPeer(peerId, this.relay);
+      this.peer = newPeer(peerId, this.relay, this.iceServers);
       this.peer.on('open', () => { this.h.onStatus?.('Room is open. Waiting for a player…'); resolve(peerId); });
       this.peer.on('error', e => {
         if (e.type === 'unavailable-id') reject(new Error('taken'));
@@ -109,7 +119,7 @@ export class Link {
     if (resume) this.setToken(resume);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
-      this.peer = newPeer(null, this.relay);
+      this.peer = newPeer(null, this.relay, this.iceServers);
       this.peer.on('error', e => {
         clearTimeout(timer);
         if (!this.conn || !this.conn.open) reject(new Error(e.type === 'peer-unavailable' ? 'no-room' : e.type || 'error'));
@@ -120,6 +130,16 @@ export class Link {
         this.h.onStatus?.('Connecting…');
         this.#dial(resume ? () => { clearTimeout(timer); resolve(); } : () => { clearTimeout(timer); resolve(); }, !!resume);
       });
+    });
+  }
+
+  /** Queue guests already registered their own opaque id before becoming eligible. */
+  dialRegistered(peerId, timeoutMs = 15000) {
+    if (!this.peer || this.closed) return Promise.reject(new Error('Connection closed'));
+    this.role = 'guest'; this.roomId = peerId;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Connection timed out')), timeoutMs);
+      this.#dial(() => { clearTimeout(timer); resolve(); }, false);
     });
   }
 
@@ -149,7 +169,7 @@ export class Link {
         resolve(best.id);
       };
       const check = () => { const open = [...cands.values()].filter(r => r.opened && !r.dead); if (open.length && open.every(r => r.got)) pick(); };
-      this.peer = newPeer(null, this.relay);
+      this.peer = newPeer(null, this.relay, this.iceServers);
       this.peer.on('error', e => {
         if (e.type === 'peer-unavailable') { if (!chosen && ++unavailable >= ids.length) finish('no-room'); return; }
         if (!chosen) finish(e.type || 'error');
@@ -188,7 +208,8 @@ export class Link {
     }, resuming ? onUp : null);
   }
 
-  #adopt(conn, onOpen, onResumed) {
+  #adopt(conn, onOpen, onResumed, trusted = false) {
+    let authenticated = !this.pairGuard || !!onResumed || trusted;
     this.conn = conn;
     this.lastSeen = Date.now();
     this.resumedCb = onResumed || null;
@@ -199,6 +220,11 @@ export class Link {
       this.lastSeen = Date.now();
       if (!d || typeof d !== 'object' || typeof d.t !== 'string') return;
       if (JSON.stringify(d).length > MAX_MESSAGE_CHARS) return;
+      if (this.pairGuard && (d.t === 'hello' || d.t === 'welcome')) {
+        if (d.pair?.id !== this.pairGuard.id || d.pair?.key !== this.pairGuard.key) { try { conn.close(); } catch {} return; }
+        authenticated = true;
+      }
+      if (!authenticated && d.t !== 'ping') return;
       if (d.t === 'ping') { this.peerPings = true; return; }
       if (d.t === 'resumed') { this.#resumedOk(); return; }
       if (d.t === 'resume') return;                       // only meaningful on a fresh connection (see #incoming)
@@ -221,6 +247,7 @@ export class Link {
 
   /** Host: a new connection. If a seat is taken it must prove it holds the token; otherwise it is "full". */
   #incoming(c) {
+    if (this.pairGuard && c.peer !== this.pairGuard.guestPeer) { c.on('open', () => c.close()); if(c.open)c.close(); return; }
     if (this.queueSince) {                                                      // random host: tell the joiner how long we have waited
       const say = () => { try { c.send({ t: 'queue', waited: Date.now() - this.queueSince }); } catch { /* ignore */ } };
       if (c.open) say(); else c.on('open', say);
@@ -242,11 +269,11 @@ export class Link {
         const old = this.conn;
         this.conn = null;
         try { old?.close(); } catch { /* ignore */ }
-        this.#adopt(c);
+        this.#adopt(c, null, null, true);
         this.resumedCb = null;
         c.send({ t: 'resumed' });
         this.#resumedOk(true);
-      } else if (!this.conn && !this.grace) {
+      } else if (!this.pairGuard && !this.conn && !this.grace) {
         // the seat is empty and this is a normal first message: treat as a fresh guest
         this.candidates.delete(c);
         this.#adopt(c);
@@ -306,7 +333,7 @@ export class Link {
     try {
       if (!this.peer || this.peer.destroyed || this.peer.disconnected) {
         try { this.peer?.destroy(); } catch { /* ignore */ }
-        this.peer = newPeer(null, this.relay);
+        this.peer = newPeer(this.pairGuard?.guestPeer || null, this.relay, this.iceServers);
         this.peer.on('error', () => again());
         this.peer.on('open', () => this.#redial());
         return;

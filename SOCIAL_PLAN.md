@@ -2,9 +2,11 @@
 
 Status update, 2026-11-05: the local backend MVP now implements passkey accounts, friendships, invites, blocks/reports and server-scored committed matches. See backend/README.md for tested scope and deployment gates. No backend has been deployed: Cloudflare account lookup was declined. Existing live P2P matches are not yet bridged into server standings; push and production recovery/moderation remain future work. The plan below describes the wider rollout.
 
+Status update, 2026-11-06: Android debug APK 0.1.3 exists. A shared guest-first Worker/D1 matchmaking queue and frontend integration are implemented and tested locally, including APK/website origins and more than eight pairs. Hosting remains blocked by the rejected Cloudflare account lookup. See MULTIPLAYER.md. Verified standings remain separate; native passkeys need native credential integration.
+
 ## Keep guest play
 
-The installed PWA remains the phone app for now; no Android build is needed for this iteration. Guest players can practise against the computer, customise, and play by code without an account. Signing in is optional and explained by its benefit: keep progress across phones, save friends and receive invitations. An editable display name is separate from the permanent account identifier. Existing local inventory/settings need an explicit merge policy when a guest first signs in.
+Both the installed PWA and the Capacitor Android prototype reuse the web game. Guest players can practise against the computer, customise, and play by code without an account. Signing in is optional and explained by its benefit: keep progress across phones, save friends and receive invitations. An editable display name is separate from the permanent account identifier. Existing local inventory/settings need an explicit merge policy when a guest first signs in.
 
 PWAs can be installed from supported browsers without creating a native package: https://web.dev/learn/pwa/installation . Platform/browser behavior differs; installation/push needs actual Android/iOS testing.
 

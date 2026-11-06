@@ -1,5 +1,6 @@
 import { API_URL } from './service-config.js';
 import { Service } from './service.js';
+import { Matchmaker } from './matchmaking.js';
 import { initSocial } from './social.js';
 import { Computer } from './computer.js';
 import { FIT_DEFAULT, FIT_LIMITS } from './fit.js';
@@ -84,7 +85,7 @@ let hideRude = store_get('ff-rude') !== '0';   // default ON: never show a rude 
 let showPhotos = true;                  // private match: display a friend's real photo if they send one
 let helloTimer = null;                  // host: drop a connection that never says hello
 let searching = false, searchId = 0;    // random matchmaking in progress
-let matchWaiter = null, hostWaiter = null;
+let matchWaiter = null, hostWaiter = null, queueSearch = null, queueCleanup = Promise.resolve();
 let autoStarted = false;
 let opponentGone = false;               // the other phone closed after the fight was decided
 const hideIp = true;                            // always on: random matches go through the relay only, so a stranger never sees my IP address
@@ -310,7 +311,7 @@ function closeMatchCustomise(){
 $('overCustomise').onclick=openMatchCustomise;
 renderWho();
 const service=new Service(API_URL),social=initSocial(service,{getName:()=>myName(),onBack:()=>show('menu'),invite:async target=>{await $('createBtn').onclick();if(!roomCodeRaw)throw new Error('Could not open a room');await service.request('/invites','POST',{target,code:roomCodeRaw});$('lobbyMsg').textContent='Invitation sent. You will approve your friend when they join.';},join:async code=>{$('codeInput').value=code;await $('joinBtn').onclick();}});
-$('accountBtn').hidden=!service.enabled;$('accountBtn').onclick=()=>{show('social');social.open();};
+$('accountBtn').hidden=!service.enabled||globalThis.Capacitor?.isNativePlatform?.()===true;$('accountBtn').onclick=()=>{show('social');social.open();};
 
 function menuMsg(text, err = false) {
   $('menuMsg').textContent = text;
@@ -330,7 +331,7 @@ async function waitFor(cond, ms) {
   return cond();
 }
 
-function makeLink(quiet = false) {
+function makeLink(quiet = false, iceServers = null) {
   return new Link({
     onOpen: onLinkOpen,
     onMessage: onMessage,
@@ -343,7 +344,7 @@ function makeLink(quiet = false) {
     onReconnecting: () => netBadge(me === 'host' ? (names.guest || 'Your opponent') + ' disconnected. Waiting…' : 'Connection lost. Reconnecting…'),
     onReconnected: () => onReconnected(),
     onStatus: t => { if (!quiet) menuMsg(t); },
-  }, { relay: matchKind === 'random' && hideIp });
+  }, { relay: matchKind === 'random' && hideIp, iceServers });
 }
 
 /** Tears down a link. With [only], a stale search attempt closes just its own link and never touches a newer one. */
@@ -430,7 +431,7 @@ function setSearching(on) {
   $('joinBtn').disabled = on;
 }
 
-$('cancelBtn').onclick = () => { searchId++; setSearching(false); cleanupLink(); matchKind = null; menuMsg('Search cancelled.'); };
+$('cancelBtn').onclick = () => { resetAll(); menuMsg('Search cancelled.'); };
 
 /** Look at every slot at once and join the player who has waited longest (see Link.joinAny). */
 async function tryJoinRandom(name, active) {
@@ -462,8 +463,43 @@ async function tryHostRandom(i, name, active, since) {
   return 'timeout';
 }
 
+/** Server pairing is shared by native and website clients; the PeerJS link still carries game messages. */
+async function findQueuedOpponent() {
+  resetAll();matchKind='random';const id=++searchId;setSearching(true);
+  const active=()=>searching&&id===searchId;
+  const finder=new Matchmaker(service);queueSearch=finder;
+  let paired;
+  menuMsg('Preparing multiplayer…');
+  try {
+    await queueCleanup;if(!active())return;
+    await finder.start(myName(),{
+      openPeer:async (peer,iceServers)=>{if(!active())throw new Error('Search cancelled');link=makeLink(true,iceServers);await link.host(peer);if(!active())throw new Error('Search cancelled');},
+      onPair:pair=>{
+        if(!active())throw new Error('Search cancelled');me=pair.role;names={host:'',guest:''};names[me]=myName();settings=normalizeSettings(pair.settings);
+        link.expectPair(pair);if(me==='guest')link.setToken(newToken());
+        paired=new Promise(resolve=>{if(me==='host')hostWaiter=resolve;else matchWaiter=resolve;});
+        menuMsg('Opponent found. Connecting…');
+      },
+      connect:async pair=>{
+        if(!active())throw new Error('Search cancelled');
+        if(pair.role==='guest')await link.dialRegistered(pair.hostPeer);
+        const ok=await Promise.race([paired,sleep(16000).then(()=>false)]);
+        if(!ok)throw new Error('Could not connect to your opponent. Please try again.');
+      },
+      onRelay:servers=>{if(queueSearch===finder&&link)link.setRelayServers(servers);},
+      onStatus:t=>{if(queueSearch===finder){if(searching)menuMsg(t);else netBadge(t);}},
+    });
+    if(!active())return;
+    hostWaiter=null;matchWaiter=null;setSearching(false);enterLobby();
+  } catch(e) {
+    if(id!==searchId)return;
+    resetAll();menuMsg(e.message||'Multiplayer could not connect. Please try again.',true);
+  }
+}
+
 $('randomBtn').onclick = async () => {
   sfx.unlock();
+  if(service.enabled)return findQueuedOpponent();
   if (hideIp && !hasRelay()) {      // relay-only needs a TURN relay (see ice.js); without one a random match could never connect
     menuMsg('Random matches always hide your IP behind a relay server, and none is set up. Invite a friend with a private match instead.', true);
     return;
@@ -500,7 +536,7 @@ const allowPhotos = () => matchKind === 'private' || matchKind === 'computer';  
 const pictureOf = m => ({ ...genWire(m.skin,m),cb:m.cb, photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, sk: m.sk, ss: m.ss, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
-  if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined });
+  if (me === 'guest') send({ t: 'hello', v: PROTOCOL, kind: matchKind, name: names.guest, flag: myFlag(), token: link?.token || undefined, pair: link?.pairProof?.() });
   if (me === 'host') {                                     // a connection that never says hello must not hog the room
     clearTimeout(helloTimer);
     helloTimer = setTimeout(() => { if (me === 'host' && !names.guest && !pendingGuest) link?.dropGuest(); }, 8000);
@@ -670,7 +706,7 @@ function acceptGuest(name) {
   flags.guest = countryCode(pendingFlag);
   link?.setToken(guestToken);
   saveSession();
-  send({ t: 'welcome', v: PROTOCOL, kind: matchKind, name: names.host, yourName: name, flag: myFlag(), settings, ready: ready.host });
+  send({ t: 'welcome', v: PROTOCOL, kind: matchKind, name: names.host, yourName: name, flag: myFlag(), settings, ready: ready.host, pair: link?.pairProof?.() });
   hostWaiter?.(true);
   renderLobby();
 }
@@ -2054,6 +2090,7 @@ $('againBtn').onclick = () => {
 // Reset
 // ---------------------------------------------------------------------------------------------
 function resetAll() {
+  const oldQueue=queueSearch;queueSearch=null;if(oldQueue)queueCleanup=Promise.all([queueCleanup,oldQueue.cancel()]).then(()=>{});
   token++;
   inGame = false;
   round = null;

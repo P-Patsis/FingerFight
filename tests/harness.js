@@ -65,9 +65,9 @@ export class Conn {
 export const network = new Map();
 export const peers = [];
 export class FakePeer {
-  constructor(id) {
-    if (id && typeof id === 'object') id = undefined;      // like PeerJS: new Peer(options) with no id
-    this.id = id; this.h = {}; this.conn = null; peers.push(this);
+  constructor(id, options) {
+    if (id && typeof id === 'object') { options = id; id = undefined; }      // like PeerJS: new Peer(options) with no id
+    this.id = id; this.options = options || {}; this.h = {}; this.conn = null; peers.push(this);
     setTimeout(() => {
       if (id && network.has(id) && network.get(id) !== this) { this.emit('error', { type: 'unavailable-id' }); return; }
       if (id) network.set(id, this);
@@ -78,11 +78,11 @@ export class FakePeer {
   emit(e, ...a) { for (const f of this.h[e] || []) f(...a); }
   /** Like PeerJS: connecting to an id nobody holds gives a 'peer-unavailable' error on this peer. */
   connect(id) {
-    const c = new Conn(); this.conn = c;
+    const c = new Conn(); c.peer = id; this.conn = c;
     setTimeout(() => {
       const target = network.get(id);
       if (!target) { this.emit('error', { type: 'peer-unavailable' }); return; }
-      const remote = new Conn(); c.remote = remote; remote.remote = c;
+      const remote = new Conn(); remote.peer = this.id; c.remote = remote; remote.remote = c;
       target.emit('connection', remote);
       c.emit('open'); remote.emit('open');
     }, 0);

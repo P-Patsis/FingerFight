@@ -9,7 +9,17 @@ export class Service{
  }
  get enabled(){return !!this.base;}
  save(result){this.token=result.token;this.user=result.user;try{this.storage?.setItem('ff-session:'+this.base,JSON.stringify(result));}catch{ /* memory session */ }return result;}
- async request(path,method='GET',data){if(!this.enabled)throw new Error('Online accounts are not connected');const res=await this.fetch(this.base+path,{method,headers:{'Content-Type':'application/json',...(this.token?{Authorization:'Bearer '+this.token}:{})},...(data===undefined?{}:{body:JSON.stringify(data)}),signal:AbortSignal.timeout(15000)});const result=await res.json();if(!res.ok)throw new Error(result.error||'Could not complete request');return result;}
+ async request(path,method='GET',data){if(!this.enabled)throw new Error('Online accounts are not connected');const res=await this.fetch(this.base+path,{method,headers:{'Content-Type':'application/json',...(this.token?{Authorization:'Bearer '+this.token}:{})},...(data===undefined?{}:{body:JSON.stringify(data)}),signal:AbortSignal.timeout(15000)});const result=await res.json();if(!res.ok){const e=new Error(result.error||'Could not complete request');e.status=res.status;throw e;}return result;}
+ async ensurePlayer(name){
+  if(this.token){try{const result=await this.request('/me');this.user=result.user;return this.user;}catch(e){if(e.status!==401)throw e;this.token=null;this.user=null;}}
+  return this.save(await this.request('/players/session','POST',{name})).user;
+ }
+ async prepareRelay(){
+  if(this.relayUntil>Date.now()+60000)return this.relayServers;
+  const r=await this.request('/rtc/config','POST',{}),ice=r.iceServers;
+  if(!Array.isArray(ice)||ice.length<1||ice.length>8||!Number.isFinite(r.expires)||r.expires*1000<Date.now()+60000||!ice.every(s=>s&&typeof s.username==='string'&&s.username.length<=1024&&typeof s.credential==='string'&&s.credential.length<=1024&&(Array.isArray(s.urls)?s.urls:[s.urls]).length>0&&(Array.isArray(s.urls)?s.urls:[s.urls]).length<=8&&(Array.isArray(s.urls)?s.urls:[s.urls]).every(u=>typeof u==='string'&&u.length<=512&&/^turns?:[^\s]+$/.test(u))))throw new Error('Multiplayer relay is unavailable');
+  this.relayServers=ice;this.relayUntil=r.expires*1000;return ice;
+ }
  async guest(name){return this.save(await this.request('/auth/guest','POST',{name}));}
  async register(name){if(!this.credentials)throw new Error('Passkeys are not supported by this browser');if(!this.token)await this.guest(name);const o=await this.request('/auth/register/options','POST',{}),options={...o.options,challenge:decode(o.options.challenge),user:{...o.options.user,id:decode(o.options.user.id)},excludeCredentials:(o.options.excludeCredentials||[]).map(c=>({...c,id:decode(c.id)}))};const credential=await this.credentials.create({publicKey:options});if(!credential)throw new Error('Passkey creation cancelled');return this.save(await this.request('/auth/register/verify','POST',{id:o.id,response:credentialJSON(credential)}));}
  async login(){if(!this.credentials)throw new Error('Passkeys are not supported by this browser');const o=await this.request('/auth/login/options','POST',{}),options={...o.options,challenge:decode(o.options.challenge),allowCredentials:(o.options.allowCredentials||[]).map(c=>({...c,id:decode(c.id)}))},credential=await this.credentials.get({publicKey:options});if(!credential)throw new Error('Sign in cancelled');return this.save(await this.request('/auth/login/verify','POST',{id:o.id,response:credentialJSON(credential)}));}
