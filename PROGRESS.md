@@ -3,7 +3,7 @@
 ## 2026-11-06 — Collapsible hand sizing
 
 - Changed: Finger width, Palm width and Coverage, plus Reset fit, are grouped in a native **Adjust Hand Size** disclosure in the shared Hand controls (Store/Profile/try-on). Closed initially; the open state survives control rerenders while editing. Slider ranges, live fitting, persistence and validated wire data are unchanged. Native keyboard/tap disclosure and a 44px summary target; bounded slider layout retained.
-- Verified: focused controls/fit/SW checks **11/11 pass**; full game suite **384/384 passes** (64 s). SW restamped to `ff-2a7bc471`. Android version bumped to code 2 / `0.1.1-prototype`; APK rebuild in progress. Real-phone disclosure/slider review remains open; no rig, tracking or particle changes.
+- Verified: focused controls/fit/SW checks **11/11 pass**; full game suite **384/384 passes** (64 s). SW restamped to `ff-2a7bc471`. Android version code 2 / `0.1.1-prototype` builds successfully (3m10s); APK content and signature checks pass. New APK copied to `/sdcard/Download/FingerFight-0.1.1-debug.apk`; 17,224,331 bytes; SHA-256 `aa46ed4112541e7e806b407627e69b108e5ba09d57b7a90795804ae7be1c8e2c`. Live main.js, CSS and SW match the pushed UI files. Real-phone disclosure/slider review remains open; no rig, tracking or particle changes. The earlier APK installation hang is still undiagnosed: downloaded APK integrity/signature checks passed, local storage was 98% full (~2.8GB free), and phone model/Android version/installer screen details were requested. This UI build is not an installer fix.
 
 
 ## 2026-11-06 — Capacitor Android prototype — debug APK built
