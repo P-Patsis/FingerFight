@@ -2,7 +2,7 @@
 
 Capacitor 8 packages the existing web game in Android System WebView. It is separate from Cloudflare (the undeployed account/social backend). This prototype keeps guest PeerJS multiplayer and local computer practice; no cloud account or paid service is required to build it. PeerJS still needs internet, and restrictive networks may need TURN.
 
-Verified build: `assembleDebug` succeeds; Android v2 signature and APK contents verify; game tests **384/384 pass**. APK is 17,224,331 bytes (about 16.4 MiB), SHA-256 `aa46ed4112541e7e806b407627e69b108e5ba09d57b7a90795804ae7be1c8e2c`. Current APK: version code 2 / `0.1.1-prototype`, also copied to phone Downloads as `FingerFight-0.1.1-debug.apk`. Device testing below is still pending. No FPS measurements have been taken for this APK.
+Verified build: `assembleDebug` succeeds; Android v2 signature and APK contents verify; game tests **386/386 pass**. APK is 17,224,647 bytes (about 16.4 MiB), SHA-256 `ba8466a842cd3a090054e299297a3ebf188dbd9934a69d90e463a108b0ba1503`. Current APK: version code 3 / `0.1.2-prototype`, also copied to phone Downloads as `FingerFight-0.1.2-debug.apk`. Device testing below is still pending. No FPS measurements have been taken for this APK.
 
 ## Build on this ARM64 phone
 
