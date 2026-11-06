@@ -1,12 +1,38 @@
 {
   "main_module": "worker.mjs",
-  "compatibility_date": "2026-11-05",
-  "compatibility_flags": ["nodejs_compat"],
-  "observability": {"enabled": true, "head_sampling_rate": 0.1, "redact_query_string": true, "traces": {"enabled": true, "head_sampling_rate": 0.1}},
+  "compatibility_date": "2026-11-06",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "redact_query_string": true,
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1
+    }
+  },
   "bindings": [
-    {"type": "d1", "name": "DB", "id": "SET_AFTER_DATABASE_CREATION"},
-    {"type": "plain_text", "name": "ALLOWED_ORIGINS", "text": "https://p-patsis.github.io"},
-    {"type": "plain_text", "name": "APP_ORIGIN", "text": "https://p-patsis.github.io"},
-    {"type": "plain_text", "name": "RP_ID", "text": "p-patsis.github.io"}
+    {
+      "type": "d1",
+      "name": "DB",
+      "id": "SET_AFTER_DATABASE_CREATION"
+    },
+    {
+      "type": "plain_text",
+      "name": "ALLOWED_ORIGINS",
+      "text": "https://p-patsis.github.io,https://localhost"
+    },
+    {
+      "type": "plain_text",
+      "name": "APP_ORIGIN",
+      "text": "https://p-patsis.github.io"
+    },
+    {
+      "type": "plain_text",
+      "name": "RP_ID",
+      "text": "p-patsis.github.io"
+    }
   ]
 }

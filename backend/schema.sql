@@ -14,3 +14,10 @@ CREATE TABLE IF NOT EXISTS matches(id TEXT PRIMARY KEY, host TEXT NOT NULL REFER
 CREATE INDEX IF NOT EXISTS matches_players ON matches(host,guest,state);
 CREATE TABLE IF NOT EXISTS turns(match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE, round INTEGER NOT NULL, player TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, commitment TEXT NOT NULL, revealed INTEGER NOT NULL DEFAULT 0, value INTEGER, PRIMARY KEY(match_id,round,player));
 CREATE TABLE IF NOT EXISTS limits(key TEXT PRIMARY KEY, n INTEGER NOT NULL, until INTEGER NOT NULL);
+
+-- Matchmaking leases are separate from the durable scored match. Pair allocation is one atomic batch.
+CREATE TABLE IF NOT EXISTS queue_tickets(player TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, client TEXT NOT NULL, peer TEXT UNIQUE NOT NULL, joined INTEGER NOT NULL, expires INTEGER NOT NULL, ready INTEGER NOT NULL DEFAULT 0, pair_id TEXT);
+CREATE INDEX IF NOT EXISTS queue_waiting ON queue_tickets(ready,pair_id,joined,expires);
+CREATE TABLE IF NOT EXISTS queue_pairs(id TEXT PRIMARY KEY REFERENCES matches(id) ON DELETE CASCADE, secret TEXT NOT NULL, host_peer TEXT NOT NULL, guest_peer TEXT NOT NULL, ack_host INTEGER NOT NULL DEFAULT 0, ack_guest INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'pending');
+
+CREATE INDEX IF NOT EXISTS queue_pair_expiry ON queue_pairs(expires);
