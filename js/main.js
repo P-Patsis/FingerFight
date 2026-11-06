@@ -1358,7 +1358,7 @@ function skeletonColorRow(box) {
  * The colour picker of the CURRENT category (the Profile's type chip / the Store's type chip), ONE line: the full colour picker (any colour), a handful of
  * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
  */
-let fitControlsOpen = false;
+const fitControlsOpen = {profile:false,store:false};
 /** Keep the list in a full-width collapsible panel, with its button between colour and sizing. */
 function mountSavedLooks(box,row){
   if(!inProfileCust())return;
@@ -1371,8 +1371,9 @@ function mountSavedLooks(box,row){
 }
 function renderFitControls(box){
   const section=el('details','fit-settings'),content=el('div','fit-settings-content');
-  section.open=fitControlsOpen;
-  section.ontoggle=()=>{fitControlsOpen=section.open;};
+  const scope=inProfileCust()?'profile':'store';
+  section.open=fitControlsOpen[scope];
+  section.ontoggle=()=>{fitControlsOpen[scope]=section.open;};
   section.append(el('summary','','Adjust Hand Size'),content);
   let row=box.querySelector('.cprow');
   if(!row){row=el('div','cprow');row.append(el('span','colour-spacer'));box.append(row);}

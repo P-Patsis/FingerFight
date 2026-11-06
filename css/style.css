@@ -625,11 +625,18 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .idrow .lab { font-size: 12px; width: auto; }
 .flag-in { flex: 0 0 48px; width: 48px; }
 .flag-in input { width: 48px; padding: 6px 4px; }
-.cat-color .cprow.has-looks { grid-template-columns: 44px 88px minmax(0, 1fr); gap: 8px; }
-.saved-looks-toggle { min-width: 0; min-height: 44px; padding: 8px 2px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.cat-color .cprow.has-looks { grid-template-columns: 44px 104px minmax(0, 1fr); gap: 8px; }
+.saved-looks-toggle { min-width: 0; min-height: 44px; padding: 12px 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-align: center; box-sizing: border-box; cursor: pointer; }
 .saved-looks-toggle::before { content: '▸ '; }
 .saved-looks-toggle[aria-expanded="true"]::before { content: '▾ '; }
 .saved-looks-panel { width: 100%; min-width: 0; padding-top: 4px; }
 .saved-looks-panel .looks:empty { display: none; }
 
-.cprow.has-looks .fit-settings-content { width: calc(100% + 148px); margin-left: -148px; }
+.cprow.has-looks .fit-settings-content { width: calc(100% + 164px); margin-left: -164px; }
+
+/* Store sections keep their natural height instead of collapsing as scroll-container flex/grid items. */
+#store > * { flex-shrink: 0; }
+#storeSticky { display: flex; flex-direction: column; align-items: stretch; flex: 0 0 auto; }
+#storeSticky > *, #storeSticky .store-live > *, #storeSticky .wear-top > *, #storeSticky .cat-color > * { flex-shrink: 0; }
+#storeCats, #storeLayers { flex: 0 0 auto; min-height: 44px; align-items: center; }
+#storeGrid { flex: 0 0 auto; }

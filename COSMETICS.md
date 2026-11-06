@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Store height and Saved looks alignment
+
+Store's preview/controls/category rows and item carousel keep their natural heights inside the scrolling layout. Opening a colour or fitting panel no longer makes the rows shrink away; fitting disclosures now have separate Profile/Store state. Saved looks uses centred 14px bold text matching Adjust Hand Size, with the full-width fitting sliders preserved. No cosmetic, rig, counting, particle or network changes.
+
+
 ## 2026-11-06 — Saved looks disclosure in the toolbar
 
 The customise toolbar is colour picker, Saved looks, Adjust Hand Size. Saved looks opens a full-width list/edit panel and starts collapsed; no saved-list space is reserved below the preview. It survives fitting/colour rerenders and collapses when leaving. The preview Save icon and all saved-look data stay unchanged. Name and Country now share one continuous row with a 48px country field. No cosmetic, rig, count or network data changes.

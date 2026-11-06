@@ -35,3 +35,19 @@ test('preview actions are inside the viewer, Store preview/categories stick abov
  assert.ok(html.indexOf('id="sWearList"')>html.indexOf('id="storeGrid"'));
  assert.match(html,/id="storeGrid" class="store-grid hrow items-row"/);
 });
+
+test('Store has independent fitting state and keeps categories/cards outside collapsible controls',async()=>{
+ $('profileBtn').onclick();$('custBtn').onclick();await until(()=>$('profileGrid').children.length,'owned items');
+ const profileRow=$('catColor').querySelector('.cprow'),profileFit=profileRow.children.find(c=>c.tagName==='DETAILS');profileFit.open=true;profileFit.ontoggle();
+ $('profileStore').onclick();$('storeLayers').children.find(c=>c.dataset.value==='base').onclick();
+ const storeRow=$('catColor').querySelector('.cprow'),fit=storeRow.children.find(c=>c.tagName==='DETAILS');
+ assert.equal(fit.open,false,'Store does not inherit an expanded Profile menu');assert.equal(storeRow.classList.contains('has-looks'),false);
+ const count=$('storeGrid').children.length;fit.open=true;fit.ontoggle();const picker=openPicker($('catColor'));picker.done();
+ assert.equal($('storeGrid').children.length,count);assert.ok($('storeCats').children.length>0);assert.ok($('storeLayers').children.length>0);
+ $('storeBack').onclick();$('profileBtn').onclick();$('custBtn').onclick();
+ assert.equal($('catColor').querySelector('.cprow').children.find(c=>c.tagName==='DETAILS').open,true,'Profile keeps its own fitting state');$('profileBack').onclick();
+ const css=readFileSync(new URL('../css/style.css',import.meta.url),'utf8');
+ assert.match(css.slice(css.lastIndexOf('#store > *')), /flex-shrink: 0/);
+ assert.match(css.slice(css.lastIndexOf('#storeSticky {')), /^#storeSticky \{[^}]*display: flex;[^}]*flex: 0 0 auto;/);
+ assert.match(css.slice(css.lastIndexOf('#storeGrid {')), /^#storeGrid \{[^}]*flex: 0 0 auto;/);
+});

@@ -1,5 +1,12 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — Store sections retain their height
+
+- Give Store's direct scrolling sections fixed flex shrink behavior, and use a column inside the pinned group with non-shrinking preview/colour/category children. Category rows retain a 44px minimum; the item carousel retains its natural height. Expanded controls overflow by scrolling instead of squashing the rows below them. Scope these rules to Store.
+- Track fitting disclosure state independently for Profile and Store so opening Profile's controls cannot unexpectedly expand Store's sticky panel. Fitting values remain shared and validated as before.
+- Match Saved looks to the size menu's 14px bold text and 44px touch target, centre its label, give it a 104px slot and preserve full-width sliders with the updated toolbar offset. Keep the rest of Profile's layout intact.
+
+
 ## 2026-11-06 — One identity row and collapsed saved looks
 
 - Keep Name, its input, Country/toggle and its optional input in one non-wrapping horizontal row. Let the name consume remaining width; constrain the country input to 48px and use GR as its placeholder. Preserve country-name/code parsing and flag privacy preferences.
