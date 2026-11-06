@@ -102,3 +102,5 @@ Computer practice is available from the menu: a local opponent chooses its shown
 
 
 The lobby now has collapsed Match settings, one Arena carousel and a horizontal Music carousel. Customise and Try on sit directly under the hand preview. Private-room joins always require approval. See [backend/README.md](backend/README.md) for the implemented, locally tested account/social/match API and its explicit deployment/integration gates; no backend is deployed yet.
+
+Cosmetic charge effects: in camera try-on or your own match puppet, hold a fist for about a second, then extend a finger to release. Effects are themed to the chosen hand; reduced-motion disables them. This drawing state never changes finger counts or network messages. Store uses a sticky preview/categories and horizontal unowned-item cards; the equipped stack is below.

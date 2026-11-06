@@ -2,7 +2,7 @@
 
 Capacitor 8 packages the existing web game in Android System WebView. It is separate from Cloudflare (the undeployed account/social backend). This prototype keeps guest PeerJS multiplayer and local computer practice; no cloud account or paid service is required to build it. PeerJS still needs internet, and restrictive networks may need TURN.
 
-Verified build: `assembleDebug` succeeds; Android v2 signature and APK contents verify; game tests **386/386 pass**. APK is 17,224,647 bytes (about 16.4 MiB), SHA-256 `ba8466a842cd3a090054e299297a3ebf188dbd9934a69d90e463a108b0ba1503`. Current APK: version code 3 / `0.1.2-prototype`, also copied to phone Downloads as `FingerFight-0.1.2-debug.apk`. Device testing below is still pending. No FPS measurements have been taken for this APK.
+Verified build: `assembleDebug` succeeds; Android v2 signature and APK contents verify; game tests **392/392 pass**. APK is 17,230,071 bytes (about 16.4 MiB), SHA-256 `7cc484686271aa007068b079acb1be035f4b16d2ef7910e30a5603558e3de3e7`. Current APK: version code 4 / `0.1.3-prototype`, also copied to phone Downloads as `FingerFight-0.1.3-debug.apk`. Device testing below is still pending. No FPS measurements have been taken for this APK.
 
 ## Build on this ARM64 phone
 
@@ -30,7 +30,7 @@ Camera permission is requested when camera use starts. No microphone permission.
 - Check notch/status/navigation bar spacing, keyboard, narrow-screen sliders and hardware Back/leave confirmation.
 - Use two phones for a complete private match, reconnect after background/Wi-Fi changes, results, customisation and rematch. Check result-image saving/sharing and screen-awake behaviour too; WebView support can differ from Chrome.
 - Check camera indicator goes off in background, then explicitly restart camera. Confirm no tracking loop survives closing try-on.
-- Compare sustained FPS/detect/draw timings against Chrome with the same skin and lighting; review fire, sand, Ghost/Chameleon and elemental effects. No FPS gain or parity is claimed until measured.
+- Compare sustained FPS/detect/draw timings against Chrome with the same skin and lighting; review fire, sand, Ghost/Chameleon and elemental effects. Check fist charge/release with one/two fingers, thumb-only, hand loss and reduced-motion; review compact viewer controls and sticky carousels. No FPS gain or parity is claimed until measured.
 
 Play preparation later: release signing, store listing, privacy/data-safety disclosures, age/content assessment and the account's required testing track. No Play upload or backend deployment is part of this build.
 
