@@ -573,3 +573,8 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 #social input { min-width:0; max-width:100%; }
 
 #storeSnap, #wearCamOff { min-height:44px; border-radius:12px; }
+
+.fit-settings { width: 100%; min-width: 0; }
+.fit-settings > summary { cursor: pointer; font-weight: 700; padding: 10px 0; min-height: 44px; box-sizing: border-box; }
+.fit-settings-content { display: grid; gap: 8px; padding-bottom: 8px; }
+.fit-settings-content > .btn { justify-self: start; }

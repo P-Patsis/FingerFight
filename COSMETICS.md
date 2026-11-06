@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Adjust Hand Size
+
+Finger width, Palm width, Coverage and Reset fit now sit inside the initially collapsed **Adjust Hand Size** section of the shared Hand category. Open it to fit the puppet live; it stays open as values save. Existing values, ranges, persistence and opponent-picture validation are unchanged.
+
+
 ## 2026-11-06 — Android prototype
 
 The Capacitor debug APK bundles the existing cosmetic assets and hand-tracking runtime/model. No rig, drawing, particle caps, cosmetic validation or finger-count logic changed. Browser sources and PWA updates remain independent. Android storage starts separately from browser/PWA equipment and saved looks. Live-camera effects/FPS, Ghost/Chameleon camera masking and all fitting controls still need real-phone review inside Android WebView; compile success is not visual approval. See ANDROID.md.

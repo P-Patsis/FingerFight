@@ -1,5 +1,10 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — Compact hand fitting controls
+
+- Hide Finger width, Palm width, Coverage and Reset fit behind an initially collapsed **Adjust Hand Size** disclosure. Preserve its open state during editing rerenders; leave the fitting values, live camera path and validation unchanged.
+
+
 ## 2026-11-06 — Package the existing game with Capacitor
 
 - Use current Capacitor 8 and bundled local web assets on secure https://localhost, retaining the existing rig/MediaPipe version/P2P game. Do not point a production wrapper at a remote server.url. Keep model/assets offline-capable and native updates APK-based; PWA updates remain independent.

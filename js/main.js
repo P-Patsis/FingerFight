@@ -1314,15 +1314,21 @@ function skeletonColorRow(box) {
  * The colour picker of the CURRENT category (the Profile's type chip / the Store's type chip), ONE line: the full colour picker (any colour), a handful of
  * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
  */
+let fitControlsOpen = false;
 function renderFitControls(box){
+  const section=el('details','fit-settings'),content=el('div','fit-settings-content');
+  section.open=fitControlsOpen;
+  section.ontoggle=()=>{fitControlsOpen=section.open;};
+  section.append(el('summary','','Adjust Hand Size'),content);
+  box.append(section);
   for(const [key,label]of [['f','Finger width'],['p','Palm width'],['c','Coverage']]){
     const ctl=el('div','ctl fit-control'),val=el('b','',gen.fit[key]+'%'),sl=document.createElement('input');
     sl.type='range';sl.min=String(FIT_LIMITS[key][0]);sl.max=String(FIT_LIMITS[key][1]);sl.step=key==='c'?'1':'5';sl.value=String(gen.fit[key]);sl.dataset.act='fit-'+key;sl.setAttribute('aria-label',label);
     sl.oninput=()=>{setGen({fit:{...gen.fit,[key]:Number(sl.value)}});val.textContent=gen.fit[key]+'%';liveColor();};
     sl.onchange=()=>{store.set('ff-fit',JSON.stringify(gen.fit));syncStyle();};
-    ctl.append(el('span','fine',label),sl,val);box.append(ctl);
+    ctl.append(el('span','fine',label),sl,val);content.append(ctl);
   }
-  const reset=el('button','btn small','Reset fit');reset.dataset.act='fit-reset';reset.onclick=()=>{setGen({fit:{...FIT_DEFAULT}});store.set('ff-fit',JSON.stringify(gen.fit));syncStyle();};box.append(reset);
+  const reset=el('button','btn small','Reset fit');reset.dataset.act='fit-reset';reset.onclick=()=>{setGen({fit:{...FIT_DEFAULT}});store.set('ff-fit',JSON.stringify(gen.fit));syncStyle();};content.append(reset);
 }
 
 function renderCatColor() {

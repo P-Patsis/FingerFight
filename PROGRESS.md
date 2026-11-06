@@ -1,5 +1,11 @@
 # Finger Fight: progress
 
+## 2026-11-06 — Collapsible hand sizing
+
+- Changed: Finger width, Palm width and Coverage, plus Reset fit, are grouped in a native **Adjust Hand Size** disclosure in the shared Hand controls (Store/Profile/try-on). Closed initially; the open state survives control rerenders while editing. Slider ranges, live fitting, persistence and validated wire data are unchanged. Native keyboard/tap disclosure and a 44px summary target; bounded slider layout retained.
+- Verified: focused controls/fit/SW checks **11/11 pass**; full game suite **384/384 passes** (64 s). SW restamped to `ff-2a7bc471`. Android version bumped to code 2 / `0.1.1-prototype`; APK rebuild in progress. Real-phone disclosure/slider review remains open; no rig, tracking or particle changes.
+
+
 ## 2026-11-06 — Capacitor Android prototype — debug APK built
 
 - Changed: pinned Capacitor 8.6 Android wrapper, camera-only permission, portrait activity, existing icon, dark splash, debug package suffix and project-local signing/cache paths. Public game shell and checksum-verified existing MediaPipe 0.10.14/model are bundled; native service-worker registration is disabled. Android-only safe-area variables, public room-share URL and App lifecycle/Back bridge preserve browser sources.
