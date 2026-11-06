@@ -197,7 +197,7 @@ test('sand: the swarm scatters with the collapse and converges home with the ref
 
 test('sand: the particle system shakes, collapses, re-forms, never passes 90 particles / 6 emitters, and honours reduced motion', () => {
   const sand = skinOf('sand');
-  assert.ok(sand.sand && sand.particles.length === 1 && sand.particles[0].effect === 'grain', 'sheds grains through ONE emitter (1 of 6)');
+  assert.ok(sand.sand && sand.particles.length === 3 && sand.particles.some(e=>e.effect==='dust') && sand.particles.some(e=>e.effect==='grain'), 'dust, grains and chunks share the existing six-emitter limit');
   const ps = new PS.ParticleSystem({ random: (() => { let s = 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; })() });
   ps.setEmitters(sand.particles); ps.setSand(sand.sand);
   assert.equal(ps.active, true);

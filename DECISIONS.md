@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — Gesture-powered cosmetic effects and a compact preview workspace
+
+- Keep only the custom colour picker in the toolbar; put hand fitting beside it, and Original reset inside the picker. Put labelled icon controls inside the preview rather than below it. Replace misleading Store Snapshot with a true camera toggle. Mirror Customise's sticky preview/categories + horizontal items layout in Store; move the equipped stack/Clear all below the items.
+- Implement charge/release as a local graphics state machine on the existing tracking loop, not a new gesture/counting model or network field. Hold a fist, debounce, build power, then release on any deliberately extended finger (including one/two-finger floor choices). Cancel on lost tracking, reduced-motion or camera stop, and reset on skin/element changes.
+- Give Sand warm Earth-style tiles and extra dust while preserving existing shake/reassembly and particle accounting. Water/Fire/Earth/Air and other skin families get themed charging/release feedback, with no extra timers, dependencies, copyright art or particle-cap exceptions. Share current live tile geometry where coordinate identity is valid; snapshots recompute their own geometry.
+- Canvas-exported review images and proxy-context CPU timings are useful checks, not substitutes for actual Android/browser screenshots and FPS. Keep those phone checks explicitly open.
+
+
 ## 2026-11-06 — Local practice is not a stranger match
 
 - Restrict camera views only for random online matches. Local computer practice may show the player's own camera and local result JPEG; never start a peer for this. Keep private incoming-photo display preferences separate from local practice pictures, and use honest local-only hints.

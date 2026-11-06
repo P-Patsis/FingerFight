@@ -1,3 +1,4 @@
+import { pickColor, originalColor } from './pickerhelp.js';
 // The Skeleton category: six distinct styles, the chosen style id travels as `ss` (validated like any cosmetic id), the Hand cards live in the Hand
 // category, and picking an opponent view opens the matching category.
 import test from 'node:test';
@@ -61,7 +62,7 @@ test('Skeleton category: six style cards, tapping one saves it and marks it, the
   assert.equal(globalThis.localStorage.getItem('ff-skelstyle'), 'bold');
   assert.deepEqual(cards().filter(c => c.classList.contains('eq')).map(c => c.dataset.id), ['bold']);
   const row = $('catColor').children.find(c => c.classList.contains('cprow'));
-  assert.equal(row.dataset.layer, 'skeleton'); row.children.find(x => x.dataset.color === '#e42525').onclick();
+  assert.equal(row.dataset.layer, 'skeleton'); pickColor($('catColor'), '#e42525');
   assert.equal(globalThis.localStorage.getItem('ff-skel'), '#e42525');
   assert.equal(b.byId.get('skelRow'), undefined, 'no duplicate skeleton colour row');
   $('custDone').onclick(); $('profileBack').onclick();

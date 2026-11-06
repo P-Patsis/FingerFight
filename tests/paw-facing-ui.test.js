@@ -56,14 +56,16 @@ test('category switches reset card and screen scrolling after rebuild; equipping
   const flush=()=>{for(const cb of queue.splice(0))cb();};
   try{
     const g=$('storeGrid'),screen=$('store');
+    g.getBoundingClientRect=()=>({top:-180,height:150});
+    $('storeSticky').getBoundingClientRect=()=>({top:0,height:320});
     g.scrollLeft=120;g.scrollTop=240;screen.scrollTop=600;
     screen.getBoundingClientRect=()=>({top:0,height:600});
     screen.querySelector=selector=>selector==='.topbar'?{getBoundingClientRect:()=>({top:0,height:40})}:oldQuery.call(screen,selector);
     $('storeCats').getBoundingClientRect=()=>({top:100,height:35});
     $('storeLayers').children.find(c=>c.dataset.value==='nails').onclick();flush();
-    assert.equal(g.scrollLeft,0);assert.equal(g.scrollTop,0);assert.equal(screen.scrollTop,648);
+    assert.equal(g.scrollLeft,0);assert.equal(g.scrollTop,0);assert.equal(screen.scrollTop,92);
     assert.ok(g.children.every(c=>!c.dataset.id||c.classList.contains('locked')));
-    assert.equal(screen.scrollTop,648,'rendering locked items does not change category alignment');
+    assert.equal(screen.scrollTop,92,'rendering locked items does not change category alignment');
     $('storeBack').onclick();$('profileBtn').onclick();$('custBtn').onclick();flush();
     const profile=$('profile'),cards=$('profileGrid');
     profile.scrollTop=900;cards.scrollLeft=200;cards.scrollTop=40;

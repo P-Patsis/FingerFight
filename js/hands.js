@@ -234,7 +234,8 @@ export class HandCam {
     this.particles.setEmitters(v.endsWith('puppet') ? (localCloak ? rec.emitters.slice(rec.skin.particles.length) : rec.emitters) : []);
     if (!localCloak) this.cloak.clear();
     if (!v.endsWith('puppet')) this.comic.clear();
-    this.particles.setElement(v.endsWith('puppet') && rec.skin.id === 'elemental' ? gen.el : null);
+    this.particles.setHandStyle(v.endsWith('puppet') ? rec.skin.id : null);
+    this.particles.setElement(v.endsWith('puppet') ? rec.skin.id==='sand'?'sand':rec.skin.id==='elemental'?gen.el:null : null);
     this.particles.setFit(rec.skin.fit);
     this.particles.setSand(v.endsWith('puppet') ? rec.skin.sand : null);       // a sand hand crumbles when shaken (js/sand.js)
     this.video.classList?.toggle('feed-hidden', !v.startsWith('photo-'));   // Only explicitly selected photo views show camera pixels.
@@ -242,6 +243,7 @@ export class HandCam {
 
   #drawOverlay(hands, scores = [], count = 0) {
     const w = this.canvas.width, h = this.canvas.height;
+    if(!hands.length)this.particles.update(0,[]);
     if(!hands.length&&this.overlay.rec?.skin.id==='comic')this.comic.clear();
     let cloakPts = null;
     if (this.overlay.cloak) {
@@ -275,7 +277,7 @@ export class HandCam {
   }
 
   #drawStyled(ctx, pts, rec, backs, dynamics = null, cloak = this.overlay.cloak) {
-    const elemental=rec.skin.id==='elemental'&&this.particles.drawBody(ctx,pts);
+    const elemental=['elemental','sand'].includes(rec.skin.id)&&this.particles.drawBody(ctx,pts);
     if (!elemental && (!cloak || !CLOAK_SKINS.includes(rec.skin.id))) return drawPuppet(ctx, this.particles.visualHands(pts), rec.skin, rec.layers, backs, this.particles.bodyAlphas(), dynamics, this.particles.partAlphas());
     // Cloak is real local camera compositing. Never repaint a cartoon hand over it.
     pts.forEach((lm,i) => drawPlan(ctx, rigPlan(lm, rec.skin, rec.layers, backs?.[i], dynamics?.[i]).filter(s => s.part.includes('@')), 1, dynamics?.[i]?.animTime ?? null));

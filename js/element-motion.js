@@ -25,8 +25,8 @@ export class ElementMotion{
   return hands.map((h,i)=>h.map((p,j)=>{
    const s=this.states[i];if(!s)return p;
    const l=s.lag[j],wave=Math.sin(this.time*5-j*.65),amp=s.palm*(mode==='water'?.018:.007)*(1+Math.min(2,s.speed));
-   const gain=mode==='water'?1:mode==='air'?.65:.22;
-   return {...p,x:p.x+l.x*gain+wave*amp,y:p.y+l.y*gain+Math.cos(this.time*4+j*.5)*amp};
+   const gain=(mode==='water'?1:mode==='air'?.65:.22)*(mode==='water'?1-(s.charge||0)*.8:1);
+   return {...p,x:p.x+l.x*gain+wave*amp*(mode==='water'?1-(s.charge||0)*.85:1),y:p.y+l.y*gain+Math.cos(this.time*4+j*.5)*amp*(mode==='water'?1-(s.charge||0)*.85:1)};
   }));
  }
  // Water has liquid currents on the body, not the air element's orbiting arcs.

@@ -1,3 +1,4 @@
+import { hexToHsv } from '../js/colorpick.js';
 // Drives the in-app colour picker the way a finger does: tap the rainbow button, drag in the square, move the hue slider, tap Done.
 export const panelOf = box => box.children.find(c => c.dataset?.act === 'panel');
 export function openPicker(box) {
@@ -7,3 +8,11 @@ export function openPicker(box) {
     drag: (x, y) => { const s = panelOf(box).children[0]; s.onpointerdown({ clientX: x, clientY: y, pointerId: 1 }); },
     setHue: v => { const h = panelOf(box).children[1]; h.value = String(v); h.oninput(); } };
 }
+
+// Arbitrary colours now use the retained custom picker; presets no longer occupy the toolbar.
+export function pickColor(box, color, close=true) {
+  const hsv=hexToHsv(color),pk=openPicker(box),r=pk.sv.getBoundingClientRect();
+  pk.setHue(hsv.h);pk.drag(r.left+hsv.s*r.width,r.top+(1-hsv.v)*r.height);
+  if(close)pk.done();
+}
+export function originalColor(box) { openPicker(box).panel.children[2].children[3].onclick(); }

@@ -1,3 +1,4 @@
+import { pickColor, originalColor } from './pickerhelp.js';
 // Live try-on (Test snap) in the Store and the Profile: the camera turns on, draws everything worn on the real hand in the worn order,
 // follows live changes, fires the snap effect, turns off when the screen is left, and says why when it cannot start.
 import test from 'node:test';
@@ -45,13 +46,14 @@ test('Test snap in the Store turns the camera on and draws what is worn, in the 
   row('silverring').children.find(c => c.dataset.act === 'down').onclick();
   assert.deepEqual(stack(), ['whiteglove', 'silverring', 'goldring','nailpolish']);
   $('storeLayers').children.find(x => x.dataset.value === 'nails').onclick();
-  $('catColor').children.find(c => c.classList.contains('cprow')).children.find(x => x.dataset.color === '#25d3e4').onclick();
+  pickColor($('catColor'), '#25d3e4');
   assert.equal(cam().overlay.rec.layers.find(l => l.id === 'nailpolish').parts.index_tip[0].fill, '#25d3e4');
   // the snap button now fires the snap effect on the live hand
   let bursts = 0; const orig = cam().particles.trigger.bind(cam().particles);
   cam().particles.trigger = (n, h) => { bursts += n === 'snap' ? 1 : 0; return orig(n, h); };
   await $('storeSnap').onclick();
-  assert.equal(bursts, 1); assert.deepEqual(events, ['start', 'run'], 'no second camera start');
+  assert.equal(bursts, 0,'the Store no longer has a fake snapshot action');assert.equal(cam().cameraOn,false,'camera button toggles off');
+  await $('storeSnap').onclick();assert.equal(cam().cameraOn,true,'camera toggle can start it again');
   // leaving the screen switches the camera off
   $('storeBack').onclick();
   assert.ok(events.includes('stop'), 'tracks stopped'); assert.equal(cam().cameraOn, false);
@@ -144,7 +146,7 @@ test('TWO BUTTONS: "Customise" opens the customise area with NO camera; the came
   reset();
   $('profileBtn').onclick();
   const html = (await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /id="custBtn"[^>]*>Customise<\/button>/); assert.match(html, /id="tryBtn"[^>]*>Try on<\/button>/);
+  assert.match(html, /id="custBtn"[^>]*aria-label="Customise"/); assert.match(html, /id="tryBtn"[^>]*aria-label="Try on with camera"/);
   assert.equal($('custBtn').hidden, false); assert.equal($('tryBtn').hidden, false);
   $('custBtn').onclick();
   await new Promise(r => setTimeout(r, 60));
@@ -155,7 +157,7 @@ test('TWO BUTTONS: "Customise" opens the customise area with NO camera; the came
   assert.equal($('looksRow').hidden, false); assert.equal($('profileLayers').hidden, false);
   $('tryNow').onclick();
   await until(() => events.includes('run'), 'camera on from the corner');
-  assert.deepEqual(events, ['start', 'run']); assert.equal($('camBox').parentElement, $('liveBox')); assert.equal($('tryNow').textContent,'Stop camera','camera action stays under preview');
+  assert.deepEqual(events, ['start', 'run']); assert.equal($('camBox').parentElement, $('liveBox')); assert.equal($('tryNow').getAttribute('aria-label'),'Stop camera','camera action stays under preview');
   $('custDone').onclick();
   assert.ok(events.includes('stop')); assert.equal(cam().cameraOn, false); assert.equal($('custArea').hidden, true);
   assert.equal($('custBtn').hidden, false); assert.equal($('tryBtn').hidden, false, 'both entry buttons are back');

@@ -578,3 +578,26 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .fit-settings > summary { cursor: pointer; font-weight: 700; padding: 10px 0; min-height: 44px; box-sizing: border-box; }
 .fit-settings-content { display: grid; gap: 8px; padding-bottom: 8px; }
 .fit-settings-content > .btn { justify-self: start; }
+
+/* Compact viewer controls, one custom colour picker and hand fitting on the same row. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cat-color .cprow { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; align-items: start; overflow: visible; padding: 0; min-height: 44px; }
+.cprow .any-color { width: 42px; height: 42px; }
+.cprow .fit-settings > summary { text-align: right; padding: 12px 0; font-size: 14px; }
+.cprow .fit-settings-content { width: calc(100% + 54px); margin-left: -54px; padding: 8px 0; }
+.cp-foot { flex-wrap: wrap; }
+.pz-row { position: relative; width: min(100%, calc(32svh * 1.3333)); align-self: center; margin: auto; }
+.preview-zone .wear-box, .preview-zone .view-preview { width: 100%; max-height: none; }
+.preview-zone .view-preview canvas { width: 100%; height: auto; max-height: none; display: block; }
+#custOnly.viewer-actions, .viewer-actions { position: absolute; bottom: 8px; right: 8px; width: auto; display: flex; flex-direction: row; justify-content: flex-end; gap: 6px; z-index: 5; margin: 0; }
+#custOnly.viewer-actions .btn, .viewer-actions .btn { flex: 0 0 44px; width: 44px; min-width: 44px; min-height: 44px; height: 44px; padding: 6px; font-size: 19px; line-height: 1; border-radius: 50%; background: #0b1020dc; color: #f1f5f9; border: 1px solid #94a3b8; box-shadow: 0 1px 4px #0008; }
+#viewPreviewLabel { display: none; }
+#storeSticky { position: sticky; top: 0; z-index: 6; background: #0b1220; padding: 6px 0; display: grid; gap: 6px; }
+#storeSticky .wear-box { width: min(100%, calc(34svh * 1.3333)); max-width: 100%; margin: auto; }
+#storeSticky .card { margin: 0; padding: 6px; border: 0; }
+#storeCats, #storeLayers { flex-wrap: nowrap; }
+#storeGrid { display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 8px; padding-bottom: 8px; scroll-snap-type: x proximity; }
+#storeGrid .item-card { flex: 0 0 128px; width: 128px; box-sizing: border-box; }
+#sWearList { width: 100%; }
+#storeSticky, .sticky-top.stuck { max-height: 72svh; overflow-y: auto; overscroll-behavior-y: contain; }
+.cprow .fit-settings > summary { list-style-position: inside; }

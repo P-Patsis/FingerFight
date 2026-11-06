@@ -72,6 +72,20 @@ test('real camera render loop animates a stationary hand at 12.5 tracking fps, i
       if (['chameleon', 'ghost'].includes(skin)) { assert.ok(captures.length>0,'puppet-only uses real camera pixels inside the hand'); cam.setOverlay('photo-puppet',skin,[]); tracked = null; frame(2); assert.ok(captures.some(c => c.hands === 0), 'uncovered scene still reaches background learner'); tracked = hand; }
       cam.pause();
     }
+    C.setGen({el:'water'});
+    for(const view of ['puppet','photo-puppet']){
+      tracked=hand;cam.setOverlay(view,'elemental',[]);cam.run();frame(2);
+      tracked=makeHand({});frame(20);
+      assert.equal(cam.particles.charge.states[0].charge,1,view+': real camera path charges a fist');
+      assert.equal(cam.samples.at(-1).count,0,'charge never relabels the detected fist');
+      tracked=makeHand({index:true});frame(2);
+      assert.ok(cam.particles.list.some(p=>p.kind==='ice'),view+': extending one finger releases ice');
+      frame(8); // Let the existing vote window settle; the effect must not bypass counting hysteresis.
+      const snap=cam.snap({mode:'puppet',skin:'elemental'});assert.equal(snap.count,1);assert.equal(Object.hasOwn(snap,'charge'),false);
+      tracked=makeHand({});frame(20);tracked=null;frame(1);tracked=hand;frame(1);
+      assert.equal(cam.particles.charge.states[0].power,0,'tracking loss cancels a held charge');
+      cam.pause();assert.equal(cam.particles.charge.states.length,0,'round/try-on shutdown clears charging');
+    }
     C.setGen({ nl: 5, el: 'water' });
     assert.deepEqual(errors, []);
     assert.equal(JSON.stringify(hand), original, 'counting landmarks untouched');

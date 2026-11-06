@@ -3,7 +3,7 @@
 import test from 'node:test';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { openPicker, panelOf } from './pickerhelp.js';
+import { openPicker, panelOf , pickColor, originalColor } from './pickerhelp.js';
 import { installBrowser, until } from './harness.js';
 
 const b = installBrowser('?sim=1');
@@ -45,7 +45,7 @@ test('Profile: the Skeleton category\'s colour picker saves a clean colour and i
   modes.find(x => x.dataset.mode === 'skeleton').onclick();
   const row = () => $('catColor').children.find(c => c.classList.contains('cprow'));
   assert.equal(row().dataset.layer, 'skeleton', 'the skeleton view opens the Skeleton category');
-  row().children.find(x => x.dataset.color === '#25e46a').onclick();
+  pickColor($('catColor'), '#25e46a');
   assert.equal(globalThis.localStorage.getItem('ff-skel'), '#25e46a');
   const pk = openPicker($('catColor'));
   pk.setHue(120); pk.drag(240, 0);
@@ -315,8 +315,8 @@ test('ONE colour picker above the grid that switches with the category chip: pre
   assert.equal($('catColor').children.filter(c => c.classList.contains('cprow')).length, 1, 'exactly one picker row');
   const row = $('catColor').children.find(c => c.classList.contains('cprow'));
   assert.equal(row.dataset.layer, 'nails', 'the picker belongs to the chip');
-  assert.ok(row.children.some(x => x.dataset.act === 'any'), 'a full colour picker button'); assert.ok(row.children.some(x => x.dataset.act === 'default'), 'Original');
-  assert.equal(row.children.filter(x => x.dataset.color).length, L.BASIC_PALETTE.length);
+  assert.ok(row.children.some(x => x.dataset.act === 'any'), 'a full colour picker button'); assert.ok(!row.children.some(x => x.dataset.act === 'default'),'Original stays inside the picker');
+  assert.equal(row.children.filter(x => x.dataset.color).length, 0);
   assert.ok(!all().some(x => x.dataset?.act === 'gradient'), 'no gradient');
   const pk = openPicker($('catColor'));
   pk.setHue(0); pk.drag(240, 0);
@@ -333,14 +333,14 @@ test('ONE colour picker above the grid that switches with the category chip: pre
   assert.ok(log.lastIndexOf('replace') >= 0 && log.lastIndexOf('replace') < log.lastIndexOf('scroll=0'), 'the reset comes after the new cards are in: ' + log.join(','));
   assert.equal($('catColor').children.find(c => c.classList.contains('cprow')).dataset.layer, 'tattoo', 'the picker switched with the chip');
   chip('nails').onclick();
-  all().find(x => x.dataset?.act === 'default').onclick();
+  originalColor($('catColor'));
   assert.equal(stackOf('nailpolish').c, undefined, 'Original puts the item colours back');
   // the Hand chip: recolours the selected hand
   chip('base').onclick();
   $('profileGrid').children.find(c => c.dataset.id === 'cartoon').onclick();
   const hrow = $('catColor').children.find(c => c.classList.contains('cprow'));
   assert.ok(hrow, 'the Hand chip has the picker for the worn hand');
-  hrow.children.find(x => x.dataset.color === '#e42525').onclick();
+  pickColor($('catColor'), '#e42525');
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-hcolors')).cartoon, '#e42525', 'the cartoon hand is recoloured');
   $('custBtn').onclick();
   $('profileBack').onclick();

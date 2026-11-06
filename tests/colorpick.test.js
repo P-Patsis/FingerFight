@@ -1,7 +1,7 @@
 // The in-app colour picker's maths, and that it applies a valid #rrggbb to EVERY category that has a colour.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openPicker, panelOf } from './pickerhelp.js';
+import { openPicker, panelOf , pickColor, originalColor } from './pickerhelp.js';
 import { installBrowser, until } from './harness.js';
 import { hsvToHex, hexToHsv, svAt } from '../js/colorpick.js';
 
@@ -46,12 +46,12 @@ test('the custom picker opens in one tap, drags live, and colours EVERY category
   }
   // presets and Original sit beside the picker and still work, also while the panel is open
   chip('nails').onclick(); openPicker($('catColor'));
-  $('catColor').children.find(c => c.classList.contains('cprow')).children.find(x => x.dataset.color === '#e42525').onclick();
+  pickColor($('catColor'), '#e42525', false);
   assert.equal(stackC('nailpolish'), '#e42525'); assert.ok(panelOf($('catColor')), 'a preset does not close the panel');
-  $('catColor').children.find(c => c.classList.contains('cprow')).children.find(x => x.dataset.act === 'default').onclick();
+  originalColor($('catColor'));
   assert.equal(stackC('nailpolish'), undefined, 'Original');
   // Done without touching the picker changes nothing
-  const before = ls('ff-stack'); panelOf($('catColor')).children[2].children[2].onclick(); assert.equal(ls('ff-stack'), before);
+  const before = ls('ff-stack'); openPicker($('catColor')).done(); assert.equal(ls('ff-stack'), before);
   // what goes over the network is still validated exactly as before
   assert.equal(validBc(read.base()), true); assert.equal(validLay([{ id: 'goldring', c: read.ring() }]), true);
   assert.equal(validPicture({ photo: '', view: 'skeleton', skin: 'cartoon', hands: [], lm: null, ar: 1, sk: read.skeleton() }, false), true);

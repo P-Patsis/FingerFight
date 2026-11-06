@@ -57,8 +57,9 @@ test('name box and country block share one baseline: equal label-line heights an
 test('every view\'s preview is the same size (4:3, same width rule as the puppet window); the intensity slider has no padding that shortens its travel', () => {
   const css = fs.readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
   const last = css.lastIndexOf('.preview-zone .view-preview canvas');
-  assert.match(css.slice(last), /width:\s*min\(100%, calc\(24vh \* 1\.3333\)\)[^}]*aspect-ratio:\s*4 \/ 3/s, 'same width and 4:3 as .wear-box');
-  assert.match(css, /\.preview-zone \.wear-box\s*\{[^}]*width:\s*min\(100%, calc\(24vh \* 1\.3333\)\)/s);
+  assert.match(css.slice(last), /width:\s*100%;[^}]*height:\s*auto/, 'canvas fills the common preview frame without stretching');
+  assert.match(css,/\.pz-row \{[^}]*width:\s*min\(100%, calc\(32svh \* 1\.3333\)\)/);
+  assert.match(css,/\.wear-box \{[^}]*aspect-ratio:\s*4 \/ 3/);
   assert.match(html, /id="viewPreview" width="240" height="180"/, 'the canvas itself is 4:3, so nothing is stretched');
   assert.match(css, /\.cat-color input\[type=range\]\s*\{[^}]*padding:\s*0;[^}]*border:\s*0/s);
 });

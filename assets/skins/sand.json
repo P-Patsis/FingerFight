@@ -864,10 +864,22 @@
  },
  "particles": [
   {
+   "effect": "dust",
+   "color": "#e2bf7e",
+   "where": "hand",
+   "rate": 26
+  },
+  {
    "effect": "grain",
    "color": "#e2bf7e",
    "where": "hand",
-   "rate": 7
+   "rate": 12
+  },
+  {
+   "effect": "stone",
+   "color": "#d5ad67",
+   "where": "hand",
+   "rate": 5
   }
  ]
 }

@@ -27,6 +27,6 @@ test('materials render distinct native surfaces instead of a recoloured segmente
 test('Earth chunks and source tiles share exact geometry, with individual tile holes and no whole-finger dissolve',()=>{
  const tiles=earthTiles(hand);assert.equal(tiles.length,46);assert.equal(new Set(tiles.map(t=>t.id)).size,46);
  const intact=recording();drawElementBody(intact.ctx,[hand],'earth');const broken=recording();drawElementBody(broken.ctx,[hand],'earth',{particles:[{kind:'stone',hand:0,tile:20,age:.5,life:1}]});
- assert.equal(intact.calls.filter(a=>a[0]==='fill').length,broken.calls.filter(a=>a[0]==='fill').length);assert.ok(broken.calls.some(a=>a[0]==='globalAlpha'&&a[1]===0),'only detached tile becomes a hole');
+ assert.equal(intact.calls.filter(a=>a[0]==='fill').length,tiles.length*2);assert.equal(broken.calls.filter(a=>a[0]==='fill').length,(tiles.length-1)*2,'only the detached tile is omitted; other fingers remain solid');
  assert.ok(tiles.every(t=>t.points.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y))));
 });

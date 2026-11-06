@@ -21,7 +21,7 @@ import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, genWire, setGen, rerollPainting } from './cosmetics.js';
 import { cleanGc, GC_MIN, GC_MAX, newSeed } from './generated.js';
-import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, BASIC_PALETTE, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
+import { CATEGORIES, CATEGORY_LABELS, LAYERS, LAYER_LABELS, MAX_STACK, PROFILE_LAYERS, SKELETON_STYLES, cleanSkelStyle, INTENSITY_MIN, INTENSITY_MAX, INTENSITY_DEFAULT, cleanColor } from './layers.js';
 import { Inventory } from './inventory.js';
 import { Stats } from './stats.js';
 import { Looks, sameGetup, MAX_LOOKS } from './looks.js';
@@ -1196,7 +1196,7 @@ function renderStore() {
   for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], storeView.layer, v => { storeView.layer = v; storeView.reset = true; }, renderStore);
   renderStoreGrid();
   renderWear();
-  if (storeView.reset) { storeView.reset = false; resetCategoryItems($('storeGrid'), $('store'), $('storeCats')); }
+  if (storeView.reset) { storeView.reset = false; resetCategoryItems($('storeGrid'), $('store'), $('storeCats'), $('storeSticky')); }
 }
 
 /** The Profile's customise list: one type at a time (Hand, Tattoo / scar, Nail polish, Ring, Glove, Effect) in a sideways-scrolling row, only what you own (the Store shows only items not yet owned). */
@@ -1276,14 +1276,6 @@ function colorRow(box, layer, cur, apply, live) {
   any.setAttribute('aria-label', LAYER_LABELS[layer] + ': pick any colour');
   any.onclick = () => { picker.layer = open ? null : layer; renderCatColor(); };       // opens / closes our panel; what was dragged is already applied
   row.append(any);
-  for (const c of BASIC_PALETTE) {
-    const b = el('button', 'sw' + (cur && c === cur.toLowerCase() ? ' sel' : '')); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', c);
-    b.onclick = () => apply(c);
-    row.append(b);
-  }
-  const reset = el('button', 'btn tiny ghost', 'Original'); reset.type = 'button'; reset.dataset.act = 'default';
-  reset.onclick = () => apply(null);
-  row.append(reset);
   box.append(row);
   if (open) box.append(colorPanel(layer, cur, apply, live));
 }
@@ -1309,7 +1301,8 @@ function colorPanel(layer, cur, apply, live) {
   sv.onpointerup = sv.onpointercancel = () => { dragging = false; };
   hue.oninput = () => { hsv.h = Number(hue.value) || 0; emit(); };
   done.onclick = () => { picker.layer = null; if (touched) apply(hex()); else renderCatColor(); };       // Done without touching anything changes nothing
-  const foot = el('div', 'cp-foot'); foot.append(swatch, code, done);
+  const original=el('button','btn small ghost','Original');original.type='button';original.dataset.act='default';original.onclick=()=>{picker.layer=null;apply(null);};
+  const foot = el('div', 'cp-foot'); foot.append(swatch, code, done, original);
   panel.append(sv, hue, foot);
   paint();
   return panel;
@@ -1330,7 +1323,8 @@ function renderFitControls(box){
   section.open=fitControlsOpen;
   section.ontoggle=()=>{fitControlsOpen=section.open;};
   section.append(el('summary','','Adjust Hand Size'),content);
-  box.append(section);
+  const row=box.querySelector('.cprow');
+  if(row)row.append(section);else box.append(section);
   for(const [key,label]of [['f','Finger width'],['p','Palm width'],['c','Coverage']]){
     const ctl=el('div','ctl fit-control'),val=el('b','',gen.fit[key]+'%'),sl=document.createElement('input');
     sl.type='range';sl.min=String(FIT_LIMITS[key][0]);sl.max=String(FIT_LIMITS[key][1]);sl.step=key==='c'?'1':'5';sl.value=String(gen.fit[key]);sl.dataset.act='fit-'+key;sl.setAttribute('aria-label',label);
@@ -1361,9 +1355,7 @@ function renderCatColor() {
     sl.onchange = () => { store.set('ff-naillength', String(gen.nl)); syncStyle(); };
     ctl.append(el('span', 'fine', 'Nail length'), sl, val); box.append(ctl);
   }
-  if (layer === 'base') {
-    renderFitControls(box);
-  }
+  renderFitControls(box);
   if (layer === 'base' && inv.baseId === 'elemental') {
     const elements = el('div', 'chips'); elements.setAttribute('aria-label', 'Element');
     for (const value of ELEMENTS) chip(elements, value, value[0].toUpperCase() + value.slice(1), gen.el, v => { setGen({ el: v }); store.set('ff-element', v); }, syncStyle);
@@ -1427,7 +1419,8 @@ function refreshPreview() {
   storeAnim.rec = rec;
   if (!storeAnim.ps) storeAnim.ps = new ParticleSystem();
   storeAnim.ps.setEmitters(rec.emitters);
-  storeAnim.ps.setElement(rec.skin.id === 'elemental' ? gen.el : null);
+  storeAnim.ps.setHandStyle(rec.skin.id);
+  storeAnim.ps.setElement(rec.skin.id==='sand'?'sand':rec.skin.id === 'elemental' ? gen.el : null);
   if (rec.skin.id !== 'comic') storeAnim.comic.clear();
   storeAnim.ps.setFit(rec.skin.fit);
   storeAnim.ps.setSand(rec.skin.sand);
@@ -1502,7 +1495,7 @@ async function startTryOn() {
     if (err) { msg(err); return false; }
     tryOn.on = true;
     cam.onError = e => msg('Hand tracking error: ' + e);
-    cam.onLost = () => { stopTryOn(); msg('The camera stopped. Check the browser camera permission, then tap Test snap to try again.'); };
+    cam.onLost = () => { stopTryOn(); msg('The camera stopped. Check the browser camera permission, then tap the camera button to try again.'); };
     applyOverlay();                                                    // tryOn.on: the puppet with everything worn, over the live picture
     const box = $('camBox');
     if (inProfileCust()) $('liveBox').append(box); else { $('wearBox').append(box); $('storePreview').hidden = true; }     // Profile: the top window; Store: the Wearing card
@@ -1513,7 +1506,7 @@ async function startTryOn() {
     cam.onFrame = () => { frames++; };
     cam.run();
     msg('Camera on: hold up your hand.');
-    setTimeout(() => { if (!frames && tryOn.on && my === tryOn.token) msg('The camera is on but the hand model produced no frames. Tap Camera off and try again; if it repeats, reload the page.'); }, 6000);
+    setTimeout(() => { if (!frames && tryOn.on && my === tryOn.token) msg('The camera is on but the hand model produced no frames. Tap Stop camera and try again; if it repeats, reload the page.'); }, 6000);
     return true;
   } catch (e) {
     msg('Could not start the camera (' + (e?.message || e) + ').');
@@ -1535,11 +1528,13 @@ function stopTryOn() {
 function updateTryOnButtons() {
   $('wearCamOff').hidden = !(tryOn.on || tryOn.busy);
   $('tryNow').hidden = !cust.on;
-  $('tryNow').textContent=tryOn.busy?'Starting camera…':tryOn.on?'Stop camera':'Try on';
+  $('tryNow').textContent=tryOn.busy?'…':tryOn.on?'■':'📷';
+  const label=tryOn.busy?'Starting camera…':tryOn.on?'Stop camera':'Try on with camera';
+  for(const id of ['tryNow','storeSnap']){$(id).title=label;$(id).setAttribute('aria-label',label);}
   $('tryNow').disabled=tryOn.busy||camBusy;
   $('tryBtn').disabled=tryOn.busy||camBusy;
   $('tryNow').setAttribute('aria-pressed',String(tryOn.on));
-  $('storeSnap').textContent=tryOn.on?'Snapshot':'Try on';
+  $('storeSnap').textContent=tryOn.busy?'…':tryOn.on?'■':'📷';
   $('storeSnap').disabled = tryOn.busy;
 }
 
@@ -1558,13 +1553,7 @@ $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
 $('storeBack').onclick = () => show('menu');
 $('storeCustomise').onclick = () => { show('profile'); buildStyleCard(); renderProfile(); enterCust(); };
-$('storeSnap').onclick = async () => {
-  if (!tryOn.on) { await startTryOn(); }                                // the first tap turns the camera on (or says why it cannot)
-  try {
-    if (tryOn.on) cam.particles.trigger('snap', cam.lastPts);          // the snap effects of everything worn, on the real hand
-    else storeAnim.ps?.trigger('snap', previewHandPx($('storePreview').width, $('storePreview').height));
-  } catch { /* ignore */ }
-};
+$('storeSnap').onclick = async () => { if(tryOn.on)stopTryOn();else return startTryOn(); };
 $('wearCamOff').onclick = () => stopTryOn();
 $('storeClear').onclick = () => { inv.clear(); syncStyle(); };
 

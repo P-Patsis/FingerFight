@@ -1,5 +1,12 @@
 # Puppet skins
 
+## 2026-11-06 — Fist-powered skins and Sandman material
+
+`js/charge.js` supplies a local graphics-only hold/release state machine, driven by the existing live ParticleSystem. A held fist charges; a deliberately extended finger releases (including index-only, thumb-only and two-finger choices). Lost tracking, reduced-motion, camera shutdown and skin/element changes cancel it. Counts and network cosmetic fields are unchanged. Elemental Water freezes/releases ice, Fire flares, Earth orbits and releases rocks, Air releases expanding wakes; other families use their own sparks, ink, slashes, elastic waves, motes or ripples.
+
+The `sand` ID/rig format stays intact. Its body now uses warm procedural Earth-style tiles through element-body.js, with static snapshot support and tintable Sand palette, independent chunks, extra dust and the existing shake/reform swarm. The authored JSON rig remains the fitting/fallback basis; its three emitters are dust, grains and chunks. Live tile geometry is reused only in the same coordinate space; snapshot geometry is recalculated. Particles still share 90 total / six emitters, including the 84-grain Sand swarm. See artifacts/charge-review.svg/.png for reviewed procedural states; actual phone visuals/FPS remain open.
+
+
 ## 2026-11-05 — Fitting the real hand
 
 The Hand category includes **Finger fatness** (50–180%, default 100), **Palm width** (70–150%, default 100), **Coverage** (0–10% of palm width, default 0), and **Reset fit**. Sliders update live and persist under `ff-fit`. Fatness changes lateral rig width without moving tracked joints; Coverage pads edges and extends drawn tips. Accessories share the fitted rig. Elemental surfaces and Ghost/Chameleon masks also use these controls. Detection/counting never use fitted drawing coordinates.

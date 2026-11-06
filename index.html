@@ -84,10 +84,13 @@
     <div class="topbar"><button id="storeBack" class="btn small">← Back</button></div>
     <h2 class="logo small">STORE</h2>
     <button id="storeCustomise" class="btn ghost">Customise owned items</button>
+    <div id="storeSticky" class="store-sticky stuck">
     <div id="wearSlotStore"></div>
-    <div id="storeCats" class="chips" aria-label="Category"></div>
-    <div id="storeLayers" class="chips" aria-label="Item type"></div>
-    <div id="storeGrid" class="store-grid"></div>
+    <div id="storeCats" class="chips hrow" aria-label="Category"></div>
+    <div id="storeLayers" class="chips hrow" aria-label="Item type"></div>
+    </div>
+    <div id="storeGrid" class="store-grid hrow items-row"></div>
+    <div id="sWearList"></div>
     <p id="storeMsg" class="msg" role="status"></p>
     <p class="fine">Only items you haven’t obtained appear here. Equip your collection in Customise. Demo unlocks are free for now.</p>
   </section>
@@ -149,12 +152,12 @@
             <div class="view-preview" id="viewPreviewBox"><canvas id="viewPreview" width="240" height="180" aria-label="Preview of how your hand looks to your opponent"></canvas><span id="viewPreviewLabel" class="fine"></span></div>
             <div id="liveBox" class="wear-box live-box" hidden></div>
             <div id="cWearTop" hidden></div>
+          <div id="custOnly" class="cust-only preview-actions viewer-actions">
+            <button id="custBtn" class="btn ghost" type="button" aria-label="Customise" title="Customise">✎</button>
+            <button id="tryBtn" class="btn" type="button" aria-label="Try on with camera" title="Try on with camera">📷</button>
+            <button id="tryNow" class="btn" type="button" aria-label="Try on with camera" title="Try on with camera" hidden>📷</button>
+            <button id="custDone" class="btn ghost" type="button" aria-label="Done customising and stop camera" title="Done" hidden>✓</button>
           </div>
-          <div id="custOnly" class="cust-only preview-actions">
-            <button id="custBtn" class="btn ghost" type="button">Customise</button>
-            <button id="tryBtn" class="btn" type="button" aria-label="Try on with camera">Try on</button>
-            <button id="tryNow" class="btn" type="button" aria-label="Try on with camera" hidden>Try on</button>
-            <button id="custDone" class="btn ghost" type="button" aria-label="Done customising and stop camera" hidden>Done</button>
           </div>
           <div id="cMsg"></div>
         </div>
@@ -227,17 +230,16 @@
   <!-- the "Wearing" pieces are shared by the Store (inside #wearCard) and the Profile (inside #custArea): the top (preview or live try-on), the category colour panel, and the worn list.
        They are moved into whichever screen is open; here they are parked (hidden). -->
   <div id="wearCard" class="card store-live">
-    <h3 class="card-h">Wearing</h3>
+    <h3 class="card-h sr-only">Preview</h3>
     <div id="sWearTop"></div>
     <div id="sMsg"></div>
     <div id="sCat"></div>
-    <div id="sWearList"></div>
   </div>
   <div id="wearTop" class="wear-top">
     <div id="wearBox" class="wear-box">
       <canvas id="storePreview" width="480" height="360" aria-label="Your puppet with everything you have equipped"></canvas>
+      <div class="viewer-actions"><button id="storeSnap" class="btn" type="button" aria-label="Try on with camera" title="Try on with camera">📷</button><button id="wearCamOff" class="btn ghost" type="button" aria-label="Done and stop camera" title="Done" hidden>✓</button></div>
     </div>
-    <div class="row center wrap"><button id="storeSnap" class="btn">Try on</button><button id="wearCamOff" class="btn ghost" hidden>Done</button></div>
   </div>
   <p id="wearMsg" class="fine" role="status"></p>
   <div id="catColor" class="cat-color" aria-label="Colour of this category"></div>

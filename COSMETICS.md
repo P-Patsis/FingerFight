@@ -1,5 +1,12 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Fist charge/release and compact controls
+
+Hold a fist for about a second to charge; extend any finger to release. Water freezes/releases ice, Fire flares, Earth gains orbiting/flying chunks, Air releases expanding wakes, and Sandman sheds warm tiles with dust and grain spray. Other hand families use matching sparks, paint/ink, slashes, elastic waves, eye motes, crystal glints or cloak ripples. This is local drawing only: counting and peer validation are unchanged; no charge metadata is sent. Tracking loss/camera stop cancels the charge, and reduced-motion disables it. The global 90-particle/6-emitter caps still include Sand's 84-grain swarm.
+
+The toolbar contains only the custom picker (left) and Adjust Hand Size (right); Original is inside the picker. Camera/Done icons sit inside the preview. Store's camera button toggles try-on rather than claiming to take a Snapshot. Its larger preview/categories stick above horizontal unowned-item cards, with the equipped stack and Clear all below. Visual review exports live in artifacts/charge-review.svg and .png; real-phone review remains open.
+
+
 ## 2026-11-06 — Store acquisition and full idle animation
 
 Store now lists only items not yet obtained. After unlocking, find the item through **Customise owned items**; it is not automatically equipped. Free and previously granted items remain in Customise. Demo unlocks remain explicitly labelled and have no real ads or payment integration.

@@ -7,6 +7,7 @@ const poly=(ctx,p)=>{ctx.beginPath();p.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.
 const smoothPoly=(ctx,pts)=>{ctx.beginPath();const last=pts.at(-1),first=pts[0];ctx.moveTo((last.x+first.x)/2,(last.y+first.y)/2);for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];ctx.quadraticCurveTo(p.x,p.y,(p.x+q.x)/2,(p.y+q.y)/2);}ctx.closePath();};
 const palmOutline=(h,fit)=>{const w=palm(h),dx=h[17].x-h[5].x,dy=h[17].y-h[5].y,L=Math.hypot(dx,dy)||1;return fitPalm([{x:h[0].x-dx/L*w*.3,y:h[0].y-dy/L*w*.3},{x:h[0].x+dx/L*w*.3,y:h[0].y+dy/L*w*.3},h[17],h[13],h[9],h[5],h[2],h[1]],h,fit);};
 const palm=h=>Math.hypot(h[5].x-h[17].x,h[5].y-h[17].y)||1;
+const shade=(color,gain)=>'#'+color.replace('#','').match(/../g).map(n=>Math.min(255,Math.round(parseInt(n,16)*gain)).toString(16).padStart(2,'0')).join('');
 const hash=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 /** Tiles are used by both the intact body and released chunks, so holes match their source rocks. */
 export function earthTiles(h,fitValue){
@@ -28,17 +29,24 @@ function ribbon(ctx,points,width,time,phase,fill,alpha,wave=1){
  const contour=[...edges[0],...edges[1].reverse()];ctx.beginPath();ctx.moveTo((contour[0].x+contour.at(-1).x)/2,(contour[0].y+contour.at(-1).y)/2);
  for(let i=0;i<contour.length;i++){const p=contour[i],q=contour[(i+1)%contour.length];ctx.quadraticCurveTo(p.x,p.y,(p.x+q.x)/2,(p.y+q.y)/2);}ctx.closePath();ctx.globalAlpha=alpha;ctx.fillStyle=fill;ctx.fill();
 }
-export function drawElementBody(ctx,hands,mode,{time=0,states=[],particles=[],reduced=false,fit:fitValue}={}){
+export function drawElementBody(ctx,hands,mode,{time=0,states=[],particles=[],reduced=false,fit:fitValue,partAlphas=null,sand=null,tiles=[]}={}){
  if(!mode)return false;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.lineCap='round';ctx.lineJoin='round';
  hands.forEach((h,index)=>{
-  if(mode!=='earth')h=fitTips(h,fitValue);
+  const original=h;
+  if(!['earth','sand'].includes(mode))h=fitTips(h,fitValue);
   const fit=fitFactors(fitValue),w=palm(h),state=states[index],speed=reduced?0:state?.speed||0,v=reduced?{x:0,y:0}:state?.v||{x:0,y:0},t=reduced?0:time;
-  if(mode==='earth'){
-   const colors=['#806348','#b29260','#69523a','#c2a67b'];
-   for(const tile of earthTiles(h,fitValue)){
+  const power=reduced?0:state?.charge||0;
+  if(mode==='earth'||mode==='sand'){
+   const colors=mode==='sand'?[sand?.color||'#e2bf7e',sand?.color2||'#f7e6b8',shade(sand?.color||'#e2bf7e',.72),shade(sand?.color||'#e2bf7e',1.07)]:['#806348','#b29260','#69523a','#c2a67b'];
+   for(const tile of tiles[index]||earthTiles(h,fitValue)){
     const detached=particles.find(p=>p.kind==='stone'&&p.hand===index&&p.tile===tile.id),age=detached?detached.age/detached.life:0;
-    ctx.globalAlpha=detached?1-Math.min(1,Math.sin(Math.PI*age)*2):1;ctx.fillStyle=colors[tile.tone];poly(ctx,tile.points);ctx.fill();
-    const a=tile.points[0],b=tile.points[1];ctx.fillStyle='#ddcaa2';poly(ctx,[a,b,{x:tile.x,y:tile.y}]);ctx.globalAlpha*=.35;ctx.fill();ctx.globalAlpha=1;
+    const alpha=(mode==='sand'?(.3+.7*(partAlphas?.[index]?.[tile.part]??1)):1)*(detached?1-Math.min(1,Math.sin(Math.PI*age)*2):1);
+    if(alpha<=.01)continue;
+    ctx.globalAlpha=alpha;ctx.fillStyle=colors[tile.tone];poly(ctx,tile.points);ctx.fill();
+    const a=tile.points[0],b=tile.points[1];ctx.fillStyle='#ddcaa2';poly(ctx,[a,b,{x:tile.x,y:tile.y}]);ctx.globalAlpha*=.35;ctx.fill();
+    if(mode==='sand'){ctx.globalAlpha=alpha*.45;ctx.fillStyle='#fff0c2';for(let k=0;k<2;k++){const q=tile.points[k%tile.points.length],x=tile.x+(q.x-tile.x)*.55,y=tile.y+(q.y-tile.y)*.55,r=Math.max(.6,w*.008);ctx.fillRect(x,y,r,r);}}
+    if(power>.15){ctx.globalAlpha=power*.65;ctx.strokeStyle=mode==='sand'?'#fff0bc':'#f4d89c';ctx.lineWidth=w*.012;poly(ctx,tile.points);ctx.stroke();}
+    ctx.globalAlpha=1;
    }return;
   }
   if(mode==='water'){
@@ -46,24 +54,28 @@ export function drawElementBody(ctx,hands,mode,{time=0,states=[],particles=[],re
    for(let f=0;f<5;f++){const line=chains[f].slice(1).map(i=>h[i]);ribbon(ctx,line,w*((f===0?.145:.13)*fit.finger+fit.margin),t,f,'#0e94c4',.78,1+speed*.2);ribbon(ctx,line.map(p=>({x:p.x-w*.025,y:p.y})),w*(.08*fit.finger+fit.margin*.5),t,f+1,'#5ee4ed',.65);ribbon(ctx,line.map(p=>({x:p.x+w*.025,y:p.y})),w*.018,t,f+2,'#edffff',.85);}
    // Nested moving caustics wrap the palm instead of drawing straight bone lines.
    for(let k=0;k<4;k++){const a=mix(h[0],h[5],.25+k*.17),b=mix(h[0],h[17],.25+k*.17),c=mix(h[0],h[9],.5);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(c.x+Math.sin(t*3+k)*w*.18,c.y+Math.cos(t*2+k)*w*.12,b.x,b.y);ctx.strokeStyle=k%2?'#c2ffff':'#08689d';ctx.globalAlpha=.6;ctx.lineWidth=w*(k%2?.018:.045);ctx.stroke();}
+   if(power>.25){
+   const freeze=Math.min(1,(power-.25)/.45);
+   for(const tile of earthTiles(original,fitValue)){ctx.globalAlpha=freeze*.94;ctx.fillStyle=tile.tone%2?'#96dce9':'#c8f5ff';poly(ctx,tile.points);ctx.fill();ctx.globalAlpha=freeze*.8;ctx.strokeStyle='#f5ffff';ctx.lineWidth=Math.max(1,w*.013);ctx.stroke();const a=tile.points[0];ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(tile.x,tile.y);ctx.stroke();}
+  }
    return;
   }
   if(mode==='fire'){
    ctx.globalAlpha=.9;ctx.fillStyle='#f46a0b';smoothPoly(ctx,palmOutline(h,fitValue));ctx.fill();
-   for(let k=0;k<4;k++){const p=mix(h[0],mix(h[5],h[17],(k+.5)/4),.35),r=w*.17,tip=mix(h[0],h[9],.9);ctx.beginPath();ctx.moveTo(p.x-r,p.y);ctx.quadraticCurveTo(p.x-r*.8,p.y-w*.3,tip.x-v.x*.06+Math.sin(t*7+k)*w*.15,tip.y-w*.18);ctx.quadraticCurveTo(p.x+r,p.y-w*.2,p.x+r,p.y);ctx.closePath();ctx.globalAlpha=.55;ctx.fillStyle=k%2?'#ffdd5a':'#ff9c18';ctx.fill();}
+   for(let k=0;k<4;k++){const p=mix(h[0],mix(h[5],h[17],(k+.5)/4),.35),r=w*.17,tip=mix(h[0],h[9],.9);ctx.beginPath();ctx.moveTo(p.x-r,p.y);ctx.quadraticCurveTo(p.x-r*.8,p.y-w*.3,tip.x-v.x*.06+Math.sin(t*7+k)*w*.15,tip.y-w*.18);ctx.quadraticCurveTo(p.x+r,p.y-w*.2,p.x+r,p.y);ctx.closePath();ctx.globalAlpha=.55;ctx.fillStyle=power>.6?'#fff4c8':k%2?'#ffdd5a':'#ff9c18';ctx.fill();}
    // Overlapping tapered tongues form the hand itself, with white-hot interiors and trailing tips.
    for(let f=0;f<5;f++){
-    const line=chains[f].slice(1).map(i=>h[i]);ribbon(ctx,line,w*(.14*fit.finger+fit.margin),t,f,'#f34f0b',.85);ribbon(ctx,line,w*.065,t,f+2,'#ffcb35',.95);
+    const line=chains[f].slice(1).map(i=>h[i]);ribbon(ctx,line,w*(.14*fit.finger+fit.margin),t,f,'#f34f0b',.85);ribbon(ctx,line,w*.065,t,f+2,power>.5?'#fffce3':'#ffcb35',.95);
     for(let k=0;k<4;k++)for(let layer=0;layer<2;layer++){
-     const p=line[k],r=w*(layer?.055:.115),length=w*(.35+hash(f*13+k)*.45)*(1+Math.min(2,speed)*.3),side=Math.sin(t*9+f+k)*w*.08;
-     const tip={x:p.x-v.x*.09+side,y:p.y-length-v.y*.045};ctx.beginPath();ctx.moveTo(p.x-r,p.y+r*.5);ctx.quadraticCurveTo(p.x-r+side,p.y-length*.45,tip.x,tip.y);ctx.quadraticCurveTo(p.x+r+side,p.y-length*.4,p.x+r,p.y+r*.5);ctx.closePath();ctx.globalAlpha=layer?.9:.7;ctx.fillStyle=layer?'#fff0a1':'#ff7b13';ctx.fill();
+     const p=line[k],r=w*(layer?.055:.115),length=w*(.35+hash(f*13+k)*.45)*(1+Math.min(2,speed)*.3+power*1.6),side=Math.sin(t*9+f+k)*w*.08;
+     const tip={x:p.x-v.x*.09+side,y:p.y-length-v.y*.045};ctx.beginPath();ctx.moveTo(p.x-r,p.y+r*.5);ctx.quadraticCurveTo(p.x-r+side,p.y-length*.45,tip.x,tip.y);ctx.quadraticCurveTo(p.x+r+side,p.y-length*.4,p.x+r,p.y+r*.5);ctx.closePath();ctx.globalAlpha=layer?.9:.7;ctx.fillStyle=layer?(power>.6?'#fffde7':'#fff0a1'):(power>.6?'#ffc337':'#ff7b13');ctx.fill();
     }
    }return;
   }
   // Air has no painted glove: thin interrupted streamlines define its volume.
   for(let f=0;f<5;f++)for(let lane=0;lane<2;lane++){
    const line=chains[f].slice(1).map(i=>h[i]);ctx.beginPath();
-   line.forEach((p,k)=>{const off=Math.sin(t*3-k+f+lane*2)*w*.05+(lane-.5)*w*.11; k?ctx.lineTo(p.x+off,p.y):ctx.moveTo(p.x+off,p.y);});ctx.globalAlpha=lane?.55:.25;ctx.strokeStyle=lane?'#e1fcff':'#8dbfd5';ctx.lineWidth=w*((lane?.018:.05)*fit.finger+fit.margin);ctx.stroke();
+   line.forEach((p,k)=>{const off=Math.sin(t*3-k+f+lane*2)*w*.05+(lane-.5)*w*.11; k?ctx.lineTo(p.x+off,p.y):ctx.moveTo(p.x+off,p.y);});ctx.globalAlpha=(lane?.55:.25)+power*.22;ctx.strokeStyle=lane?'#e1fcff':'#8dbfd5';ctx.lineWidth=w*((lane?.018:.05)*fit.finger+fit.margin);ctx.stroke();
   }
  });ctx.restore();return true;
 }

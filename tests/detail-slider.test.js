@@ -1,3 +1,4 @@
+import { pickColor, originalColor } from './pickerhelp.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installBrowser, until } from './harness.js';
@@ -20,7 +21,7 @@ test('Geometric slider updates recoloured live try-on facets immediately and per
   assert.equal(cam.overlay.rec.skin.id, 'lowpoly');
   // Exercise the actual slider callbacks after applying a non-default hand colour.
   const colorRow = $('catColor').children.find(c => c.classList.contains('cprow'));
-  colorRow.children.find(c => c.dataset.color === '#25d3e4').onclick();
+  pickColor($('catColor'), '#25d3e4');
   const find = n => n.dataset?.act === 'polylevel' ? n : n.children?.map(find).find(Boolean);
   const sl = find($('catColor')); assert.ok(sl);
   const counts = [];

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openPicker, panelOf } from './pickerhelp.js';
+import { openPicker, panelOf , pickColor, originalColor } from './pickerhelp.js';
 import { installBrowser, until } from './harness.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -503,8 +503,8 @@ test('Store unlocks unowned items; Customise equips and reorders the owned colle
   card('nailpolish').onclick();
   assert.equal(btn('nailpolish', 'color'), undefined, 'no per-item colour dot any more');
   const pick = () => $('catColor').children.find(c => c.classList.contains('cprow'));
-  assert.ok(pick().children.filter(x => x.dataset.color).length >= 8, 'ONE line of basic preset swatches');
-  pick().children.find(x => x.dataset.color === '#25d3e4').onclick();
+  assert.equal(pick().children.filter(x => x.dataset.color).length,0,'no preset icons');
+  pickColor($('catColor'), '#25d3e4');
   assert.equal(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, '#25d3e4');
   const pk = openPicker($('catColor'));                              // ONE tap on the rainbow button opens our own picker
   pk.setHue(120); pk.drag(240, 0);                                   // pure green, full saturation and brightness

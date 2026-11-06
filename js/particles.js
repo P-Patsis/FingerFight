@@ -1,4 +1,5 @@
 import { cleanFit } from './fit.js';
+import { HandCharge, chargeTheme } from './charge.js';
 // Particle effects for cosmetics: small canvas effects that ride on the puppet (see COSMETICS.md).
 // An item names EFFECTS presets (it cannot carry code); this module validates them, spawns, updates and draws them.
 // Cheap on purpose: one global cap, no gradients, no shadow blur, no timers of its own (the caller's frame loop drives update/draw),
@@ -13,6 +14,9 @@ export const MAX_EMITTERS = 6;
 
 /** The presets an item may use. life = seconds [min, max]; speed in palm-widths per second; size in 1/60 of a palm width. */
 export const EFFECTS = Object.freeze({
+  ice: { kind: 'ice', life: [.75, 1.3], speed: [1.2, 2.8], size: 6, gravity: 1.8 },
+  eye: { kind: 'eye', life: [.7, 1.25], speed: [.8, 2], size: 5, gravity: -.2 },
+  ink: { kind: 'ink', life: [.65, 1.15], speed: [.7, 2.2], size: 5, gravity: .7 },
   dust: { kind: 'dust', life: [0.7, 1.5], speed: [0.2, 0.6], size: 13, gravity: -0.1 },
   splash: { kind: 'splash', life: [0.7, 1.25], speed: [1.1, 2.4], size: 5, gravity: 1.4 },
   ripple: { kind: 'ripple', life: [0.7, 1.3], speed: [0, 0], size: 4, gravity: 0 },
@@ -79,15 +83,18 @@ export class ParticleSystem {
   constructor({ max = MAX_PARTICLES, reduced = reducedNow, random = Math.random } = {}) {
     this.max = max; this.reduced = reduced; this.rnd = random;
     this.list = []; this.emitters = []; this.carry = [];
+    this.handStyle=null;this.charge=new HandCharge();this.chargeCarry=[];
     this.fit=null; this.material = new ElementMotion(); this.tiles = [];
     this.element = null; this.elementAge = 0; this.centers = []; this.velocities = [];
     this.sand = null; this.motions = []; this.hands = []; this.time = 0;       // a sand hand: per-hand shake state (js/sand.js)
   }
 
   /** Turns the sand hand on ({color, color2} from the skin) or off (null): the hand then crumbles when shaken and re-forms when it settles. */
+  setHandStyle(id){if(id!==this.handStyle){this.handStyle=id||null;this.charge.clear();this.chargeCarry=[];}}
+  get theme(){const theme=chargeTheme(this.handStyle||'elemental',this.element);return this.element==='sand'&&this.sand?{...theme,color:this.sand.color}:theme;}
   setFit(fit){this.fit=cleanFit(fit);this.tiles=[];}
   setSand(cfg) { this.sand = cfg ? { color: cfg.color, color2: cfg.color2, ...(cfg.chunks ? { chunks: true } : {}) } : null; this.motions = []; }
-  setElement(mode) { mode = ['water','fire','earth','air'].includes(mode) ? mode : null; if (mode !== this.element) { this.material.clear();this.tiles=[];this.list=[];this.element = mode; this.elementAge = 0; this.centers = []; this.velocities = []; } }
+  setElement(mode) { mode = ['water','fire','earth','air','sand'].includes(mode) ? mode : null; if (mode !== this.element) { this.charge.clear();this.chargeCarry=[];this.material.clear();this.tiles=[];this.list=[];this.element = mode; this.elementAge = 0; this.centers = []; this.velocities = []; } }
   /** How much of each solid hand to draw (1 = all, 0 = all grains); 1 when there is no sand hand or reduced motion is on. */
   bodyAlphas() { return this.sand && !this.reduced() ? this.motions.map(m => m.body) : []; }
   partAlphas() {
@@ -100,7 +107,7 @@ export class ParticleSystem {
     this.emitters = (emitters || []).slice(0, MAX_EMITTERS);
     this.carry = this.emitters.map(() => 0);
   }
-  get active() { return !!this.element || this.emitters.length > 0 || !!this.sand; }
+  get active() { return !!this.handStyle || !!this.element || this.emitters.length > 0 || !!this.sand; }
 
   spawn(em, lm, rnd) {
     if (this.list.length + this.swarmSize >= this.max) return;
@@ -140,34 +147,63 @@ export class ParticleSystem {
         p.spin=(rnd()-.5)*7;p.returnAt=.55+rnd()*.2;
       }
       if(p.kind==='dust'){
-        p.hand=hand;p.x=a.x;p.y=a.y;p.vx=velocity.x*.2+(rnd()-.5)*palm*.8;p.vy=velocity.y*.1-palm*.25;p.g=-palm*.12;p.size=palm*(.08+rnd()*.12);p.rot=ang;
+        p.hand=hand;p.x=a.x;p.y=a.y;p.vx=velocity.x*.2+(rnd()-.5)*palm*.8;p.vy=velocity.y*.1-palm*.25;p.g=-palm*.12;p.size=palm*(.08+rnd()*.12);p.rot=ang;if(this.element==='sand'){p.size*=1.75;p.opacity=1.95;p.soft=true;p.color=this.sand?.color2||'#f2d8a5';}
       }
     }
+    if(p.kind==='ice'||p.kind==='ink'){const q=lm[TIP_IDS[Math.floor(rnd()*5)]];p.x=q.x;p.y=q.y;}
     p.prevX=p.x;p.prevY=p.y;this.list.push(p);
   }
 
   /** Advances time by [dt] seconds and emits continuous particles on every hand. [hands]: lists of 21 {x, y} pixel points. */
   update(dt, hands) {
-    if (this.reduced()) { this.list.length = 0; this.motions = []; return; }       // reduced motion: no collapse, no shedding: the static sand hand
+    if (this.reduced()) { this.list.length = 0; this.motions = [];this.charge.clear(); return; }       // reduced motion: no collapse, no shedding: the static sand hand
     dt = Math.min(Math.max(dt, 0), 0.1);                 // a stalled frame must not spawn a flood
     this.time += dt;
     this.hands = hands || [];
+    this.charge.update(this.hands,dt);
+    const theme=this.theme;
     if(this.element){
-      this.material.update(this.hands,dt);this.tiles=this.element==='earth'?this.hands.map(h=>earthTiles(h,this.fit)):[];this.elementAge+=dt;
+      this.material.update(this.hands,dt);this.tiles=['earth','sand'].includes(this.element)?this.hands.map(h=>earthTiles(h,this.fit)):[];this.elementAge+=dt;
       const centers=this.hands.map(palmCenter);
       this.velocities=centers.map((p,i)=>{const old=this.centers[i],max=dist(this.hands[i][5],this.hands[i][17])*8;return old&&dt>0?{x:Math.max(-max,Math.min(max,(p.x-old.x)/dt)),y:Math.max(-max,Math.min(max,(p.y-old.y)/dt))}:{x:0,y:0};});
       this.centers=centers;
+      this.material.states.forEach((s,i)=>{s.charge=this.charge.states[i]?.power||0;});
     }
     if (this.sand) {                                     // one shake detector per hand, fed by the landmarks the tracker already made
       this.motions.length = this.hands.length;
       this.hands.forEach((lm,i)=>{const m=this.motions[i]??=new SandMotion();m.update(lm,dt,i,this.hands.length);});
     }
+    this.charge.states.forEach((state,i)=>{
+      if(!state)return;const lm=this.hands[i],budget=Math.max(0,Math.floor((this.max-this.swarmSize)/Math.max(1,this.hands.length)));
+      if(state.released){
+        if(theme.kind==='air'){const gusts=this.list.filter(p=>p.kind==='gust'&&p.hand===i),old=new Set(gusts.slice(0,Math.max(0,gusts.length-6)));this.list=this.list.filter(p=>!old.has(p));}
+        for(const p of this.list)if(p.hand===i&&p.orbit){p.orbit=false;p.age=0;const a=Math.atan2(p.y-state.y,p.x-state.x);p.vx=Math.cos(a)*state.width*3;p.vy=Math.sin(a)*state.width*3-state.width;p.returnAt=.7;}
+        const n=Math.min(budget,Math.round(10+state.burst*14));
+        this.list.splice(0,Math.max(0,this.list.length+n+this.swarmSize-this.max));
+        for(let k=0;k<n;k++){
+          const before=this.list.length;this.spawn({effect:theme.kind==='sand'&&k%3===0?'dust':theme.release,color:theme.color,where:'tips',size:1+state.burst},lm,this.rnd);
+          const p=this.list.at(-1);if(this.list.length===before)continue;
+          const a=k/Math.max(1,n)*Math.PI*2+(this.rnd()-.5)*.25,speed=state.width*(1.4+state.burst*2);
+          p.hand=i;p.vx=Math.cos(a)*speed;p.vy=Math.sin(a)*speed-state.width*.6;
+          if(p.kind==='ice'&&theme.kind==='ice'){p.color=k%2?'#b8f4ff':'#f0ffff';p.size*=1.2;}
+          if(p.kind==='gust'||p.kind==='ripple'){p.radius*=1+state.burst*.6;p.expand*=1+state.burst*2;p.span=2+state.burst*2;p.size*=1+state.burst*.5;}
+          if(theme.kind==='brick'){p.sides=4;p.size*=1.3;}
+          if(p.kind==='ink')p.color=this.handStyle==='painting'?['#f78cbe','#ffe178','#69d8ef','#9a92ed'][k%4]:theme.color;
+        }
+      }
+      if(state.holding&&state.charge>.2&&['earth','sand'].includes(this.element)){
+        this.chargeCarry[i]=(this.chargeCarry[i]||0)+dt*(6+state.charge*6);
+        while(this.chargeCarry[i]>=1){this.chargeCarry[i]--;if(this.list.filter(p=>p.orbit&&p.hand===i).length>=(this.element==='sand'?3:6))continue;const before=this.list.length;this.spawn({effect:'stone',color:theme.color,where:'hand',size:.6},lm,this.rnd);if(this.list.length>before){const p=this.list.at(-1);p.orbit=true;p.rot=this.rnd()*Math.PI*2;p.life=3;p.age=0;p.size=Math.max(state.width*.09,Math.min(p.size,state.width*.2));}}
+      }
+    });
     // Reserve space as the swarm appears, including already-live shed particles.
     this.list.length = Math.min(this.list.length, Math.max(0, this.max - this.swarmSize));
     for (const p of this.list) {
       p.age+=dt;p.prevX=p.x;p.prevY=p.y;
       const lm=this.hands[p.hand],center=lm?palmCenter(lm):null;
-      if(p.kind==='gust'||p.kind==='ripple'){
+      const charge=this.charge.states[p.hand];
+      if(p.orbit&&charge?.holding&&charge.charge>.15){const angle=p.rot+this.time*(2.5+charge.charge*4),r=charge.width*(.85+Math.sin(p.rot)*.2);p.x=charge.x+Math.cos(angle)*r;p.y=charge.y+Math.sin(angle)*r*.7;p.age=Math.min(p.age,p.life*.35);}
+      else if(p.kind==='gust'||p.kind==='ripple'){
         if(p.wake){p.cx+=p.vx*dt;p.cy+=p.vy*dt;p.radius+=p.expand*dt;}else if(center){const k=1-Math.exp(-dt*7);p.cx+=(center.x-p.cx)*k;p.cy+=(center.y-p.cy)*k;}
         p.angle+=p.omega*dt;p.x=p.cx+Math.cos(p.angle)*p.radius;p.y=p.cy+Math.sin(p.angle)*p.radius*0.6;
       }else if(p.kind==='stone'&&center&&p.age/p.life>(p.returnAt??.5)){
@@ -180,7 +216,8 @@ export class ParticleSystem {
     this.emitters.forEach((em, i) => {
       if (!em.rate) return;
       const speed=this.element?Math.max(0,...this.material.states.map(s=>s.speed)):0;
-      const boost=this.element?Math.min(3.5,.25+speed*.8):1;
+      const power=Math.max(0,...this.charge.states.map(s=>s?.power||0));
+      const boost=(this.element?Math.min(3.5,.25+speed*.8):1)*(1+power*(theme.kind==='fire'||theme.kind==='air'?2:1));
       this.carry[i] += em.rate * dt * boost;
       while (this.carry[i] >= 1) { this.carry[i] -= 1; this.spawn(em, hands[Math.floor(this.rnd() * hands.length)], this.rnd); }
     });
@@ -194,7 +231,7 @@ export class ParticleSystem {
 
   drawBackdrop(ctx) { /* World wakes are drawn with particles; water currents overlay the body. */ }
 
-  drawBody(ctx,hands){return drawElementBody(ctx,this.visualHands(hands),this.element,{time:this.material.time,states:this.material.states,particles:this.list,reduced:this.reduced(),fit:this.fit});}
+  drawBody(ctx,hands){return drawElementBody(ctx,this.visualHands(hands),this.element,{time:this.material.time,states:this.material.states,particles:this.list,reduced:this.reduced(),fit:this.fit,partAlphas:this.partAlphas(),sand:this.sand,tiles:hands===this.hands&&!this.reduced()?this.tiles:[]});}
 
   visualHands(hands){return this.element&&!this.reduced()?this.material.deform(hands,this.element):hands;}
 
@@ -202,13 +239,14 @@ export class ParticleSystem {
     if (this.reduced()) return;
 
     if (this.list.length) drawParticles(ctx, this.list);
+    this.charge.draw(ctx,this.theme);
     if (this.sand && this.motions.length) {
       const grains = [];
       this.hands.forEach((_, i) => { if (this.motions[i]) grains.push(...this.motions[i].swarm.filter(Boolean)); });
       if (grains.length) drawGrains(ctx, grains, this.sand, Math.max(0.3, Math.hypot(this.hands[0][5].x - this.hands[0][17].x, this.hands[0][5].y - this.hands[0][17].y) / 60));
     }
   }
-  clear() { this.list.length = 0; }
+  clear() { this.list.length = 0;this.charge.clear();this.chargeCarry=[];this.material.clear();this.motions=[];this.centers=[];this.velocities=[]; }
 }
 
 /** Draws particles ({kind, x, y, vx, vy, size, life, age, color, rot}). Only lines, arcs and fills. */
@@ -244,14 +282,21 @@ export function drawParticles(ctx, list) {
       const r=p.size,n=p.source?.length||p.sides||5,pts=p.source?p.source.map(q=>{const a=p.age*(p.spin??1);return{x:p.x+(q.x*Math.cos(a)-q.y*Math.sin(a))*r,y:p.y+(q.x*Math.sin(a)+q.y*Math.cos(a))*r};}):Array.from({length:n},(_,i)=>{const a=p.rot+p.age*(p.spin??1)+i*Math.PI*2/n,k=p.profile?.[i]??1;return{x:p.x+Math.cos(a)*r*k,y:p.y+Math.sin(a)*r*.8*k};});
       ctx.fillStyle=p.color;ctx.beginPath();pts.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath();ctx.fill();ctx.fillStyle='#d9bf8f';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);ctx.lineTo(p.x,p.y);ctx.closePath();ctx.fill();
     } else if(p.kind==='dust'){
-      ctx.globalAlpha=Math.sin(Math.PI*t)*.18;ctx.fillStyle=p.color;const r=p.size*(.5+t*1.8);
-      for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(p.x+Math.cos(p.rot+i*2)*r*.45,p.y+Math.sin(p.rot+i*2)*r*.25,r*.75,r*.5,0,0,7);ctx.fill();}
+      ctx.globalAlpha=Math.min(.48,Math.sin(Math.PI*t)*.18*(p.opacity||1));ctx.fillStyle=p.color;const r=p.size*(.5+t*1.8);
+      if(p.soft){ctx.beginPath();ctx.ellipse(p.x,p.y,r,r*.62,p.rot*.15,0,7);ctx.fill();}
+      else for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(p.x+Math.cos(p.rot+i*2)*r*.45,p.y+Math.sin(p.rot+i*2)*r*.25,r*.75,r*.5,0,0,7);ctx.fill();}
     } else if (p.kind === 'flame') {
       const r = Math.max(2, p.size * (1 - 0.65 * t)), wob = Math.sin(p.age * 16 + p.rot) * r * 0.22;
       ctx.globalAlpha = Math.max(0, 0.9 * (1 - t * t));
       ctx.fillStyle = p.color; ctx.beginPath();
       const lean=(p.bend||0)*r*.5;ctx.moveTo(p.x + wob+lean, p.y - r * 1.7); ctx.quadraticCurveTo(p.x + r * 1.1, p.y - r * 0.2, p.x, p.y + r * 0.7);
       ctx.quadraticCurveTo(p.x - r * 1.1, p.y - r * 0.2, p.x + wob+lean, p.y - r * 1.7); ctx.fill();
+    } else if(p.kind==='eye'){
+      const r=p.size;ctx.fillStyle='#f1ffe3';ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.4,r*.9,p.rot,0,7);ctx.fill();ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,r*.7,0,7);ctx.fill();ctx.fillStyle='#172521';ctx.beginPath();ctx.arc(p.x,p.y,r*.3,0,7);ctx.fill();
+    } else if(p.kind==='ice'){
+      const r=p.size*(1-t*.3),a=p.rot+p.age*3;ctx.fillStyle=p.color;ctx.beginPath();for(let k=0;k<4;k++){const angle=a+k*Math.PI/2,scale=k%2?.4:1.5,x=p.x+Math.cos(angle)*r*scale,y=p.y+Math.sin(angle)*r*scale;k?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1,r*.12);ctx.stroke();
+    } else if(p.kind==='ink'){
+      ctx.fillStyle=p.color;ctx.beginPath();ctx.ellipse(p.x,p.y,p.size*(1+t*.6),p.size*.65,p.rot,0,7);ctx.fill();ctx.lineWidth=p.size*.35;ctx.strokeStyle=p.color;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-p.vx*.045,p.y-p.vy*.045);ctx.stroke();
     } else if (p.kind === 'grain') {
       ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     } else {                                                                              // ember
