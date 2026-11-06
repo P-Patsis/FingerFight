@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-06 — One Name/Country row and a collapsed Saved looks menu
+
+- Changed: Name/input and Country/toggle/optional input all share one non-wrapping row. Name fills remaining width; the country field is 48px with GR placeholder. The toolbar is colour picker → Saved looks → Adjust Hand Size. Saved looks opens a full-width list/edit panel; it starts collapsed, survives colour/fit rerenders and resets on leaving customisation. Its old always-visible strip no longer reserves space beneath the preview. Full-width fitting sliders and the preview Save icon remain.
+- Verified: focused controls/looks/layout/try-on **24/24 passes**, full game **396/396 passes** (68.1s). Android code 6 / `0.1.5-prototype` builds in 3m07s; actual APK contents and Android v2 signature verify. Copied to Downloads as `FingerFight-0.1.5-debug.apk`: 19,643,349 bytes; SHA-256 `9d2279b5563de9d67bd7a44ce0c11aa72970341190385b3bc42af7875c640421`; Downloads checksum matches. Existing music remains bundled.
+- Published: UI source `0f25807` pushed; Pages deployment completed successfully. Live index.html, main.js, audio.js, panel-scroll.js, style.css and sw.js match the committed source. Follow-up commit records the APK version and delivery evidence.
+- Device OPEN: actual narrow-phone layout/touch, saved-menu opening and music/camera/FPS review; no on-device verification inferred from compilation or fake-DOM tests. No tracking, rig, counting, particles, network validation or backend activation changed.
+
+
 ## 2026-11-06 — Profile/picker fixes and music restored to the Android bundle
 
 - Changed: Save look is now an accessible icon inside the preview. Saved/renamed/updated notices expire in three seconds; deletion and leaving customisation clear them. Name/input and Country/toggle/collapsible input use inline rows. Sound/Volume share one row. Removed computer-practice prose and duplicate photo warnings/hints; one notice explains that random matches never store/send camera photos. Actual private photo choices, local computer snapshots and random photo rejection are unchanged.
