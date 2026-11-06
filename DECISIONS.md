@@ -1,5 +1,12 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — Local practice is not a stranger match
+
+- Restrict camera views only for random online matches. Local computer practice may show the player's own camera and local result JPEG; never start a peer for this. Keep private incoming-photo display preferences separate from local practice pictures, and use honest local-only hints.
+- Remove idle intensity UI and ignore old saved intensity; use max 10/10 with existing reduced-motion/frame-rate protections. Keep Fire intensity separate.
+- Store is for acquiring unowned items; Customise is for selecting and styling owned items. Filter using the existing Inventory.owns rules on every Store grid refresh, remove obtained cards immediately, preserve rejected unlocks, and provide a direct owned-collection button. Do not change the demo unlock provider or add monetisation.
+
+
 ## 2026-11-06 — Compact hand fitting controls
 
 - Hide Finger width, Palm width, Coverage and Reset fit behind an initially collapsed **Adjust Hand Size** disclosure. Preserve its open state during editing rerenders; leave the fitting values, live camera path and validation unchanged.

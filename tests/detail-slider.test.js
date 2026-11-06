@@ -11,12 +11,12 @@ await import('../js/main.js');
 const { gen } = await import('../js/cosmetics.js');
 
 test('Geometric slider updates recoloured live try-on facets immediately and persists on change', async () => {
-  await until(() => $('storeGrid').children.length || $('storeBtn').onclick, 'ready');
-  $('storeBtn').onclick();
-  await until(() => $('storeGrid').children.some(c => c.dataset.id === 'lowpoly'), 'Geometric card');
-  $('storeGrid').children.find(c => c.dataset.id === 'lowpoly').onclick();
-  $('storeLayers').children.find(c => c.dataset.value === 'base').onclick();
-  await $('storeSnap').onclick();
+  await until(() => $('profileGrid').children.length || $('storeBtn').onclick, 'ready');
+  $('profileBtn').onclick();$('custBtn').onclick();
+  await until(() => $('profileGrid').children.some(c => c.dataset.id === 'lowpoly'), 'Geometric card');
+  $('profileGrid').children.find(c => c.dataset.id === 'lowpoly').onclick();
+  $('profileLayers').children.find(c => c.dataset.value === 'base').onclick();
+  await $('tryNow').onclick();
   assert.equal(cam.overlay.rec.skin.id, 'lowpoly');
   // Exercise the actual slider callbacks after applying a non-default hand colour.
   const colorRow = $('catColor').children.find(c => c.classList.contains('cprow'));
@@ -31,5 +31,5 @@ test('Geometric slider updates recoloured live try-on facets immediately and per
   }
   assert.ok(counts.every((n, i) => !i || n > counts[i - 1]), counts.join(','));
   sl.onchange(); assert.equal(localStorage.getItem('ff-polylevel'), '5');
-  $('wearCamOff').onclick(); $('storeBack').onclick();
+  $('tryNow').onclick(); $('profileBack').onclick();
 });

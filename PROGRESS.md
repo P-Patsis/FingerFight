@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-06 — Local camera views, full idle animation and acquisition-only Store
+
+- Fixed: computer practice was mistakenly coerced to random-match safe views. It now offers Photo + puppet and Photo + skeleton, uses the existing live camera overlay paths, and displays own local snapshots even if incoming opponent photos were disabled in an earlier private match. Practice hints say pictures stay on this phone. Random online opponents still cannot send/receive photos; private choices and validation remain intact.
+- Changed: removed the idle animation intensity slider. Drawing defaults/startup use maximum 10/10 and ignore legacy ff-motion settings; reduced-motion still freezes animations and the existing slow-frame safeguard remains. The separate Fire intensity control stays.
+- Store: only not-yet-owned items appear, including after colour preview refreshes. Unlocks disappear from Store without automatically equipping; **Customise owned items** opens the owned collection. Refused unlocks remain available to retry; exhausted categories explain where owned items are. Existing demo unlock provider is unchanged; no real ad/payment SDK.
+- Verified: full suite **386/386 passes** (67.1 s), plus latest owned painting-preview/fitting/fire follow-up **5/5 passes**. New real HandCam-method local-practice test checks four choices, live feed hiding/overlay selection, own JPEG reveal and zero signaling peers. Acquisition tests cover filtered categories, refused/successful unlocks, transfer to Customise and empty state. Existing owned-item UI tests now exercise Customise. SW restamped to `ff-87da1387`. Android code 3 / `0.1.2-prototype` rebuild running; phone UI/installation/camera/FPS review remains open.
+
+
 ## 2026-11-06 — Collapsible hand sizing
 
 - Changed: Finger width, Palm width and Coverage, plus Reset fit, are grouped in a native **Adjust Hand Size** disclosure in the shared Hand controls (Store/Profile/try-on). Closed initially; the open state survives control rerenders while editing. Slider ranges, live fitting, persistence and validated wire data are unchanged. Native keyboard/tap disclosure and a 44px summary target; bounded slider layout retained.

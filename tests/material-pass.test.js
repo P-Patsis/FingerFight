@@ -22,22 +22,21 @@ test('idle strength scales drift and pulse, can turn them off, and remains local
   for (const n of [-1,11,1.5,'5',NaN]) assert.equal(D.setMotionStrength(n),false);
   D.setMotionStrength(10);
   const d=new D.HandDynamics({reduced:()=>true});d.update(hand(),1/30,C.resolveLoadout('robot',[]).skin);
-  assert.equal(d.animTime,null); D.setMotionStrength(5);
+  assert.equal(d.animTime,null); D.setMotionStrength(10);
   assert.deepEqual(C.genWire('robot'),{},'idle style is local; opponent pictures remain still');
 });
 
-test('Hand-category idle strength slider updates existing dynamics and persists without changing rig landmarks', async () => {
+test('idle animations default to maximum and old slider settings do not override it', async () => {
+  localStorage.setItem('ff-motion','0');
   await import('../js/main.js');
-  $('storeBtn').onclick();
-  await until(()=>$('storeGrid').children.length,'catalog');
-  $('storeLayers').children.find(c=>c.dataset.value==='base').onclick();
-  const sl=find($('catColor'),'motion'); assert.ok(sl);
+  $('profileBtn').onclick();$('custBtn').onclick();
+  await until(()=>$('profileGrid').children.length,'owned catalog');
+  $('profileLayers').children.find(c=>c.dataset.value==='base').onclick();
+  assert.equal(find($('catColor'),'motion'),undefined);
   const d=new D.HandDynamics({reduced:()=>false}), lm=hand(), before=JSON.stringify(lm);
-  sl.value='0';sl.oninput();assert.equal(d.animStrength,0);
-  sl.value='8';sl.oninput();sl.onchange();assert.equal(d.animStrength,1.6);
-  assert.equal(localStorage.getItem('ff-motion'),'8');
+  assert.equal(d.animStrength,2);
   d.update(lm,1/30,C.resolveLoadout('mechanical',[]).skin);assert.equal(JSON.stringify(lm),before);
-  D.setMotionStrength(5);$('storeBack').onclick();
+  $('profileBack').onclick();
 });
 
 test('released sand keeps world-space momentum and eases back; two hands share 84 grains', () => {

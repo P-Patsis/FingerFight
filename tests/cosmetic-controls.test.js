@@ -16,16 +16,17 @@ const { validPicture } = await import('../js/logic.js');
 const { ParticleSystem } = await import('../js/particles.js');
 const { makeHand, ALL, FAN } = await import('./helpers.js');
 const find = (n, act) => n.dataset?.act === act ? n : n.children?.map(c => find(c, act)).find(Boolean);
-const card = id => $('storeGrid').children.find(c => c.dataset.id === id);
+const card = id => $('profileGrid').children.find(c => c.dataset.id === id);
 
 test('Painting tile and preview clicks reroll even when already worn; fire slider updates and persists', async () => {
-  $('storeBtn').onclick(); await until(() => card('painting'), 'catalog');
-  $('storeLayers').children.find(c => c.dataset.value === 'base').onclick();
+  $('profileBtn').onclick();$('custBtn').onclick(); await until(() => card('painting'), 'catalog');
+  $('profileLayers').children.find(c => c.dataset.value === 'base').onclick();
   card('painting').onclick(); const a = C.gen.sd;
   card('painting').onclick(); assert.notEqual(C.gen.sd, a); const second = C.gen.sd;
-  $('storePreview').onclick(); assert.notEqual(C.gen.sd, second);
+  $('profileStore').onclick();$('storePreview').onclick(); assert.notEqual(C.gen.sd, second);
+  $('storeCustomise').onclick();
   for (const id of ['flaming', 'burnbone']) {
-    card(id).onclick(); await $('storeSnap').onclick();
+    card(id).onclick(); await $('tryNow').onclick();
     const slider = find($('catColor'), 'fire'); assert.ok(slider);
     slider.value = '1'; slider.oninput(); const low = cam.overlay.rec.emitters.map(e => ({...e}));
     slider.value = '10'; slider.oninput(); const high = cam.overlay.rec.emitters;
@@ -33,9 +34,9 @@ test('Painting tile and preview clicks reroll even when already worn; fire slide
     assert.ok(high.every(e => e.rate <= 40));
     slider.onchange(); assert.equal(localStorage.getItem('ff-fire'), '10');
     assert.deepEqual(C.genWire(id), { fi: 10 });
-    $('wearCamOff').onclick();
+    $('tryNow').onclick();
   }
-  $('storeBack').onclick();
+  $('profileBack').onclick();
 });
 
 test('fist debounce rerolls once per closure, rejects brief glitches and requires reopening', () => {
@@ -67,11 +68,11 @@ test('Profile and settings occupies Store\'s former position above Store', () =>
 });
 
 test('compact manual fit controls update live, save immediately on change and reset all fit settings',async()=>{
- $('storeBtn').onclick();await until(()=>card('cartoon'),'catalog');$('storeLayers').children.find(c=>c.dataset.value==='base').onclick();card('cartoon').onclick();await $('storeSnap').onclick();
+ $('profileBtn').onclick();$('custBtn').onclick();await until(()=>card('cartoon'),'catalog');$('profileLayers').children.find(c=>c.dataset.value==='base').onclick();card('cartoon').onclick();await $('tryNow').onclick();
  for(const [key,value]of [['f',145],['p',120],['c',3]]){
   const sl=find($('catColor'),'fit-'+key);assert.ok(sl);sl.value=String(value);sl.oninput();assert.equal(cam.overlay.rec.skin.fit[key],value);sl.onchange();assert.equal(JSON.parse(localStorage.getItem('ff-fit'))[key],value);
  }
  assert.deepEqual(C.gen.fit,{f:145,p:120,c:3});assert.deepEqual(C.genWire('cartoon').fit,C.gen.fit);
  find($('catColor'),'fit-reset').onclick();assert.deepEqual(C.gen.fit,{f:100,p:100,c:0});assert.equal(cam.overlay.rec.skin.fit,undefined);assert.deepEqual(JSON.parse(localStorage.getItem('ff-fit')),C.gen.fit);
- $('wearCamOff').onclick();$('storeBack').onclick();
+ $('tryNow').onclick();$('profileBack').onclick();
 });

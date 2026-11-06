@@ -16,7 +16,7 @@ import { Link, newCode, cleanCode, formatCode, privateId, randomId, CODE_LEN, ne
 import { HandCam, SimCam } from './hands.js';
 import { createWakeLock } from './wake.js';
 import { drawFromMessage, drawPuppetPicture, drawViewPreview, drawSkeletonPicture, statesFromCount, previewHandPx, SKELETON_COLOR } from './avatars.js';
-import { motionStyle, setMotionStrength } from './dynamics.js';
+import { setMotionStrength } from './dynamics.js';
 import { statesToLandmarks } from './puppet.js';
 import { skinIds, getSkin, skinIdOf, loadUserSkins, isUserSkin } from './skins.js';
 import { loadCatalog, catalog, filterCatalog, entryOf, resolveLoadout, gen, genWire, setGen, rerollPainting } from './cosmetics.js';
@@ -94,7 +94,7 @@ const MODE_LABELS = { skeleton: 'Skeleton', puppet: 'Puppet', 'photo-skeleton': 
 // what I show my opponent: a view (see VIEWS in logic.js; older saved values are mapped) and a puppet skin (see SKINS.md), both remembered on this phone
 try{setGen({fit:JSON.parse(store_get('ff-fit')||'null')});}catch{ /* bad saved fit uses defaults */ }
 setGen({ gc: Number(store_get('ff-polylevel')), fi: Number(store_get('ff-fire')), nl: Number(store_get('ff-naillength') ?? 5), el: store_get('ff-element') });                  // how many facets the Geometric hand has (1 chunky - 5 fine), mine; it travels as `gc`
-setMotionStrength(Number(store_get('ff-motion') ?? 5));
+setMotionStrength(10); // Always full idle animation; reduced-motion preference still takes precedence.
 let style = { mode: viewOf(store_get('ff-mode')), skin: store_get('ff-puppet') || 'cartoon', baseColor: null, skel: cleanColor(store_get('ff-skel')), skelStyle: cleanSkelStyle(store_get('ff-skelstyle')), stack: [] };   // stack = worn items in the order equipped, last on top: [{id, color}]; see COSMETICS.md
 const cust = { on: false };                                           // the Profile's customise / try-on mode (see custBtn)
 const tryOn = { on: false, busy: false, token: 0 };      // the live camera try-on in the Store / Profile (see startTryOn)
@@ -496,7 +496,7 @@ $('randomBtn').onclick = async () => {
 // ---------------------------------------------------------------------------------------------
 // Network
 // ---------------------------------------------------------------------------------------------
-const allowPhotos = () => matchKind === 'private';          // random opponents never send, and are never shown, photos
+const allowPhotos = () => matchKind === 'private' || matchKind === 'computer';          // random opponents never send, and are never shown, photos
 const pictureOf = m => ({ ...genWire(m.skin,m),cb:m.cb, photo: m.photo, view: m.view, skin: m.skin, lay: m.lay, bc: m.bc, sk: m.sk, ss: m.ss, bk: m.bk, cos: m.cos, hands: m.hands, lm: m.lm, ar: m.ar });
 
 function onLinkOpen() {
@@ -804,8 +804,8 @@ function buildBgPicker() {
 // ---- what my opponent sees of my hand
 // The whole matrix: friends (private) may get any of VIEWS; strangers (random) only the drawn ones. A photo choice is KEPT while a
 // random match is on screen (only displayed as its drawn twin), so it is back for the next private match.
-const matchTypeNow = () => ((matchKind === 'random'||matchKind==='computer') ? 'random' : 'private');
-const effectiveStyle = () => ((matchKind === 'random'||matchKind==='computer') && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
+const matchTypeNow = () => (matchKind === 'random' ? 'random' : 'private');
+const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) ? { ...style, mode: safeViewOf(style.mode) } : style);
 /** The camera view's overlay follows the choice (puppet views draw the puppet over my own camera picture). */
 /** The STORE's try-on has no view choice: a photo view shows my live camera picture behind the puppet, any other view the puppet alone (the items are what is tried on).
  *  The Profile's top window shows the selected view itself (skeleton, puppet, with or without the live photo); its puppet fitting lives in the customise controls. Preview only, never sent. */
@@ -849,15 +849,19 @@ function renderStyle() {
     b.hidden = !offered.includes(b.dataset.mode);                 // strangers never even see a photo option
     b.classList.toggle('sel', b.dataset.mode === mode);
   }
-  $('photoRow').hidden = random;
+  $('photoRow').hidden = random || matchKind === 'computer';
+  for (const b of $('modePicker').children) {
+    const hint = b.children?.[0];
+    if (!isSafeView(b.dataset.mode) && hint) hint.textContent = matchKind === 'computer' ? 'stays on this phone' : 'sends a real photo';
+  }
   $('photoBtn').textContent = showPhotos ? 'On' : 'Off';
   $('photoBtn').classList.toggle('on', showPhotos);
   $('rudeBtn').textContent = hideRude ? 'On' : 'Off';
   $('rudeBtn').classList.toggle('on', hideRude);
-  const warn = random ? '' : cameraWarning(mode);                // only a photo view carries the warning
+  const warn = random || matchKind === 'computer' ? '' : cameraWarning(mode);                // only a photo view carries the warning
   $('styleNote').textContent = random
     ? 'Random opponent: only a drawn puppet or skeleton is shared. Your camera image never leaves this phone.'
-    : warn;
+    : matchKind === 'computer' ? 'Computer practice: camera pictures stay on this phone.' : warn;
   $('styleNote').classList.toggle('err', !!warn);
   renderViewPreview(mode);
   applyOverlay();
@@ -1050,7 +1054,7 @@ function itemCard(e) {
       ev?.stopPropagation?.();
       btn.disabled = true;
       const r = await unlockItem(inv, e);                         // STUB today (js/unlock.js); a native build swaps the provider
-      storeMsg(r.granted ? e.name + ' unlocked. Tap it to wear it.' : 'Not unlocked' + (r.error ? ' (' + r.error + ')' : '') + '.');
+      storeMsg(r.granted ? e.name + ' unlocked. Find it in Customise.' : 'Not unlocked' + (r.error ? ' (' + r.error + ')' : '') + '.');
       if (r.granted) sfx.ui();
       syncStyle();
     };
@@ -1177,6 +1181,12 @@ function fillGrid(grid, list) {
   for (const e of list) grid.append(itemCard(e));
 }
 
+function renderStoreGrid() {
+  const available = filterCatalog(catalog(), storeView).filter(e => !inv.owns(e.id));
+  fillGrid($('storeGrid'), available);
+  if (!available.length) $('storeGrid').children[0].textContent = 'You own everything in this category. Find your items in Customise.';
+}
+
 function renderStore() {
   const cats = $('storeCats'), lays = $('storeLayers');
   cats.replaceChildren(); lays.replaceChildren();
@@ -1184,12 +1194,12 @@ function renderStore() {
   for (const c of CATEGORIES) chip(cats, c, CATEGORY_LABELS[c], storeView.category, v => { storeView.category = v; storeView.reset = true; }, renderStore);
   chip(lays, 'all', 'Everything', storeView.layer, v => { storeView.layer = v; storeView.reset = true; }, renderStore);
   for (const l of LAYERS) chip(lays, l, LAYER_LABELS[l], storeView.layer, v => { storeView.layer = v; storeView.reset = true; }, renderStore);
-  fillGrid($('storeGrid'), filterCatalog(catalog(), storeView));
+  renderStoreGrid();
   renderWear();
   if (storeView.reset) { storeView.reset = false; resetCategoryItems($('storeGrid'), $('store'), $('storeCats')); }
 }
 
-/** The Profile's customise list: one type at a time (Hand, Tattoo / scar, Nail polish, Ring, Glove, Effect) in a sideways-scrolling row, only what you own (the Store has everything). */
+/** The Profile's customise list: one type at a time (Hand, Tattoo / scar, Nail polish, Ring, Glove, Effect) in a sideways-scrolling row, only what you own (the Store shows only items not yet owned). */
 function renderProfileItems() {
   const lays = $('profileLayers');
   lays.replaceChildren();
@@ -1245,7 +1255,7 @@ function enterCust() {
 }
 $('custBtn').onclick = ()=>$('lobby').hidden?enterCust():openMatchCustomise();                                    // "Customise": pick and arrange, no camera
 $('tryBtn').onclick = () => { if(!$('lobby').hidden)openMatchCustomise();else enterCust();startTryOn(); };          // "Try on (camera)": the same area with the camera ON (says why when it cannot)
-$('tryNow').onclick = () => { if(cust.on){if(tryOn.on)stopTryOn();else startTryOn();} };          // customising without the camera and now wanting it
+$('tryNow').onclick = () => { if(cust.on){if(tryOn.on)stopTryOn();else return startTryOn();} };          // customising without the camera and now wanting it
 
 /** The first colour a category starts from when nothing was picked: the default of its first colourable item (the hand: the worn hand). */
 function categoryDefault(layer) {
@@ -1353,11 +1363,6 @@ function renderCatColor() {
   }
   if (layer === 'base') {
     renderFitControls(box);
-    const ctl = el('div', 'ctl'), val = el('b', '', String(motionStyle.strength));
-    const sl = document.createElement('input'); sl.type = 'range'; sl.min = '0'; sl.max = '10'; sl.step = '1'; sl.value = String(motionStyle.strength); sl.dataset.act = 'motion'; sl.setAttribute('aria-label', 'Idle animation strength');
-    sl.oninput = () => { if (setMotionStrength(Number(sl.value))) { val.textContent = String(motionStyle.strength); refreshPreview(); } };
-    sl.onchange = () => { store.set('ff-motion', String(motionStyle.strength)); };
-    ctl.append(el('span', 'fine', 'Idle animation'), sl, val); box.append(ctl);
   }
   if (layer === 'base' && inv.baseId === 'elemental') {
     const elements = el('div', 'chips'); elements.setAttribute('aria-label', 'Element');
@@ -1472,7 +1477,7 @@ function liveColor() {
   refreshPreview(); applyOverlay();
   clearTimeout(liveTimer);
   liveTimer = setTimeout(() => {
-    if (!$('store').hidden) fillGrid($('storeGrid'), filterCatalog(catalog(), storeView));
+    if (!$('store').hidden) renderStoreGrid();
     if (!$('profile').hidden && cust.on && profileView.layer !== 'base') fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
     renderViewPreview(effectiveStyle().mode);
   }, 250);
@@ -1552,6 +1557,7 @@ $('storePreview').onclick = () => { if (inv.baseId === 'painting') { rerollPaint
 $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
 $('storeBack').onclick = () => show('menu');
+$('storeCustomise').onclick = () => { show('profile'); buildStyleCard(); renderProfile(); enterCust(); };
 $('storeSnap').onclick = async () => {
   if (!tryOn.on) { await startTryOn(); }                                // the first tap turns the camera on (or says why it cannot)
   try {
@@ -1860,12 +1866,12 @@ function tryResolve() {
 }
 
 /**
- * The picture of a hand for the reveal. Real photos are shown only in private matches (and only if I allow it);
+ * The picture of a hand for the reveal. Real photos are shown in private matches or local computer practice (and only if I allow it);
  * everything else, and every fallback, is DRAWN here from the finger data, so a stranger can't push an image at me.
  */
 function buildPicture(msg) {
   const photoView = !isSafeView(msg.view);
-  if (photoView && msg.photo && allowPhotos() && showPhotos) {
+  if (photoView && msg.photo && allowPhotos() && (matchKind === 'computer' || showPhotos)) {
     const img = el('img');
     img.alt = 'Hand';
     img.src = msg.photo;

@@ -19,7 +19,7 @@ export const DYN = Object.freeze({
   SLOW_DT: 0.05,        // average frame time (s) above which spring physics switches itself off (below ~20 fps)
 });
 
-export const motionStyle = { strength: 5 };
+export const motionStyle = { strength: 10 };
 export function setMotionStrength(n) {
   if (!Number.isInteger(n) || n < 0 || n > 10) return false;
   motionStyle.strength = n; return true;

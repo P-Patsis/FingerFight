@@ -79,7 +79,7 @@ browser) and the PeerJS introduction server.
 
 Current branch: `main`. Latest layout and puppet-only/photo try-on toggle need device review;
 Node tests use a fake DOM/PeerJS and do not prove real browser layout, camera accuracy or two-device connectivity.
-The Store supports local inventory, ordered cosmetic stacks, colour pickers and effects.
+The Store lists unowned cosmetics to unlock. Customise holds the owned collection, ordered cosmetic stacks, colour pickers and effects. Idle animation runs at maximum intensity (with reduced-motion support); Fire intensity remains adjustable. Computer practice supports all four hand views, including local Photo + puppet/skeleton, without sending camera pictures to a peer.
 Ad/purchase unlocks are demonstration stubs (`js/unlock.js`), not real transactions.
 No notification service, accounts, friends system or game APK wrapper is implemented.
 

@@ -441,14 +441,15 @@ test('items can be loaded from any base path and a broken item is skipped, not f
 });
 
 // ---- the Store screen -------------------------------------------------------------------------------------------------------------
-test('Store + Profile: tap to wear / take off (no equip buttons), worn list with reorder, colour picker, effects, unlock stub', async () => {
+test('Store unlocks unowned items; Customise equips and reorders the owned collection with colours and effects', async () => {
   await loadCatalog(); resetItems(); await loadCatalog();
   assert.ok($('storeBtn') && $('storeBack') && $('storeGrid') && $('storePreview'));
   $('storeBtn').onclick();
   assert.deepEqual(b.visible(), ['store']);
   assert.equal($('wearCard').parentElement, $('wearSlotStore'), 'the Wearing card lives in the Store');
-  const cards = () => $('storeGrid').children.filter(c => c.matches('.item-card'));
-  await until(() => cards().length === catalog().length, 'one card per item');
+  let gridId = 'storeGrid';
+  const cards = () => $(gridId).children.filter(c => c.matches('.item-card'));
+  await until(() => cards().length === catalog().filter(e=>!e.free).length, 'one card per item');
   const card = id => cards().find(c => c.dataset.id === id);
   const unlockBtn = id => card(id).children.find(c => c.dataset?.act === 'unlock');
   const stackIds = () => JSON.parse(globalThis.localStorage.getItem('ff-stack') || '[]').map(x => x.id);
@@ -457,14 +458,22 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   const btn = (id, act) => row(id).children.find(c => c.dataset?.act === act);
   // no Equip / Take off buttons any more; locked items have the unlock button, owned ones are plain tappable cards
   for (const c of cards()) assert.ok(!c.children.some(x => /^(equip|off)$/.test(x.dataset?.act || '')));
-  assert.ok(unlockBtn('ruby') && !unlockBtn('goldring')); assert.match(unlockBtn('ruby').textContent, /Watch ad.*demo/);
-  assert.equal(card('goldring').getAttribute('role'), 'button');
+  assert.ok(unlockBtn('ruby') && !card('goldring')); assert.match(unlockBtn('ruby').textContent, /Watch ad.*demo/);
+  assert.ok(cards().every(c=>c.classList.contains('locked')));
   // filters
   const chip = (box, v) => $(box).children.find(x => x.dataset.value === v);
   chip('storeCats', 'animal').onclick();
-  assert.deepEqual(cards().map(c => c.dataset.id), filterCatalog(catalog(), { category: 'animal' }).map(e => e.id));
+  assert.deepEqual(cards().map(c => c.dataset.id), filterCatalog(catalog(), { category: 'animal' }).filter(e=>!e.free).map(e => e.id));
   chip('storeCats', 'all').onclick(); chip('storeLayers', 'ring').onclick();
-  assert.deepEqual(cards().map(c => c.dataset.id), ['goldring', 'silverring', 'ruby', 'ornate']);
+  assert.deepEqual(cards().map(c => c.dataset.id), filterCatalog(catalog(),{layer:'ring'}).filter(e=>!e.free).map(e=>e.id));
+  await unlockBtn('ruby').onclick();
+  await until(()=>!card('ruby'),'obtained item leaves Store');
+  assert.match($('storeMsg').textContent,/Ruby ring unlocked/);
+  assert.deepEqual(stackIds(),[],'unlock does not equip');
+  $('storeCustomise').onclick();gridId='profileGrid';
+  assert.deepEqual(b.visible(),['profile']);
+  chip('profileLayers','ring').onclick();
+  assert.ok(card('ruby')&&!card('ornate'),'Customise contains owned items only');
   // TAP: wear, in tap order; the second ring stacks too; tapping again takes that one off
   card('goldring').onclick(); card('silverring').onclick();
   assert.deepEqual(stackIds(), ['goldring', 'silverring']);
@@ -475,11 +484,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(stackIds(), ['silverring']); assert.ok(!card('goldring').classList.contains('eq'));
   card('goldring').onclick();
   assert.deepEqual(stackIds(), ['silverring', 'goldring']);
-  // unlock (stub) then tap to wear
-  unlockBtn('ruby').onclick();
-  await until(() => !unlockBtn('ruby'), 'ruby unlocked by the stub');
-  assert.match($('storeMsg').textContent, /Ruby ring unlocked/);
-  assert.deepEqual(stackIds(), ['silverring', 'goldring'], 'unlocking does not wear it');
+  // Newly unlocked item is now equipped from Customise.
   card('ruby').onclick();
   assert.deepEqual(stackIds(), ['silverring', 'goldring', 'ruby']);
   assert.match($('storeLoadout').textContent, /Ruby ring/);
@@ -494,7 +499,7 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   btn('ruby', 'remove').onclick();
   assert.deepEqual(stackIds(), ['silverring', 'goldring']); assert.ok(!card('ruby').classList.contains('eq'));
   // COLOUR PICKER is PER CATEGORY now: one panel for the chosen type, no dot on individual items
-  chip('storeLayers', 'nails').onclick();
+  chip('profileLayers', 'nails').onclick();
   card('nailpolish').onclick();
   assert.equal(btn('nailpolish', 'color'), undefined, 'no per-item colour dot any more');
   const pick = () => $('catColor').children.find(c => c.classList.contains('cprow'));
@@ -507,11 +512,11 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   pk.drag(9999, -500);                                               // a drag outside the square is clamped, never an invalid value
   assert.match(JSON.parse(globalThis.localStorage.getItem('ff-stack')).find(x => x.id === 'nailpolish').c, /^#[0-9a-f]{6}$/);
   pk.done(); assert.equal(panelOf($('catColor')), undefined, 'Done closes the panel');
-  chip('storeLayers', 'ring').onclick();
+  chip('profileLayers', 'ring').onclick();
   assert.ok($('catColor').children.some(c => c.classList.contains('cprow')), 'rings have their own colour picker now');
   // EFFECTS: pick them like any item
-  chip('storeLayers', 'effect').onclick();
-  assert.deepEqual(cards().map(c => c.dataset.id), ['sparkles', 'bubbles', 'glow', 'embers', 'electric']);
+  chip('profileLayers', 'effect').onclick();
+  assert.deepEqual(cards().map(c => c.dataset.id), ['sparkles', 'bubbles', 'glow', 'embers']);
   card('bubbles').onclick(); card('glow').onclick();
   assert.deepEqual(stackIds().slice(-2), ['bubbles', 'glow']);
   assert.ok($('catColor').children.some(c => c.dataset?.act === undefined && c.classList.contains('ctl')), 'the Effect category has its colour panel');
@@ -519,8 +524,9 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   await $('storeSnap').onclick();
   assert.match($('wearMsg').textContent, /simulator has no camera/);
   // PROFILE: the same card and the owned items
-  $('storeBack').onclick();
+  $('profileBack').onclick();
   $('profileBtn').onclick();
+  chip('profileLayers','base').onclick();
   assert.deepEqual(b.visible(), ['profile']);
   assert.equal($('wearTop').parentElement, $('cWearTop'), 'the preview moved to the Profile customise area');
   const pcards = () => $('profileGrid').children.filter(c => c.matches('.item-card'));
@@ -538,6 +544,26 @@ test('Store + Profile: tap to wear / take off (no equip buttons), worn list with
   assert.deepEqual(stackIds(), []); assert.equal(globalThis.localStorage.getItem('ff-puppet') !== null || true, true);
   $('storeBack').onclick();
   assert.deepEqual(b.visible(), ['menu']);
+});
+
+test('Store keeps refused unlocks, hides obtained items and explains an exhausted category', async () => {
+  $('storeBtn').onclick();
+  $('storeLayers').children.find(c=>c.dataset.value==='ring').onclick();
+  const card=()=>$('storeGrid').children.find(c=>c.dataset.id==='ornate');
+  const unlockButton=()=>card().children.find(c=>c.dataset.act==='unlock');
+  assert.ok(card());
+  try {
+    unlock.setUnlockProvider({name:'refused',request:async()=>({granted:false,error:'not completed'})});
+    await unlockButton().onclick();assert.ok(card());assert.match($('storeMsg').textContent,/Not unlocked/);
+    unlock.resetUnlockProvider();await unlockButton().onclick();
+    assert.equal(card(),undefined);
+    assert.ok(!$('storeGrid').children.some(c=>c.dataset.id));
+    assert.match($('storeGrid').children[0].textContent,/own everything/);
+    $('storeCustomise').onclick();
+    $('profileLayers').children.find(c=>c.dataset.value==='ring').onclick();
+    assert.ok($('profileGrid').children.some(c=>c.dataset.id==='ornate'));
+    $('profileBack').onclick();
+  } finally { unlock.resetUnlockProvider(); }
 });
 
 test('the service worker precaches every new module and every item and skin file, so the Store works offline', async () => {

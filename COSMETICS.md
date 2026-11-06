@@ -1,5 +1,12 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Store acquisition and full idle animation
+
+Store now lists only items not yet obtained. After unlocking, find the item through **Customise owned items**; it is not automatically equipped. Free and previously granted items remain in Customise. Demo unlocks remain explicitly labelled and have no real ads or payment integration.
+
+Idle animation intensity has no slider: it uses maximum 10/10, ignoring legacy saved lower settings, while reduced-motion and slow-frame protection remain. **Fire intensity** stays adjustable. Computer practice restores **Photo + puppet / Photo + skeleton** for live camera and local results; random online matches remain drawing-only.
+
+
 ## 2026-11-06 — Adjust Hand Size
 
 Finger width, Palm width, Coverage and Reset fit now sit inside the initially collapsed **Adjust Hand Size** section of the shared Hand category. Open it to fit the puppet live; it stays open as values save. Existing values, ranges, persistence and opponent-picture validation are unchanged.

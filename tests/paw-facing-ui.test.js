@@ -62,8 +62,8 @@ test('category switches reset card and screen scrolling after rebuild; equipping
     $('storeCats').getBoundingClientRect=()=>({top:100,height:35});
     $('storeLayers').children.find(c=>c.dataset.value==='nails').onclick();flush();
     assert.equal(g.scrollLeft,0);assert.equal(g.scrollTop,0);assert.equal(screen.scrollTop,648);
-    g.children.find(c=>c.dataset.id==='nailpolish').onclick();flush();
-    assert.equal(screen.scrollTop,648,'equipping does not run category alignment');
+    assert.ok(g.children.every(c=>!c.dataset.id||c.classList.contains('locked')));
+    assert.equal(screen.scrollTop,648,'rendering locked items does not change category alignment');
     $('storeBack').onclick();$('profileBtn').onclick();$('custBtn').onclick();flush();
     const profile=$('profile'),cards=$('profileGrid');
     profile.scrollTop=900;cards.scrollLeft=200;cards.scrollTop=40;
@@ -79,13 +79,13 @@ test('category switches reset card and screen scrolling after rebuild; equipping
 });
 
 test('Painting and slider help paragraphs are removed while slider labels remain beside controls',()=>{
-  $('storeBtn').onclick();$('storeLayers').children.find(c=>c.dataset.value==='base').onclick();
-  const card=id=>$('storeGrid').children.find(c=>c.dataset.id===id);
+  $('profileBtn').onclick();$('custBtn').onclick();$('profileLayers').children.find(c=>c.dataset.value==='base').onclick();
+  const card=id=>$('profileGrid').children.find(c=>c.dataset.id===id);
   card('painting').onclick();
   assert.doesNotMatch(text($('catColor')),/Tap Painting|0 = still|Reduced motion keeps/);
-  const motion=find($('catColor'),'motion');assert.equal(motion.parentElement.children[0].textContent,'Idle animation');
+  assert.equal(find($('catColor'),'motion'),undefined);
   card('flaming').onclick();const fire=find($('catColor'),'fire');
   assert.equal(fire.parentElement.children[0].textContent,'Fire intensity');
-  assert.equal(motion.tagName,'INPUT');assert.equal(fire.tagName,'INPUT');
-  $('storeBack').onclick();
+  assert.equal(fire.tagName,'INPUT');
+  $('profileBack').onclick();
 });

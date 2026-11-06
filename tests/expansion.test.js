@@ -94,16 +94,16 @@ test('new special hands remain data-only for strangers; private photo rules stil
 });
 
 test('Nails-only length slider persists, clear-all removes worn items, and elemental selector updates the preview',async()=>{
- await import('../js/main.js');$('storeBtn').onclick();await until(()=>$('storeGrid').children.length,'catalog');
- const chip=value=>$('storeLayers').children.find(c=>c.dataset.value===value);
+ await import('../js/main.js');$('profileBtn').onclick();$('custBtn').onclick();await until(()=>$('profileGrid').children.length,'catalog');
+ const chip=value=>$('profileLayers').children.find(c=>c.dataset.value===value);
  assert.equal(chip('nails').textContent,'Nails');chip('nails').onclick();
  const sl=find($('catColor'),'naillength');assert.ok(sl);
- const card=id=>$('storeGrid').children.find(c=>c.dataset.id===id);
+ const card=id=>$('profileGrid').children.find(c=>c.dataset.id===id);
  card('nailpolish').onclick();card('knuckleclaws').onclick();
  sl.value='8';sl.oninput();sl.onchange();assert.equal(localStorage.getItem('ff-naillength'),'8');assert.equal(C.genWire('cartoon').nl,8);
- $('storeClear').onclick();assert.ok(!$('storeGrid').children.some(c=>c.classList.contains('eq')));
+ $('storeClear').onclick();assert.ok(!$('profileGrid').children.some(c=>c.classList.contains('eq')));
  chip('base').onclick();assert.equal(find($('catColor'),'naillength'),undefined);
  card('elemental').onclick();const elements=$('catColor').children.find(c=>c.getAttribute('aria-label')==='Element');
  elements.children.find(c=>c.dataset.value==='air').onclick();assert.equal(C.gen.el,'air');assert.equal(localStorage.getItem('ff-element'),'air');
- $('storeBack').onclick();reset();
+ $('profileBack').onclick();reset();
 });

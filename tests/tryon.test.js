@@ -28,22 +28,22 @@ const reset = () => { events.length = 0; startErr = null; loadErr = null; startD
 test('Test snap in the Store turns the camera on and draws what is worn, in the worn order, on the live hand', async () => {
   reset();
   await until(() => catalogReady(), 'catalogue');
-  $('storeBtn').onclick();
-  card('whiteglove').onclick(); card('goldring').onclick();
+  $('profileBtn').onclick();$('custBtn').onclick();
+  const choose=(layer,id)=>{$('profileLayers').children.find(c=>c.dataset.value===layer).onclick();$('profileGrid').children.find(c=>c.dataset.id===id).onclick();};
+  choose('glove','whiteglove');choose('ring','goldring');choose('ring','silverring');choose('nails','nailpolish');
+  $('profileBack').onclick();$('storeBtn').onclick();
   await $('storeSnap').onclick();
   assert.deepEqual(events, ['start', 'run']);
   assert.equal($('camBox').parentElement, $('wearBox'), 'the camera view sits in the Wearing card');
   assert.equal($('camBox').hidden, false); assert.equal($('storePreview').hidden, true);
   assert.equal($('wearCamOff').hidden, false);
   assert.equal(cam().overlay.puppet, true, 'the puppet is drawn on the live hand');
-  assert.deepEqual(stack(), ['whiteglove', 'goldring'], 'in the order worn');
-  // live changes follow: another item, a reorder, a colour
-  card('silverring').onclick();
-  assert.deepEqual(stack(), ['whiteglove', 'goldring', 'silverring']);
+  assert.deepEqual(stack(), ['whiteglove', 'goldring','silverring','nailpolish'], 'owned equipment comes from Customise');
+  // The collection is equipped in Customise; reorder and colour changes still apply live in the Store.
+  assert.deepEqual(stack(), ['whiteglove', 'goldring', 'silverring','nailpolish']);
   const row = id => $('wearList').children.find(li => li.dataset.id === id);
   row('silverring').children.find(c => c.dataset.act === 'down').onclick();
-  assert.deepEqual(stack(), ['whiteglove', 'silverring', 'goldring']);
-  card('nailpolish').onclick();
+  assert.deepEqual(stack(), ['whiteglove', 'silverring', 'goldring','nailpolish']);
   $('storeLayers').children.find(x => x.dataset.value === 'nails').onclick();
   $('catColor').children.find(c => c.classList.contains('cprow')).children.find(x => x.dataset.color === '#25d3e4').onclick();
   assert.equal(cam().overlay.rec.layers.find(l => l.id === 'nailpolish').parts.index_tip[0].fill, '#25d3e4');
