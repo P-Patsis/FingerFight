@@ -53,7 +53,7 @@
         <label class="namerow"><span class="lab">Name</span><input id="nameInput" maxlength="40" autocomplete="off" placeholder="type a name" aria-label="Your name"></label>
         <div class="flagrow">
           <div class="flaghead"><span class="lab">Country</span><span id="countryHint" class="flag-icon"></span><button id="flagBtn" class="toggle">Off</button></div>
-          <span id="countryRow" class="flag-in"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR / Greece" aria-label="Country code or name"></span>
+          <span id="countryRow" class="flag-in"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR" aria-label="Country code or name"></span>
         </div>
       </div>
       <p id="nameNote" class="fine"></p>
@@ -162,8 +162,11 @@
           </div>
           <div id="cMsg" role="status" aria-live="polite"></div>
         </div>
-        <div id="looksRow" class="looks hrow" aria-label="Saved looks" hidden></div>
-        <div id="lookEdit" class="look-edit" hidden></div>
+        <div id="looksDock" hidden><div id="savedLooksPanel" class="saved-looks-panel" hidden>
+          <div id="looksRow" class="looks hrow" aria-label="Saved looks" hidden></div>
+          <div id="lookEdit" class="look-edit" hidden></div>
+          <p id="looksEmpty" class="fine" hidden>No saved looks yet.</p>
+        </div></div>
         <div id="cCat" hidden></div>
         <div id="profileLayers" class="chips two-rows" aria-label="Item type" hidden></div>
       </div>

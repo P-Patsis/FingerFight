@@ -5,9 +5,12 @@ import fs from 'node:fs';
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const at = id => { const i = html.indexOf('id="' + id + '"'); assert.ok(i > 0, id); return i; };
 
-test('Name and Country each keep their label and control inline', () => {
+test('Name, name input, Country and the compact country input share one row', () => {
   const row = html.slice(html.lastIndexOf('<div', at('countryHint') - 200) , html.indexOf('<p id="nameNote"'));
   assert.match(row, /class="idrow"/);
+  const css=fs.readFileSync(new URL('../css/style.css',import.meta.url),'utf8');
+  assert.match(css.slice(css.lastIndexOf('.idrow {')), /^\.idrow \{[^}]*display: flex;[^}]*flex-wrap: nowrap;/);
+  assert.match(css.slice(css.lastIndexOf('.flag-in {')), /^\.flag-in \{[^}]*width: 48px;/);
   for (const id of ['nameInput', 'countryInput', 'countryHint', 'flagBtn', 'countryRow']) assert.ok(row.includes('id="' + id + '"'), id + ' is in the one row');
   assert.match(row, /<span class="lab">Name<\/span>/); assert.match(row, /<span class="lab">Country<\/span>/); assert.match(row, /placeholder="type a name"/);
   assert.ok(at('nameInput') < at('flagBtn') && at('flagBtn') < at('countryInput'), 'name followed by the country label, toggle and collapsible input');

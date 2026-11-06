@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Saved looks disclosure in the toolbar
+
+The customise toolbar is colour picker, Saved looks, Adjust Hand Size. Saved looks opens a full-width list/edit panel and starts collapsed; no saved-list space is reserved below the preview. It survives fitting/colour rerenders and collapses when leaving. The preview Save icon and all saved-look data stay unchanged. Name and Country now share one continuous row with a 48px country field. No cosmetic, rig, count or network data changes.
+
+
 ## 2026-11-06 — Save icon and colour-panel scrolling
 
 Save look is an accessible preview icon; look names/editing remain below the preview. Notices clear after three seconds or immediately on deletion/exit. Name, Country and Sound/Volume use compact inline controls. The colour panel now contributes to scroll height; vertical gestures move the screen up to the sticky edge before its panel scrolls. Horizontal carousels and colour/size gestures are preserved. No cosmetic/rig/counting/wire/particle changes; real-phone touch/layout review remains open.

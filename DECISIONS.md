@@ -1,5 +1,12 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — One identity row and collapsed saved looks
+
+- Keep Name, its input, Country/toggle and its optional input in one non-wrapping horizontal row. Let the name consume remaining width; constrain the country input to 48px and use GR as its placeholder. Preserve country-name/code parsing and flag privacy preferences.
+- Put an accessible Saved looks disclosure button between the colour picker and Adjust Hand Size. Keep the actual saved list/edit strip in a full-width panel below the toolbar, initially hidden; open state survives colour/fitting rerenders, then resets on leaving customisation. Park its persistent DOM before rebuilding colour controls so look IDs/editing remain valid. No empty saved-list strip below the preview.
+- Preserve full-width fitting sliders under the new three-control toolbar, the Save preview icon, persistence/validation, Store acquisition and hand rendering.
+
+
 ## 2026-11-06 — Compact identity controls, reachable picker and bundled music
 
 - Put Name/input and Country/toggle/optional input on their own horizontal rows. Sound toggle and Volume share one row. Move Save look to an accessible icon inside the preview; keep the saved-look list/edit strip below it. Saved/renamed/updated notices expire after three seconds, deletion clears immediately, and leaving customisation clears the notice.

@@ -615,3 +615,21 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 .cp-panel { position: static; margin-top: 6px; width: 100%; }
 #storeSticky, .sticky-top.stuck { overscroll-behavior-y: auto; }
 #cMsg:empty { display: none; }
+
+/* Identity stays on one line; saved looks occupy space only when opened. */
+.idrow { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
+.namerow { display: flex; flex-direction: row; align-items: center; flex: 1 1 0; gap: 5px; }
+.namerow input { flex: 1 1 0; width: 0; }
+.flagrow { flex: 0 0 auto; width: auto; gap: 4px; }
+.flaghead { gap: 4px; }
+.idrow .lab { font-size: 12px; width: auto; }
+.flag-in { flex: 0 0 48px; width: 48px; }
+.flag-in input { width: 48px; padding: 6px 4px; }
+.cat-color .cprow.has-looks { grid-template-columns: 44px 88px minmax(0, 1fr); gap: 8px; }
+.saved-looks-toggle { min-width: 0; min-height: 44px; padding: 8px 2px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.saved-looks-toggle::before { content: '▸ '; }
+.saved-looks-toggle[aria-expanded="true"]::before { content: '▾ '; }
+.saved-looks-panel { width: 100%; min-width: 0; padding-top: 4px; }
+.saved-looks-panel .looks:empty { display: none; }
+
+.cprow.has-looks .fit-settings-content { width: calc(100% + 148px); margin-left: -148px; }

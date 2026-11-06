@@ -110,6 +110,8 @@ function takeLoadout() { const L = inv.loadout(); style.skin = L.base; style.bas
 const stats = new Stats({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // local play statistics (this phone only)
 const practiceStats=new Stats({getItem:store_get,setItem:(k,v)=>store.set(k,v)},'ff-practice-stats');
 const matchStats=()=>matchKind==='computer'?practiceStats:stats;
+const savedLooksPanel=$('savedLooksPanel');
+let savedLooksOpen=false;
 const looks = new Looks({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // saved looks (this phone only)
 const inv = new Inventory({ getItem: store_get, setItem: (k, v) => store.set(k, v) });   // owned items and equipment (this phone only)
 takeLoadout();
@@ -1138,6 +1140,7 @@ function renderLooks() {
   row.replaceChildren();
   if (editingLook && !looks.get(editingLook)) editingLook = null;
   $('saveLookBtn').disabled=looks.full;
+  $('looksEmpty').hidden=looks.list.length>0;
   const now = currentGetup();
   for (const l of looks.list) {
     const on = looks.appliedId === l.id && sameGetup(l, now);
@@ -1276,6 +1279,7 @@ function layoutPreview() {
   if (which === 'fit') startStoreAnim();
 }
 function leaveCust() {
+  savedLooksOpen=false;savedLooksPanel.hidden=true;
   lookNotice();
   cust.on = false;
   $('custArea').hidden = true;
@@ -1313,6 +1317,7 @@ function colorRow(box, layer, cur, apply, live) {
   any.onclick = () => { picker.layer = open ? null : layer; renderCatColor(); if(!open)revealStickyControl($('catColor').querySelector('.cp-panel')); };       // opens / closes our panel; what was dragged is already applied
   row.append(any);
   box.append(row);
+  mountSavedLooks(box,row);
   if (open) box.append(colorPanel(layer, cur, apply, live));
 }
 /** The in-app colour panel: hue slider + saturation/brightness square. Dragging applies live; Done applies for good and closes. */
@@ -1354,13 +1359,24 @@ function skeletonColorRow(box) {
  * well-spread basic presets, and "Original". It recolours everything of that type (the Hand: the worn hand, when that hand supports it). One plain colour; no gradients.
  */
 let fitControlsOpen = false;
+/** Keep the list in a full-width collapsible panel, with its button between colour and sizing. */
+function mountSavedLooks(box,row){
+  if(!inProfileCust())return;
+  if(Array.from(row.children).some(n=>n.dataset?.act==='saved-looks'))return;
+  row.classList.add('has-looks');
+  const button=el('button','saved-looks-toggle','Saved looks');button.type='button';button.dataset.act='saved-looks';
+  button.setAttribute('aria-controls','savedLooksPanel');button.setAttribute('aria-expanded',String(savedLooksOpen));
+  button.onclick=()=>{savedLooksOpen=!savedLooksOpen;savedLooksPanel.hidden=!savedLooksOpen;button.setAttribute('aria-expanded',String(savedLooksOpen));if(savedLooksOpen)revealStickyControl(savedLooksPanel);};
+  row.append(button);box.append(savedLooksPanel);savedLooksPanel.hidden=!savedLooksOpen;renderLooks();
+}
 function renderFitControls(box){
   const section=el('details','fit-settings'),content=el('div','fit-settings-content');
   section.open=fitControlsOpen;
   section.ontoggle=()=>{fitControlsOpen=section.open;};
   section.append(el('summary','','Adjust Hand Size'),content);
-  const row=box.querySelector('.cprow');
-  if(row)row.append(section);else box.append(section);
+  let row=box.querySelector('.cprow');
+  if(!row){row=el('div','cprow');row.append(el('span','colour-spacer'));box.append(row);}
+  mountSavedLooks(box,row);row.append(section);
   for(const [key,label]of [['f','Finger width'],['p','Palm width'],['c','Coverage']]){
     const ctl=el('div','ctl fit-control'),val=el('b','',gen.fit[key]+'%'),sl=document.createElement('input');
     sl.type='range';sl.min=String(FIT_LIMITS[key][0]);sl.max=String(FIT_LIMITS[key][1]);sl.step=key==='c'?'1':'5';sl.value=String(gen.fit[key]);sl.dataset.act='fit-'+key;sl.setAttribute('aria-label',label);
@@ -1374,6 +1390,7 @@ function renderFitControls(box){
 function renderCatColor() {
   const box = $('catColor'), layer = inProfileCust() ? profileView.layer : storeView.layer;
   if (picker.layer && picker.layer !== layer) picker.layer = null;        // the panel belongs to one category
+  $('looksDock').append(savedLooksPanel);savedLooksPanel.hidden=true;
   box.replaceChildren();
   box.hidden = layer === 'all';
   if (layer === 'all') return;

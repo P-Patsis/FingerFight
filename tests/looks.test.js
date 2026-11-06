@@ -75,7 +75,8 @@ test('UI: the saved-looks row is inside the pinned block under the preview; Save
   assert.ok(html.slice(at('stickyTop'), at('custArea')).includes('id="looksRow"'));
   $('profileBtn').onclick(); $('custBtn').onclick();
   await until(() => !$('custArea').hidden, 'customise open');
-  assert.equal($('looksRow').hidden, false);
+  assert.equal($('looksRow').hidden, false);assert.equal($('savedLooksPanel').hidden,true,'saved looks start collapsed');
+  $('catColor').querySelector('.cprow').children.find(c=>c.dataset.act==='saved-looks').onclick();assert.equal($('savedLooksPanel').hidden,false);
   const chip = v => $('profileLayers').children.find(x => x.dataset.value === v);
   chip('ring').onclick(); $('profileGrid').children.find(c => c.dataset.id === 'goldring').onclick();
   let asked = null; globalThis.prompt = (q, d) => { asked = q; return 'Gold <i>fan</i>'; };

@@ -10,12 +10,13 @@ test('custom colour is the only toolbar icon and hand sizing shares its row and 
  $('profileBtn').onclick();$('custBtn').onclick();await until(()=>$('profileGrid').children.length,'catalog');
  $('profileLayers').children.find(c=>c.dataset.value==='base').onclick();
  const row=()=>$('catColor').children.find(c=>c.classList.contains('cprow'));
- assert.equal(row().children[0].dataset.act,'any');assert.equal(row().children[1].tagName,'DETAILS');
- assert.equal(row().children[1].children[0].textContent,'Adjust Hand Size');
+ assert.equal(row().children[0].dataset.act,'any');assert.equal(row().children[1].dataset.act,'saved-looks');assert.equal(row().children[2].tagName,'DETAILS');
+ assert.equal(row().children[2].children[0].textContent,'Adjust Hand Size');
  assert.equal(row().children.some(c=>c.dataset.color),false);
- row().children[1].open=true;row().children[1].ontoggle();
+ assert.equal($('savedLooksPanel').hidden,true);row().children[1].onclick();assert.equal($('savedLooksPanel').hidden,false);assert.equal(row().children[1].getAttribute('aria-expanded'),'true');
+ row().children[2].open=true;row().children[2].ontoggle();
  const input=find($('catColor'),'fit-f');input.value='135';input.oninput();input.onchange();
- assert.equal(JSON.parse(localStorage.getItem('ff-fit')).f,135);assert.equal(row().children[1].open,true);
+ assert.equal(JSON.parse(localStorage.getItem('ff-fit')).f,135);assert.equal(row().children[2].open,true);assert.equal($('savedLooksPanel').hidden,false,'open saved looks survives colour/fit rerenders');row().children[1].onclick();assert.equal($('savedLooksPanel').hidden,true);
  const p=openPicker($('catColor'));assert.equal(p.panel.children[2].children[3].textContent,'Original');p.done();
  $('profileBack').onclick();
 });
