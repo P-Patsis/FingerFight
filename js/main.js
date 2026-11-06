@@ -1,4 +1,5 @@
 import { API_URL } from './service-config.js';
+import { bindStickyScroll, revealStickyControl } from './panel-scroll.js';
 import { Service } from './service.js';
 import { Matchmaker } from './matchmaking.js';
 import { initSocial } from './social.js';
@@ -854,8 +855,7 @@ function buildStyleCard() {
   modes.replaceChildren();
   for (const v of VIEWS) {
     const b = el('button', isSafeView(v) ? '' : 'real', MODE_LABELS[v]);
-    if (!isSafeView(v)) b.append(el('span', 'sub', 'sends a real photo'));     // the hint lives on the photo buttons themselves
-    b.type = 'button';
+        b.type = 'button';
     b.dataset.mode = v;
     b.onclick = () => {
       if (!viewsFor(matchTypeNow()).includes(v)) return;
@@ -886,19 +886,12 @@ function renderStyle() {
     b.classList.toggle('sel', b.dataset.mode === mode);
   }
   $('photoRow').hidden = random || matchKind === 'computer';
-  for (const b of $('modePicker').children) {
-    const hint = b.children?.[0];
-    if (!isSafeView(b.dataset.mode) && hint) hint.textContent = matchKind === 'computer' ? 'stays on this phone' : 'sends a real photo';
-  }
   $('photoBtn').textContent = showPhotos ? 'On' : 'Off';
   $('photoBtn').classList.toggle('on', showPhotos);
   $('rudeBtn').textContent = hideRude ? 'On' : 'Off';
   $('rudeBtn').classList.toggle('on', hideRude);
-  const warn = random || matchKind === 'computer' ? '' : cameraWarning(mode);                // only a photo view carries the warning
-  $('styleNote').textContent = random
-    ? 'Random opponent: only a drawn puppet or skeleton is shared. Your camera image never leaves this phone.'
-    : matchKind === 'computer' ? 'Computer practice: camera pictures stay on this phone.' : warn;
-  $('styleNote').classList.toggle('err', !!warn);
+  $('styleNote').textContent = 'In random matches, no camera photo is stored or sent to your opponent. Only a puppet or skeleton is shared.';
+  $('styleNote').classList.remove('err');
   renderViewPreview(mode);
   applyOverlay();
   layoutPreview();
@@ -947,7 +940,7 @@ function renderLobby() {
   $('lobbyMsg').textContent = me === 'guest' ? (names.host ? (random ? 'Starts when you both have your camera on.' : 'The host starts the fight.') : 'Waiting for the host to accept you…')
     : pendingGuest ? 'Accept or decline the player above.'
     : !names.guest ? (random ? 'Waiting…' : 'Send the code to your friend. Waiting for them to join…')
-    : !(ready.host && ready.guest) ? (matchKind==='computer'?'Enable your camera to play against the computer.':'Both players need to enable their camera.') : (matchKind==='computer'?'Local practice: random guesses and a random puppet.':'');
+    : !(ready.host && ready.guest) ? (matchKind==='computer'?'Enable your camera to play against the computer.':'Both players need to enable their camera.') : '';
   if(random&&!canStart)autoStarted=false;
   if (random && canStart && !autoStarted) {
     autoStarted = true;
@@ -1109,37 +1102,42 @@ function applyLook(look) {
   looks.markApplied(look.id);
   sfx.ui(); syncStyle();
 }
+let lookNoticeTimer=null;
+function lookNotice(text=''){
+  clearTimeout(lookNoticeTimer);$('cMsg').textContent=text;
+  if(text){lookNoticeTimer=setTimeout(()=>{if($('cMsg').textContent===text)$('cMsg').textContent='';},3000);lookNoticeTimer.unref?.();}
+}
+$('saveLookBtn').onclick=saveLook;
 function saveLook() {
-  if (looks.full) { $('cMsg').textContent = 'You can keep ' + MAX_LOOKS + ' looks. Delete one first.'; return; }
+  if (looks.full) { lookNotice('You can keep ' + MAX_LOOKS + ' looks. Delete one first.'); return; }
   let name = 'Look ' + (looks.list.length + 1);
   if (typeof globalThis.prompt === 'function') { const a = globalThis.prompt('Name this look', name); if (a === null) return; name = a; }
   const look = looks.add(name, currentGetup());
-  $('cMsg').textContent = look ? 'Saved "' + look.name + '".' : 'Could not save this look.';
+  lookNotice(look ? 'Saved "' + look.name + '".' : 'Could not save this look.');
   renderLooks();
 }
 let editingLook = null;                                            // the look whose edit strip is open (rename / update / delete)
 function renameLook(l) {
   let name = l.name;
   if (typeof globalThis.prompt === 'function') { const a = globalThis.prompt('Rename this look', l.name); if (a === null) return; name = a; }
-  $('cMsg').textContent = looks.rename(l.id, name) ? 'Renamed.' : 'That name is empty.';
+  lookNotice(looks.rename(l.id, name) ? 'Renamed.' : 'That name is empty.');
   renderLooks();
 }
 function updateLook(l) {
   if (typeof globalThis.confirm === 'function' && !globalThis.confirm('Replace the look "' + l.name + '" with what you wear now?')) return;
-  $('cMsg').textContent = looks.update(l.id, currentGetup()) ? 'Updated "' + l.name + '".' : 'Could not update this look.';
+  lookNotice(looks.update(l.id, currentGetup()) ? 'Updated "' + l.name + '".' : 'Could not update this look.');
   renderLooks();
 }
 function deleteLook(l) {
   if (typeof globalThis.confirm === 'function' && !globalThis.confirm('Delete the look "' + l.name + '"?')) return;
-  looks.remove(l.id); if (editingLook === l.id) editingLook = null;
+  lookNotice();looks.remove(l.id); if (editingLook === l.id) editingLook = null;
   renderLooks();
 }
 function renderLooks() {
   const row = $('looksRow'), strip = $('lookEdit');
   row.replaceChildren();
   if (editingLook && !looks.get(editingLook)) editingLook = null;
-  const add = el('button', 'btn small look-add', '+ Save look'); add.type = 'button'; add.dataset.act = 'save'; add.onclick = saveLook;
-  row.append(add);
+  $('saveLookBtn').disabled=looks.full;
   const now = currentGetup();
   for (const l of looks.list) {
     const on = looks.appliedId === l.id && sameGetup(l, now);
@@ -1269,6 +1267,7 @@ function layoutPreview() {
   $('cWearTop').hidden = which !== 'fit';
   $('wearBox').hidden = false;
   $('stickyTop').classList.toggle('stuck', c);
+  $('saveLookBtn').hidden = !c;
   $('custBtn').hidden = c; $('tryBtn').hidden = c; $('custDone').hidden = !c;
   $('tryNow').hidden = !c;           // customising without the camera: the corner offers to turn it on
   $('profileLayers').hidden = !c; $('cCat').hidden = !c; $('looksRow').hidden = !c; if (!c) { $('lookEdit').hidden = true; picker.layer = null; }
@@ -1277,6 +1276,7 @@ function layoutPreview() {
   if (which === 'fit') startStoreAnim();
 }
 function leaveCust() {
+  lookNotice();
   cust.on = false;
   $('custArea').hidden = true;
   layoutPreview();
@@ -1310,7 +1310,7 @@ function colorRow(box, layer, cur, apply, live) {
   const open = picker.layer === layer;
   const any = el('button', 'any-color' + (open ? ' open' : '')); any.type = 'button'; any.dataset.act = 'any'; any.setAttribute('aria-expanded', open ? 'true' : 'false');
   any.setAttribute('aria-label', LAYER_LABELS[layer] + ': pick any colour');
-  any.onclick = () => { picker.layer = open ? null : layer; renderCatColor(); };       // opens / closes our panel; what was dragged is already applied
+  any.onclick = () => { picker.layer = open ? null : layer; renderCatColor(); if(!open)revealStickyControl($('catColor').querySelector('.cp-panel')); };       // opens / closes our panel; what was dragged is already applied
   row.append(any);
   box.append(row);
   if (open) box.append(colorPanel(layer, cur, apply, live));
@@ -1575,7 +1575,7 @@ function updateTryOnButtons() {
 }
 
 function renderStats() {
-  $('practiceStats').textContent='Computer practice: '+practiceStats.wins+' wins · '+practiceStats.losses+' losses (separate from player matches).';
+  $('practiceStats').textContent='Against computer: '+practiceStats.wins+' wins · '+practiceStats.losses+' losses.';
   const m = stats.matches, fav = f => (f ? f.n + '  (' + f.times + '×)' : '-');
   $('stMatches').textContent = String(m); $('stWins').textContent = String(stats.wins); $('stLosses').textContent = String(stats.losses);
   $('stRate').textContent = m ? Math.round(100 * stats.wins / m) + '%' : '-';
@@ -2155,3 +2155,6 @@ bindPageFocus(document, globalThis);                          // sound stops wit
 globalThis.addEventListener?.('online', () => link?.nudge?.());       // wifi / 4G came back: re-open the match link now, not at the next timer
 
 if (missingIds.length) setTimeout(() => showFatal('This page is out of date (missing: ' + [...new Set(missingIds)].join(', ') + '). Reload it, or clear this site\'s data in the browser settings.'), 0);
+
+bindStickyScroll($('stickyTop'),$('profile'));
+bindStickyScroll($('storeSticky'),$('store'));

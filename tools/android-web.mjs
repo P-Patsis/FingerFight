@@ -10,6 +10,7 @@ for (const file of new Set(shellFiles())) {
   await mkdir(new URL('.', target), { recursive: true });
   await copyFile(new URL('../' + file, import.meta.url), target);
 }
+await cp(new URL('../assets/audio/', import.meta.url),new URL('assets/audio/',out),{recursive:true});
 await mkdir(new URL('vendor/vision/', out), { recursive: true });
 await copyFile(new URL('../node_modules/@mediapipe/tasks-vision/vision_bundle.mjs', import.meta.url), new URL('vendor/vision/vision_bundle.mjs', out));
 await cp(new URL('../node_modules/@mediapipe/tasks-vision/wasm/', import.meta.url), new URL('vendor/vision/wasm/', out), { recursive: true });

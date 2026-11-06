@@ -13,21 +13,11 @@ test('the camera warning belongs to the photo views only', () => {
   assert.equal(cameraWarning('nonsense'), '');
 });
 
-test('the warning text shows on the page only while a photo view is chosen, and the photo buttons carry the hint', async () => {
-  const mk = mode => {
-    const b = installBrowser('?sim=1');
-    globalThis.localStorage.setItem('ff-mode', mode);      // after the install, which starts with an empty store
-    return b;
-  };
-  for (const mode of VIEWS) {
-    const b = mk(mode);
-    await import('../js/main.js?w=' + mode);
-    b.byId.get('profileBtn').onclick();
-    const note = b.byId.get('styleNote').textContent;
-    assert.equal(/^Warning: this sends a real photo of you to your opponent\.$/.test(note), mode.startsWith('photo-'), mode + ': ' + note);
-    const buttons = [...b.byId.get('modePicker').children];
-    for (const btn of buttons) assert.equal(btn.children.some(c => /real photo/.test(c.textContent)), btn.dataset.mode.startsWith('photo-'), btn.dataset.mode);
-  }
+test('Profile has one random-match privacy notice without duplicate photo warnings', async () => {
+ for(const mode of VIEWS){const b=installBrowser('?sim=1');localStorage.setItem('ff-mode',mode);await import('../js/main.js?w='+mode);b.byId.get('profileBtn').onclick();
+  assert.match(b.byId.get('styleNote').textContent,/In random matches, no camera photo is stored or sent/);
+  for(const btn of b.byId.get('modePicker').children)assert.equal(btn.children.some(c=>/real photo/.test(c.textContent)),false);
+ }
 });
 
 function camWith(video, detect, log = []) {

@@ -1,5 +1,14 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — Compact identity controls, reachable picker and bundled music
+
+- Put Name/input and Country/toggle/optional input on their own horizontal rows. Sound toggle and Volume share one row. Move Save look to an accessible icon inside the preview; keep the saved-look list/edit strip below it. Saved/renamed/updated notices expire after three seconds, deletion clears immediately, and leaving customisation clears the notice.
+- Keep the picker in layout flow so the sticky scroll height includes the entire colour panel. Route vertical input over an unpinned sticky panel to its screen first, then its own overflow, then back to the screen at the end. Preserve horizontal carousels, colour/size gestures and native touch momentum when already pinned.
+- Use one notice explaining random-match camera privacy; remove duplicate photo warnings/button hints and computer-practice prose. Keep actual private photo choices, consent preferences, local computer snapshots, random photo rejection and separate computer statistics unchanged.
+- Bundle the five existing credited Ogg tracks into Android, and verify their presence in generated assets and the built APK. Do not permanently cache a transient 404 as a missing song. No new music, libraries or licensing changes.
+- The previous GitHub Pages commit/build succeeded; its deployment stayed queued/updating until the ten-minute timeout. Retry publication with the new tested source and check the live files; do not misdiagnose a source/build error or silently change hosts.
+
+
 ## 2026-11-06 — One guest-first queue for Android and website
 
 - Keep the APK's bundled web game and existing validated PeerJS/WebRTC protocol. GitHub Pages hosts files; it is not the game relay. Both updated clients will use the same API URL and signaling service.

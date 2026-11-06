@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Save icon and colour-panel scrolling
+
+Save look is an accessible preview icon; look names/editing remain below the preview. Notices clear after three seconds or immediately on deletion/exit. Name, Country and Sound/Volume use compact inline controls. The colour panel now contributes to scroll height; vertical gestures move the screen up to the sticky edge before its panel scrolls. Horizontal carousels and colour/size gestures are preserved. No cosmetic/rig/counting/wire/particle changes; real-phone touch/layout review remains open.
+
+
 ## 2026-11-06 — Shared matchmaking integration
 
 No cosmetic format, landmark/counting, drawing loop, snapshot validation or particle budget changed. Updated server-queue random matches retain drawing-only opponent pictures and relay-only transport. Camera pixels are not sent to the new API. Existing visual/FPS review remains open; protocol tests do not substitute for phone review.

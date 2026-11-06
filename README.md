@@ -48,7 +48,7 @@ a stranger they are not even offered, and a message carrying a photo is rejected
 ## Run it locally
 ```
 scripts/start.sh            # serves http://localhost:8082 (use ?sim=1 for no camera)
-npm test                    # Node test runner; 392 tests at the last recorded run (Node 22 verified)
+npm test                    # Node test runner; 396 tests at the last recorded run (Node 22 verified)
 ```
 The camera needs **https or localhost**. To play with someone else, host it on https (GitHub Pages) and share the match code.
 Both players need internet: the hand model (about 17 MB: 9.4 MB wasm + 7.8 MB model, from jsDelivr / Google, cached by the

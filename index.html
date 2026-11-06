@@ -41,7 +41,7 @@
       <button id="statsBtn" class="btn ghost">Stats</button>
     </div>
     <button id="calibBtn" class="link">Camera test &amp; finger calibration</button>
-    <p class="fine">Uses your camera to count your fingers. Against random opponents only a puppet or skeleton of your hand is ever shared, never a camera image.</p>
+    <p class="fine">Uses your camera to count your fingers.</p>
   </section>
 
   <!-- ===== Profile & settings ===== -->
@@ -52,7 +52,7 @@
       <div class="idrow">
         <label class="namerow"><span class="lab">Name</span><input id="nameInput" maxlength="40" autocomplete="off" placeholder="type a name" aria-label="Your name"></label>
         <div class="flagrow">
-          <div class="flaghead"><span class="lab">Country flag</span><span id="countryHint" class="flag-icon"></span><button id="flagBtn" class="toggle">Off</button></div>
+          <div class="flaghead"><span class="lab">Country</span><span id="countryHint" class="flag-icon"></span><button id="flagBtn" class="toggle">Off</button></div>
           <span id="countryRow" class="flag-in"><input id="countryInput" maxlength="40" autocomplete="off" spellcheck="false" placeholder="GR / Greece" aria-label="Country code or name"></span>
         </div>
       </div>
@@ -123,7 +123,7 @@
         <button id="shareBtn" class="btn small ghost">Share link</button>
       </div>
     </div>
-    <p id="randomNote" class="msg" hidden>Random opponent. Only a puppet or skeleton of your hand is shared, never a camera image.</p>
+    <p id="randomNote" class="msg" hidden>Random opponent.</p>
     <div class="card" id="joinPrompt" hidden>
       <div id="joinText"></div>
       <div class="row center"><button id="acceptBtn" class="btn small">Accept</button><button id="rejectBtn" class="btn small ghost">Decline</button></div>
@@ -156,10 +156,11 @@
             <button id="custBtn" class="btn ghost" type="button" aria-label="Customise" title="Customise">✎</button>
             <button id="tryBtn" class="btn" type="button" aria-label="Try on with camera" title="Try on with camera">📷</button>
             <button id="tryNow" class="btn" type="button" aria-label="Try on with camera" title="Try on with camera" hidden>📷</button>
+            <button id="saveLookBtn" class="btn ghost" type="button" aria-label="Save look" title="Save look" hidden>💾</button>
             <button id="custDone" class="btn ghost" type="button" aria-label="Done customising and stop camera" title="Done" hidden>✓</button>
           </div>
           </div>
-          <div id="cMsg"></div>
+          <div id="cMsg" role="status" aria-live="polite"></div>
         </div>
         <div id="looksRow" class="looks hrow" aria-label="Saved looks" hidden></div>
         <div id="lookEdit" class="look-edit" hidden></div>
@@ -174,8 +175,7 @@
     </div></div>
     <div id="appSlot"><div class="card" id="appCard">
       <h3 class="card-h">App settings</h3>
-      <div class="set"><span>Sound</span><button id="muteBtn" class="toggle on">On</button></div>
-      <label class="vol">Volume <input id="volSlider" type="range" min="0" max="100" step="5" value="70" aria-label="Volume"></label>
+      <div class="sound-row"><span>Sound</span><button id="muteBtn" class="toggle on">On</button><label class="vol">Volume <input id="volSlider" type="range" min="0" max="100" step="5" value="70" aria-label="Volume"></label></div>
       <div class="set"><span>Hide rude gestures (show only the number)</span><button id="rudeBtn" class="toggle on">On</button></div>
       <div class="set" id="photoRow"><span>Show my opponent's photos</span><button id="photoBtn" class="toggle on">On</button></div>
     </div></div>

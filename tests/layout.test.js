@@ -5,12 +5,12 @@ import fs from 'node:fs';
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const at = id => { const i = html.indexOf('id="' + id + '"'); assert.ok(i > 0, id); return i; };
 
-test('name + country flag share ONE row, label over input: Name on the left, a compact flag block (label, flag, toggle, input) on the right', () => {
+test('Name and Country each keep their label and control inline', () => {
   const row = html.slice(html.lastIndexOf('<div', at('countryHint') - 200) , html.indexOf('<p id="nameNote"'));
   assert.match(row, /class="idrow"/);
   for (const id of ['nameInput', 'countryInput', 'countryHint', 'flagBtn', 'countryRow']) assert.ok(row.includes('id="' + id + '"'), id + ' is in the one row');
-  assert.match(row, /<span class="lab">Name<\/span>/); assert.match(row, /<span class="lab">Country flag<\/span>/); assert.match(row, /placeholder="type a name"/);
-  assert.ok(at('nameInput') < at('flagBtn') && at('flagBtn') < at('countryInput'), 'name, then the flag label + toggle, then its input underneath');
+  assert.match(row, /<span class="lab">Name<\/span>/); assert.match(row, /<span class="lab">Country<\/span>/); assert.match(row, /placeholder="type a name"/);
+  assert.ok(at('nameInput') < at('flagBtn') && at('flagBtn') < at('countryInput'), 'name followed by the country label, toggle and collapsible input');
 });
 
 test('Profile top block is ONE sticky stack in order: camera preview, Choose your Hand, colour picker, category chips; only the item cards come after', () => {
@@ -45,7 +45,7 @@ test('the colour picker has roomy targets and no "Choose colour" caption; the fu
   const js = fs.readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
   assert.ok(!js.includes("'Choose colour'"), 'caption removed'); assert.ok(!js.includes('Only drawn data is sent'), 'the redundant drawn-data line is gone');
   assert.ok(!/input\[type=color\]/.test(js.replace(/\/\/.*$/gm, '')) && !js.includes("type = 'color'"), 'no native colour input is created: the OS dialog cannot appear');
-  assert.match(css, /\.cp-panel\s*\{[^}]*position:\s*absolute/s, 'the panel floats over the cards instead of growing the pinned block');
+  assert.match(css.slice(css.lastIndexOf('.cp-panel {')), /position:\s*static/, 'the picker contributes to scroll height instead of being clipped');
 });
 
 test('name box and country block share one baseline: equal label-line heights and equal input heights', () => {

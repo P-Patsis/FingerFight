@@ -23,8 +23,8 @@ test('computer practice offers both camera views, uses real overlay paths and di
   assert.equal($('video').classList.contains('feed-hidden'),!mode.startsWith('photo-'));
  }
  choose('photo-skeleton').onclick();
- assert.match($('styleNote').textContent,/stay on this phone/);
- assert.doesNotMatch($('styleNote').textContent,/sends.*opponent/);
+ assert.match($('styleNote').textContent,/In random matches, no camera photo is stored or sent/);
+ assert.doesNotMatch($('styleNote').textContent,/Computer practice|Warning:/);
  $('custDone').onclick();await until(()=>!$('startBtn').disabled,'ready after try-on');
  const step=k=>$('settingsCard').fire('click',{target:{closest:()=>({dataset:{step:k}})}});
  step('seconds:-1');step('seconds:-1');$('startBtn').onclick();

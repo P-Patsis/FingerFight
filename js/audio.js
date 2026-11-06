@@ -119,7 +119,7 @@ export const TRACKS = [
 export const TRACK_NAMES = ['Dojo', 'Neon Street', 'Rooftop', 'Volcano', 'Space Station'];
 const FADE_S = 1.2;
 
-const cache = new Map();         // index -> decoded AudioBuffer, or null when the file is missing/bad (remembered, so we never retry)
+const cache = new Map();         // index -> decoded AudioBuffer, or null for an unknown track (network/decode failures retry)
 let wantIndex = null;            // the arena whose music we should be playing
 let current = null;              // { index, src, gain }
 let loading = 0;                 // token: a late download for an old arena must not start
@@ -136,8 +136,7 @@ async function fetchBuffer(index) {
     if (!url) missing = true;
     else {
       const r = await fetch(url);
-      if (r.status === 404) missing = true;                       // the file really is not there: remember that
-      else if (r.ok) buf = await ctx.decodeAudioData(await r.arrayBuffer());
+      if (r.ok) buf = await ctx.decodeAudioData(await r.arrayBuffer());
       else failedAt.set(index, Date.now());
     }
   } catch { buf = null; failedAt.set(index, Date.now()); }        // offline, the service worker was swapping, a bad decode: try again later

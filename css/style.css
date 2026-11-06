@@ -601,3 +601,17 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 #sWearList { width: 100%; }
 #storeSticky, .sticky-top.stuck { max-height: 72svh; overflow-y: auto; overscroll-behavior-y: contain; }
 .cprow .fit-settings > summary { list-style-position: inside; }
+
+/* Compact identity/audio rows and a picker that contributes to scroll height. */
+.idrow { display: grid; gap: 8px; }
+.namerow { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
+.flagrow { display: flex; flex-direction: row; align-items: center; width: 100%; min-width: 0; gap: 8px; }
+.flaghead { flex: 0 0 auto; gap: 8px; }
+.flaghead .lab { width: 64px; flex: none; }
+.flag-in { flex: 1; min-width: 0; }
+.sound-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sound-row .vol { flex: 1; min-width: 0; }
+.sound-row .vol input { width: 0; flex: 1; min-width: 0; }
+.cp-panel { position: static; margin-top: 6px; width: 100%; }
+#storeSticky, .sticky-top.stuck { overscroll-behavior-y: auto; }
+#cMsg:empty { display: none; }

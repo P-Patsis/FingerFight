@@ -79,7 +79,7 @@ test('UI: the saved-looks row is inside the pinned block under the preview; Save
   const chip = v => $('profileLayers').children.find(x => x.dataset.value === v);
   chip('ring').onclick(); $('profileGrid').children.find(c => c.dataset.id === 'goldring').onclick();
   let asked = null; globalThis.prompt = (q, d) => { asked = q; return 'Gold <i>fan</i>'; };
-  $('looksRow').children.find(x => x.dataset.act === 'save').onclick();
+  $('saveLookBtn').onclick();
   assert.equal(asked, 'Name this look');
   const row = () => $('looksRow').children.filter(c => c.classList.contains('look'));
   assert.equal(row().length, 1); assert.equal(row()[0].children[0].textContent, 'Gold ifan/i', 'markup characters are stripped from the name');
@@ -94,14 +94,14 @@ test('UI: the saved-looks row is inside the pinned block under the preview; Save
   assert.ok(row()[0].classList.contains('sel'));
   assert.equal(globalThis.localStorage.getItem('ff-look'), row()[0].dataset.id, 'the applied look is remembered');
   // a cancelled prompt saves nothing
-  globalThis.prompt = () => null; $('looksRow').children.find(x => x.dataset.act === 'save').onclick(); assert.equal(row().length, 1);
+  globalThis.prompt = () => null; $('saveLookBtn').onclick(); assert.equal(row().length, 1);
   // delete
   const strip = () => $('lookEdit').children.filter(c => c.dataset?.act);
   assert.equal($('lookEdit').hidden, true, 'the edit strip stays out of the way until asked');
   row()[0].children.find(x => x.dataset.act === 'edit').onclick();
   assert.equal($('lookEdit').hidden, false); assert.deepEqual(strip().map(x => x.dataset.act), ['rename', 'update', 'delete', 'close']);
   strip().find(x => x.dataset.act === 'delete').onclick();
-  assert.equal(row().length, 0); assert.equal($('lookEdit').hidden, true, 'the strip closes with its look'); assert.deepEqual(JSON.parse(globalThis.localStorage.getItem('ff-looks')), []);
+  assert.equal($('cMsg').textContent,'','deleting clears the saved notice');assert.equal(row().length, 0); assert.equal($('lookEdit').hidden, true, 'the strip closes with its look'); assert.deepEqual(JSON.parse(globalThis.localStorage.getItem('ff-looks')), []);
   delete globalThis.prompt;
   $('custDone').onclick(); $('profileBack').onclick();
 });
@@ -132,7 +132,7 @@ test('UI: ✎ opens the edit strip; Rename asks for a name, Update replaces the 
   const strip = a => $('lookEdit').children.find(x => x.dataset?.act === a);
   const saved = () => JSON.parse(globalThis.localStorage.getItem('ff-looks'));
   chip('ring').onclick(); $('profileGrid').children.find(c => c.dataset.id === 'silverring').onclick();
-  globalThis.prompt = () => 'Silver'; $('looksRow').children.find(x => x.dataset.act === 'save').onclick();
+  globalThis.prompt = () => 'Silver'; $('saveLookBtn').onclick();
   assert.equal(row().length, 1);
   row()[0].children.find(x => x.dataset.act === 'edit').onclick();
   globalThis.prompt = (q, d) => { assert.equal(q, 'Rename this look'); assert.equal(d, 'Silver'); return 'Shiny'; };

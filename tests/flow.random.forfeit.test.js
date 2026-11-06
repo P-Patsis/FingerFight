@@ -55,7 +55,7 @@ test('photo reveal styles are not offered against a random opponent and cannot b
   modes.find(x => x.dataset.mode === 'photo-puppet').onclick();
   assert.ok(['puppet', 'skeleton'].includes(modes.find(x => x.classList.contains('sel')).dataset.mode), 'the click was refused');
   assert.equal($('photoRow').hidden, true);
-  assert.match($('styleNote').textContent, /only a drawn puppet or skeleton/i);
+  assert.match($('styleNote').textContent, /no camera photo is stored or sent/i);
 });
 
 test('a stranger who disconnects mid-fight loses: I win by forfeit, the link is finished, no rematch', async () => {

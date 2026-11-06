@@ -27,7 +27,7 @@ test('preview actions are inside the viewer, Store preview/categories stick abov
   const id=m[3].match(/\bid="([^"]+)"/)?.[1];if(id)parents.set(id,stack.map(x=>x.id));
   if(!voids.has(m[2])&&!m[3].endsWith('/'))stack.push({tag:m[2],id});
  }
- for(const id of ['custBtn','tryBtn','tryNow','custDone'])assert.ok(parents.get(id).includes('pzRow'),id);
+ for(const id of ['custBtn','tryBtn','tryNow','saveLookBtn','custDone'])assert.ok(parents.get(id).includes('pzRow'),id);
  for(const id of ['storeSnap','wearCamOff'])assert.ok(parents.get(id).includes('wearBox'),id);
  for(const id of ['wearSlotStore','storeCats','storeLayers'])assert.ok(parents.get(id).includes('storeSticky'),id);
  assert.ok(!parents.get('storeGrid').includes('storeSticky'));assert.ok(!parents.get('sWearList').includes('storeSticky'));

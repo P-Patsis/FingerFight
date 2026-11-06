@@ -2,9 +2,9 @@
 
 Capacitor 8 packages the existing web game in Android System WebView. It is separate from Cloudflare (the undeployed account/social backend). This prototype keeps guest PeerJS multiplayer and local computer practice; no cloud account or paid service is required to build it. PeerJS still needs internet, and restrictive networks may need TURN.
 
-Verified build: `assembleDebug` succeeds; Android v2 signature and APK contents verify; game tests **392/392 pass**. APK is 17,230,071 bytes (about 16.4 MiB), SHA-256 `7cc484686271aa007068b079acb1be035f4b16d2ef7910e30a5603558e3de3e7`. Current APK: version code 4 / `0.1.3-prototype`, also copied to phone Downloads as `FingerFight-0.1.3-debug.apk`. Device testing below is still pending. No FPS measurements have been taken for this APK.
+Verified build: `assembleDebug` succeeds; Android v2 signature and actual APK contents verify; game tests **396/396 pass**. APK is 19,642,589 bytes (about 18.7 MiB), SHA-256 `7b4a7b74499b03235246b6c72a0201f2b1522ccf82051fb404f83dd7bb0ae34a`. Current APK: version code 5 / `0.1.4-prototype`, also copied to phone Downloads as `FingerFight-0.1.4-debug.apk`. This build adds the five previously omitted music files, compact identity/sound rows, preview Save look and picker/notice fixes. Device playback, touch/scroll and camera/FPS checks remain pending.
 
-Shared server matchmaking is now implemented in source and tested with the native and website origins, but `API_URL` stays empty until deployment is approved and verified. The installed 0.1.3 APK still uses legacy PeerJS slots. See [MULTIPLAYER.md](MULTIPLAYER.md). This change assembles/checks the Android web shell; a new APK should be built after configuring the real shared API URL. No updated APK or real two-device result is claimed for this queue yet.
+Shared server matchmaking is now implemented in source and tested with the native and website origins, but `API_URL` stays empty until deployment is approved and verified. The 0.1.4 APK still uses legacy PeerJS slots. See [MULTIPLAYER.md](MULTIPLAYER.md). The queue client is bundled but inactive; rebuild with the verified shared API URL after deployment. No real two-device queue result is claimed.
 
 ## Build on this ARM64 phone
 
@@ -21,7 +21,7 @@ npm --cache .git/npm-cache run build:android
 
 Output: `artifacts/FingerFight-debug.apk`. Package: `io.github.ppatsis.fingerfight.debug`. Keep `.android-tools/debug.keystore` to update the same installed debug app; it is deliberately ignored by Git. This is a debug prototype, not a signed Play release. On another host set its own SDK path and override `android.aapt2FromMavenOverride` with that host's executable.
 
-The packager copies the service-worker shell allowlist, bundles pinned MediaPipe 0.10.14 and the checksum-verified existing model, disables service workers in the native copy, and adapts safe-area CSS to Capacitor SystemBars. It never copies backend files. Android loads bundled assets from secure `https://localhost`; it does not load the Pages site remotely. Browser files are unchanged. Android updates require a new APK, later Play updates.
+The packager copies the service-worker shell allowlist and the five existing music tracks, bundles pinned MediaPipe 0.10.14 and the checksum-verified existing model, disables service workers in the native copy, and adapts safe-area CSS to Capacitor SystemBars. It never copies backend files. Android loads bundled assets from secure `https://localhost`; it does not load the Pages site remotely. Browser files are unchanged. Android updates require a new APK, later Play updates.
 
 Camera permission is requested when camera use starts. No microphone permission. Backgrounding releases the existing camera; resuming nudges reconnect but does not silently restart it. Back uses existing leave confirmation/history, and exits at the menu. Local app data is separate from browser/PWA data. Existing passkey configuration is for the website origin; native accounts require a separate tested Credential Manager/Digital Asset Links integration before enabling them.
 

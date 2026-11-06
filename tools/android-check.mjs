@@ -2,6 +2,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const root = new URL('../dist/android-web/', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
+for(const file of ['dojo','neon','rooftop','volcano','space']){const bytes=await readFile(new URL('assets/audio/'+file+'.ogg',root));assert.equal(bytes.subarray(0,4).toString(),'OggS','Missing/bad bundled music: '+file);}
 const hands = await read('js/hands.js');
 assert.ok(!hands.includes('https://cdn.jsdelivr.net/npm/@mediapipe'));
 assert.ok(!hands.includes('https://storage.googleapis.com/mediapipe-models'));
