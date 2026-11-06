@@ -1,5 +1,14 @@
 # Finger Fight: progress
 
+## 2026-11-06 — Store collapse repair and Saved looks sizing
+
+- Changed: Store's direct scrolling sections retain natural height. The pinned group now uses a column with non-shrinking preview/colour/category sections; category rows keep 44px minimum height and the item carousel cannot shrink away. Expanded controls scroll rather than squeezing the rows below them. These height rules are scoped to Store. Profile and Store now remember fitting-menu expansion independently, while fitting values remain shared.
+- Profile: Saved looks uses centred 14px bold text matching Adjust Hand Size, with a wider 104px slot. Full-width fitting sliders use the corresponding toolbar offset. Other Profile layout, rig/counting/particles/network behavior is unchanged.
+- Verified: focused Store/customise/try-on checks **37/37 passes**; full game **397/397 passes** (60.3s), including opening Profile fitting then Store without inheriting the expanded menu, and keeping category/item data through picker/fitting changes. These are fake-DOM/source-invariant checks; actual phone Store layout/touch review remains open.
+- Android: code 7 / `0.1.6-prototype` builds successfully in 3m. Actual APK contents and Android v2 signature verify; Store shrink fix and independent fitting state confirmed in the ZIP. Downloads `FingerFight-0.1.6-debug.apk`: 19,643,557 bytes; SHA-256 `5d7c50e1e722ac3f8a682e25ea7b6b257ab891df7b320b5e445dfaa022d4a2fd`; copy checksum matches. No on-device install/playback/camera/FPS result is inferred.
+- Published: UI source `07d93a7` pushed and Pages deployment succeeded. Live index.html, main.js, audio.js, panel-scroll.js, style.css and sw.js match the committed source. Follow-up commit records APK version and delivery evidence.
+
+
 ## 2026-11-06 — One Name/Country row and a collapsed Saved looks menu
 
 - Changed: Name/input and Country/toggle/optional input all share one non-wrapping row. Name fills remaining width; the country field is 48px with GR placeholder. The toolbar is colour picker → Saved looks → Adjust Hand Size. Saved looks opens a full-width list/edit panel; it starts collapsed, survives colour/fit rerenders and resets on leaving customisation. Its old always-visible strip no longer reserves space beneath the preview. Full-width fitting sliders and the preview Save icon remain.
