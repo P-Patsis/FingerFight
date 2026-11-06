@@ -9,3 +9,15 @@ __pycache__/
 # Local backend state and generated bundle
 backend/.data/
 backend/dist/
+
+# Android build outputs, downloaded tools, caches and signing material
+.android-tools/
+dist/
+android/.gradle/
+android/local.properties
+android/**/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+*.keystore
+artifacts/*.apk

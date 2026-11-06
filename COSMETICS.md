@@ -1,5 +1,10 @@
 # Layered cosmetics and the Store
 
+## 2026-11-06 — Android prototype
+
+The Capacitor debug APK bundles the existing cosmetic assets and hand-tracking runtime/model. No rig, drawing, particle caps, cosmetic validation or finger-count logic changed. Browser sources and PWA updates remain independent. Android storage starts separately from browser/PWA equipment and saved looks. Live-camera effects/FPS, Ghost/Chameleon camera masking and all fitting controls still need real-phone review inside Android WebView; compile success is not visual approval. See ANDROID.md.
+
+
 ## 2026-11-05 — Preview actions and width naming
 
 Customise and Try on are now under the preview in the lobby and Profile. While editing, the same row provides Try on/Stop camera and Done; it has no overlay corner buttons. Finger fatness is labelled **Finger width** (same validated fit data). Computer practice picks its random puppet once per match. Outgoing reveal/guess pictures retain validated generated geometry, fit and comic metadata. Optional backend account/social controls remain hidden until a real endpoint is configured; the backend never stores puppet camera pixels.

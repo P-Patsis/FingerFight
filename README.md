@@ -4,13 +4,15 @@ A two-player fighting game where you guess how many fingers your opponent is hol
 finger-counting camera app: your phone's camera counts your fingers (MediaPipe hand tracking), and the other
 player's phone does the same. Phone-to-phone over the internet with a 16-character private room code.
 
+Android prototype build and phone test checklist: [ANDROID.md](ANDROID.md). Capacitor packages this same game; Cloudflare is a separate, currently undeployed backend.
+
 ## How a round works
 1. Pointer and guesser swap roles every round; both use their own camera.
 2. Countdown defaults to 5 seconds; the finger limit defaults to 5 (host can choose 1–10).
-   The optional fewer-fingers setting lowers the cap every five rounds, to a floor of 2.
+   The fewer-fingers setting lowers the cap after round 4, then per pair of turns, to a floor of 2.
 3. At zero both phones capture finger data; only private photo styles send a JPEG.
 4. A correct guess deals 1 damage to the pointer. A wrong guess or missing hand deals no damage.
-   A closed fist is a valid zero. Gestures never score; the rude-gesture display filter defaults on.
+   A closed fist is a valid zero above the shrinking floor; at that floor only 1 or 2 are valid. Gestures never score; the rude-gesture display filter defaults on.
 5. Health defaults to 2 hits. Matches start with a 5-finger limit; after round 4 it drops by one per pair of turns, stopping at 2 (then only 1 or 2 are valid). Three consecutive no-hand rounds by one player cause an idle forfeit
    (warning after two); simultaneous idleness does not choose a loser. Private idle forfeits return
    both players to the lobby; random idle forfeits close the connection and return to the menu.
@@ -21,7 +23,7 @@ and the idle flow tests.
 
 ## Starting a match
 - **Create private match:** you get a long unique code (16 characters, about 80 bits, not guessable). **Copy code** or
-  **Share link** and send it to a friend. By default you must tap **Accept** before anyone joins (switchable).
+  **Share link** and send it to a friend. You must tap **Accept** before anyone joins.
 - **Join:** paste (or type) a friend's code. A shared link carries the code after the `#`, which browsers never send to any
   server, and the page removes it from the address bar after reading it.
 - **Find a random opponent:** matchmaking with strangers. Strangers get generated names ("Fighter 4821"), and **no camera

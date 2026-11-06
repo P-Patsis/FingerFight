@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Finger Fight</string>
+    <string name="title_activity_main">Finger Fight</string>
+    <string name="package_name">io.github.ppatsis.fingerfight</string>
+    <string name="custom_url_scheme">io.github.ppatsis.fingerfight</string>
+</resources>

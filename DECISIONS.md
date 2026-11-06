@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-06 — Package the existing game with Capacitor
+
+- Use current Capacitor 8 and bundled local web assets on secure https://localhost, retaining the existing rig/MediaPipe version/P2P game. Do not point a production wrapper at a remote server.url. Keep model/assets offline-capable and native updates APK-based; PWA updates remain independent.
+- Capacitor is the Android container/plugin bridge. Cloudflare is a separate optional backend host; building the APK does not require deploying accounts/social services. Native passkeys need their own verified origin/Digital Asset Links integration before accounts can be enabled.
+- Keep the debug app separate with .debug applicationId, stable ignored project-local keystore, no microphone permission and no device/network discovery. Camera shutdown uses the existing pagehide path; resume nudges reconnect. Hardware Back preserves existing room-leave confirmation.
+- Build in project-local SDK/cache directories with Java 21, Gradle 8.14.3, SDK 36, one worker/1 GB heap and a pinned project-local ARM aapt2 35.0.2 override (the older shared binary cannot read SDK 36 resources). Do not change shared build tools. Compile success is separate from real-phone permission, camera, peer/reconnect and FPS acceptance.
+
+
 ## 2026-11-05 — Paired reductions and backend deployment gate
 
 - Simplify match setup to one Arena carousel and independent scrolling Music inside a collapsed Match settings disclosure. Always approve private joins. Put shared Customise/Try on and editor Try on/Stop camera/Done under the preview; keep camera controls explicit and comfortably sized.

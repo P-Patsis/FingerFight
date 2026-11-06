@@ -1,0 +1,7 @@
+{
+  "appId": "io.github.ppatsis.fingerfight",
+  "appName": "Finger Fight",
+  "webDir": "dist/android-web",
+  "server": { "hostname": "localhost", "androidScheme": "https", "cleartext": false },
+  "android": { "backgroundColor": "#0b1020" }
+}

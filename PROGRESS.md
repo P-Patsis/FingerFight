@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-06 — Capacitor Android prototype — debug APK built
+
+- Changed: pinned Capacitor 8.6 Android wrapper, camera-only permission, portrait activity, existing icon, dark splash, debug package suffix and project-local signing/cache paths. Public game shell and checksum-verified existing MediaPipe 0.10.14/model are bundled; native service-worker registration is disabled. Android-only safe-area variables, public room-share URL and App lifecycle/Back bridge preserve browser sources.
+- Verified: final game suite **384/384 passes** (63.2 s), including Android lifecycle/config/signing-path checks. Generated asset/dependency and actual APK-content checks pass; no backend/repository files are copied. Dependency install audit: zero vulnerabilities. **Gradle assembleDebug succeeds** (final run 3m32s); apksigner verifies v2 signature. Package `io.github.ppatsis.fingerfight.debug`, version `0.1.0-prototype`, min SDK 24 / target 36; manifest confirms CAMERA + INTERNET, no microphone. APK `artifacts/FingerFight-debug.apk`: 17,224,139 bytes; SHA-256 `beeb5a511662b3cb36caecc70562fd10da8d18ac3440df45e459b5de9eb25d8d`.
+- Build notes: old shared ARM aapt2 failed to read SDK 36 resources. Pinned project-local lzhiyong 35.0.2 ARM aapt2 successfully reads them and links the app; override remains enabled. New local debug keystore provisioned and ignored, retained for updates. SDK 36, Gradle 8.14.3 and all new tools/caches/signing material are inside FingerFight; one worker/1 GB heap. Shared SDK and system packages unchanged.
+- Device: no APK install or real camera/FPS/P2P test yet. ANDROID.md records build steps and acceptance checks. This is a debug prototype, not a Play release. Cloudflare backend remains undeployed; no account lookup, cloud deployment or paid service was attempted.
+
+
 ## 2026-11-05 — Lobby simplification, paired turns and a tested local backend
 
 - UI: removed Arena preset and the optional approval toggle. Private-room joins always ask. Native **Match settings** disclosure starts collapsed. **Arena** and **Music** are single horizontal carousels. Customise/Try on are directly under the shared lobby/profile preview; editor controls are a large Try on/Stop camera toggle plus Done, with no corner overlays. Store Try on becomes Snapshot while its camera is active. Renamed Finger fatness to **Finger width**.

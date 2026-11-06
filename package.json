@@ -6,6 +6,18 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "test:backend": "node --test backend/test/*.test.mjs",
-    "build:backend": "node backend/build.mjs"
+    "build:backend": "node backend/build.mjs",
+    "build:android:web": "node tools/android-web.mjs",
+    "sync:android": "npm run build:android:web && cap sync android",
+    "build:android": "bash tools/android-build.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "@mediapipe/tasks-vision": "0.10.14"
   }
 }
