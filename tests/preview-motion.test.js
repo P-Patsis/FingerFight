@@ -19,3 +19,11 @@ test('preview drag captures only enabled pointer gestures and leaves the stored 
  events.pointerdown({pointerId:1,clientX:0,clientY:0});events.pointermove({pointerId:1,clientX:30,clientY:0});assert.equal(repaint,0);
  enabled=true;events.pointerdown({pointerId:1,clientX:0,clientY:0});events.pointermove({pointerId:1,clientX:30,clientY:0});events.pointerup({pointerId:1});assert.equal(repaint,1);assert.ok(motion.yaw>0);motion.moved=false;motion.travel=0;for(let n=0;n<5;n++)motion.drag(1,0);assert.equal(motion.consumeClick(),true,'slow drags also suppress the painting click action');
 });
+
+test('opening another preview resets its face and framing; edge-on dragging cannot flatten the hand away',()=>{
+ const motion=new PreviewMotion(),front=motion.sample(0,true);motion.drag(131,100);motion.sample(4500);
+ const edge=motion.sample(4500,true),width=pose=>Math.max(...pose.lms[0].map(p=>p[0]))-Math.min(...pose.lms[0].map(p=>p[0]));
+ assert.ok(width(edge)>width(front)*.3,'no vanishingly thin edge-on hand');motion.reset();
+ assert.deepEqual(motion.sample(123456,true),front,'a fresh preview is front-facing and open regardless of previous clock/drag');
+ for(let n=0;n<3000;n+=33){const pose=motion.sample(123456+n),hands=previewHandPx(480,360,null,[],pose.lms,'puppet',pose.fitLms);const xs=hands.flat().map(p=>p.x),ys=hands.flat().map(p=>p.y);assert.ok(Math.min(...xs)>0&&Math.max(...xs)<480);assert.ok(Math.min(...ys)>0&&Math.max(...ys)<360);assert.ok((Math.min(...xs)+Math.max(...xs))/2>230,'frontal hand remains centred');}
+});

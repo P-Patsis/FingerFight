@@ -3,15 +3,17 @@ import {writeFileSync} from 'node:fs';
 import {installBrowser} from '../tests/harness.js';
 installBrowser('?sim=1');
 const {PreviewMotion}=await import('../js/preview-motion.js'),P=await import('../js/puppet.js'),C=await import('../js/cosmetics.js');
+const {previewHandPx}=await import('../js/avatars.js');
 await C.loadCatalog();
 const motion=new PreviewMotion();motion.sample(0);
-let svg='<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><rect width="1200" height="400" fill="#0f172a"/>';
+let svg='<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="400"><rect width="1500" height="400" fill="#0f172a"/>';
 let geometry=svg;
 const rec=C.resolveLoadout('cartoon',[]);
-for(const [i,t]of [0,4600,5700,6500].entries()){
- if(i===3)motion.drag(100,10);
- const sample=motion.sample(t),hand=sample.lms[0].map(([x,y])=>({x:(x-100)*.27,y:(y-50)*.27}));
- const label=['Open','Charged fist','Release','Dragged rotation'][i];
+for(const [i,t]of [0,4600,5700,6500,0].entries()){
+ if(i===3)motion.drag(131,0);
+ if(i===4)motion.reset();
+ const sample=motion.sample(t),hand=previewHandPx(300,360,rec.skin,rec.layers,sample.lms,'puppet',sample.fitLms)[0];
+ const label=['Frontal open','Charged fist','Release','Edge-on drag (bounded)','Reset frontal'][i];
  const start=`<g transform="translate(${i*300},25)"><text x="12" y="18" fill="white">${label}</text>`;
  svg+=start;geometry+=start;
  for(const step of P.rigPlan(hand,rec.skin,rec.layers,sample.backs[0]))for(const shape of step.shapes)svg+=`<path d="${shape.d}" transform="matrix(${step.m.join(' ')})" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${shape.opacity}"/>`;

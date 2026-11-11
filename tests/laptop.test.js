@@ -13,9 +13,9 @@ test('the camera warning belongs to the photo views only', () => {
   assert.equal(cameraWarning('nonsense'), '');
 });
 
-test('Profile has one random-match privacy notice without duplicate photo warnings', async () => {
+test('Profile hides the random-only privacy notice and omits duplicate photo warnings', async () => {
  for(const mode of VIEWS){const b=installBrowser('?sim=1');localStorage.setItem('ff-mode',mode);await import('../js/main.js?w='+mode);b.byId.get('profileBtn').onclick();
-  assert.match(b.byId.get('styleNote').textContent,/In random matches, no camera photo is stored or sent/);
+  assert.equal(b.byId.get('styleNote').hidden,true);
   for(const btn of b.byId.get('modePicker').children)assert.equal(btn.children.some(c=>/real photo/.test(c.textContent)),false);
  }
 });

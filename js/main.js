@@ -3,6 +3,7 @@ import { bindStickyScroll, revealStickyControl } from './panel-scroll.js';
 import { initialFavourites } from './preferences.js';
 import { DeadlineQueue } from './round-clock.js';
 import { PreviewMotion, bindPreviewDrag } from './preview-motion.js';
+import { DEVELOPMENT_TOOLS } from './dev-tools.js';
 import { Service } from './service.js';
 import { Matchmaker } from './matchmaking.js';
 import { initSocial } from './social.js';
@@ -154,6 +155,7 @@ function show(id) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
   if(currentScreen==='store'&&id!=='store'){storePreviewId=null;storePreviewColor=null;}
   currentScreen = id;
+  if (['profile','store','lobby','over'].includes(id)) previewMotion.reset();
   wake.want(id === 'game');
   // the style and sound cards are shared by the Profile screen and the lobby: the same controls, so nothing is duplicated or out of step
   $('custOnly').hidden = !['profile','lobby'].includes(id);                // customise / try-on lives in the Profile only (the lobby shares the opponent-view part)
@@ -907,6 +909,7 @@ function renderStyle() {
   $('rudeBtn').textContent = hideRude ? 'On' : 'Off';
   $('rudeBtn').classList.toggle('on', hideRude);
   $('styleNote').textContent = 'In random matches, no camera photo is stored or sent to your opponent. Only a puppet or skeleton is shared.';
+  $('styleNote').hidden = !random || currentScreen === 'profile';
   $('styleNote').classList.remove('err');
   renderViewPreview(mode);
   if(storeAnim.rec)refreshPreview();
@@ -950,10 +953,11 @@ function renderLobby() {
   if (pendingGuest) $('joinPrompt').scrollIntoView?.({ block: 'nearest' });
   if (pendingGuest) $('joinText').textContent = pendingGuest + ' wants to join your match.';
   $('camBtn').hidden = camReady || camBusy;
-  const canStart=!editingMatch&&!cust.on&&!tryOn.busy&&me==='host'&&link?.open&&!!names.guest&&ready.host&&ready.guest;
+  const previewing=editingMatch||cust.on||tryOn.on||tryOn.busy;
+  const canStart=!previewing&&me==='host'&&link?.open&&!!names.guest&&ready.host&&ready.guest;
   $('startBtn').hidden=false;
-  $('startBtn').textContent=matchKind==='computer'?'Start fight':ready[me]?'Cancel ready':'Ready';
-  $('startBtn').disabled=!me||!camReady||camBusy||tryOn.busy||editingMatch||cust.on||!link?.open||!names[other(me)];
+  $('startBtn').textContent=previewing?'Done':matchKind==='computer'?'Start fight':ready[me]?'Cancel ready':'Ready';
+  $('startBtn').disabled=previewing?false:!me||!camReady||camBusy||!link?.open||!names[other(me)];
   if(!$('over').hidden)$('againBtn').disabled=matchKind==='computer'?!canStart:me!=='host'||!link?.open||editingMatch;
   $('lobbyMsg').textContent=pendingGuest?'Accept or decline the player above.':!names[other(me)]?(me==='guest'&&matchKind==='private'?'Waiting for the host to accept you…':'Waiting for the other player…'):!camReady?'Enable your camera to prepare your hand.':editingMatch?'Choose your puppet, then tap Done.':matchKind==='computer'?'':ready[me]?'Waiting for the other player to press Ready.':'Choose your puppet, then press Ready.';
   if(!canStart)autoStarted=false;
@@ -1043,6 +1047,7 @@ function launchMatch(){
   stopTryOn();send({t:'start',settings});startGame();
 }
 $('startBtn').onclick=()=>{
+  if(editingMatch||cust.on||tryOn.on||tryOn.busy){$('custDone').onclick();renderLobby();return;}
   if(!me||!camReady||camBusy||tryOn.busy||editingMatch||cust.on||!link?.open||!names[other(me)])return;
   stopTryOn();
   if(matchKind==='computer'){ready.host=true;launchMatch();return;}
@@ -1322,7 +1327,7 @@ function leaveCust() {
   $('custArea').hidden = true;
   layoutPreview();
 }
-$('custDone').onclick = () => { if(editingMatch){closeMatchCustomise();return;} if (cust.on||tryOn.on) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
+$('custDone').onclick = () => { if(editingMatch){closeMatchCustomise();return;} if (cust.on||tryOn.on||tryOn.busy) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
 /** Opens the customise area WITHOUT the camera (the camera only starts through a Try-on button). */
 function enterCust() {
   if (cust.on) return;
@@ -1509,7 +1514,7 @@ function renderWear() {
 function refreshPreview() {
   const load=currentScreen==='store'?storePreviewLoadout():{base:style.skin,stack:style.stack,baseColor:style.baseColor};
   const rec = resolveLoadout(load.base,load.stack,load.baseColor);
-  if(storeAnim.rec?.skin.id!==rec.skin.id){storeAnim.hd=[];previewMotion.started=null;}
+  if(storeAnim.rec?.skin.id!==rec.skin.id){storeAnim.hd=[];previewMotion.reset();}
   storeAnim.rec = rec;
   if (!storeAnim.ps) storeAnim.ps = new ParticleSystem();
   const puppet=currentScreen==='store'||effectiveStyle().mode.endsWith('puppet');
@@ -1632,6 +1637,7 @@ function updateTryOnButtons() {
   $('tryNow').setAttribute('aria-pressed',String(tryOn.on));
   $('storeSnap').textContent=tryOn.busy?'…':tryOn.on?'■':'📷';
   $('storeSnap').disabled = tryOn.busy;
+  if(currentScreen==='lobby')renderLobby();
 }
 
 function renderStats() {
@@ -1648,6 +1654,12 @@ $('storePreview').onclick = () => {if(previewMotion.consumeClick())return; if ((
 $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
 $('storeBack').onclick = () => show('menu');
+$('storeDevTools').hidden=!DEVELOPMENT_TOOLS;
+$('storeReset').onclick=()=>{
+  if(!DEVELOPMENT_TOOLS)return;
+  if(typeof globalThis.confirm==='function'&&!globalThis.confirm('Reset local Store unlocks? Earned items will be locked again and removed from your equipped look. Saved looks, profile and match stats stay saved.'))return;
+  stopTryOn();inv.resetUnlocks();storePreviewId=null;storePreviewColor=null;storeView.category='all';storeView.layer='all';storeView.reset=true;previewMotion.reset();syncStyle();renderStore();storeMsg('Store unlocks reset on this device.');
+};
 $('storeCustomise').onclick = () => { show('profile'); buildStyleCard(); renderProfile(); enterCust(); };
 $('storeSnap').onclick = async () => { if(tryOn.on)stopTryOn();else return startTryOn(); };
 $('wearCamOff').onclick = () => stopTryOn();

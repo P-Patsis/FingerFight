@@ -662,3 +662,7 @@ canvas[data-rotate-preview="true"] {touch-action:none;cursor:grab;}
 canvas[data-rotate-preview="true"]:active {cursor:grabbing;}
 
 #game .panel.opp .hud {padding-left:48px;min-height:44px;box-sizing:border-box;}
+
+/* Keep the two lobby panels on one shared responsive width. */
+#lobby #settingsCard, #lobby #styleSlot { width: min(100%, 440px); }
+#lobby #styleCard { width: 100%; }

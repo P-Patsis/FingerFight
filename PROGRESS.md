@@ -1,5 +1,14 @@
 # Finger Fight: progress
 
+## 2026-11-11 — Lobby Done/Ready correction, frontal previews and Play preparation
+
+- Changed: the existing bottom Start fight button becomes an enabled Done while customising or trying on a hand; Done closes editing/camera, then the same position shows Ready/Cancel ready for P2P or Start fight for computer. Finishing preview does not silently ready/start a multiplayer game. The random-only photo notice is hidden in private/computer/Profile screens. Match settings and opponent-view panel share a responsive 440px maximum width.
+- Preview: reset yaw/roll/clock when opening a preview or changing its hand; start frontal/open. Reduced automatic yaw/roll and bounded edge-on foreshortening prevent a retained dragged angle making the next hand vanish. Existing effect clocks/charge/release and reduced motion remain. Updated actual fitted rig SVG/geometry artifacts inspected; these are not phone screenshots.
+- Prototype Store: Developer tools → Reset Store unlocks revokes local unlocks, removes now-locked equipment and resets a locked base to cartoon. Confirmation can cancel. Profile, saved looks, stats and free items remain. This control is disabled in release bundles. No real purchase entitlement is implemented or claimed.
+- Play preparation: release AAB build/inspection plus opt-in private upload signing; no debug signing fallback. Added PLAYSTORE.md with account/signing, backend/TURN migration, privacy/listing and testing requirements. Shared backend remains undeployed/API_URL empty; renewed Cloudflare access permission and Play account status requested asynchronously. No account lookup, paid service or credential rotation attempted without the missing access response.
+- Verified: full game **409/409 pass** (55.8s); new regressions cover bottom Done/Ready, camera exit, cancelled/confirmed Store reset, edge-on bounds, reset facing and reduced motion. One initial Store test incorrectly expected a free ring to be removed; corrected the fixture to a genuinely locked ring, then focused reset and full suite passed. Actual device layout/preview/Ready/camera/FPS checks remain open. APK/AAB build and publication evidence follows after completion.
+
+
 ## 2026-11-11 — Match lifecycle, interactive previews and Store pass
 
 - Inline Customise/Camera now stay in lobby/results; single-flight model loading and camera-loop generations prevent duplicate GPU models and stale callbacks. Canvas state is restored after render errors; CPU-backed item thumbnails repaint after camera/context restoration. Laptop identity and camera preview widths are bounded; collage labels have an opaque edge. New users get a random arena/song and 45% volume; existing preferences remain.

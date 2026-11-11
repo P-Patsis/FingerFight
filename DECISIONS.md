@@ -1,5 +1,14 @@
 # Finger Fight: decisions
 
+## 2026-11-11 — Use the main lobby action for Done and Ready
+
+- Keep one primary action in the original Start fight position: Done during preview/editing, Ready/Cancel ready in P2P, Start fight for computer. Done is enabled independently of camera/peer readiness and closes editing rather than launching a game. Retain the compact viewer Done too.
+- Hide the random-only privacy notice for other match types; constrain the two lobby panels to the same responsive width.
+- Reset decorative preview angle/clock on opening/changing hands, reduce automatic movement and keep a minimum projected width for direct rotation. Do not change tracked/networked landmarks.
+- Provide a local prototype-only Store reset behind a labelled Developer tools disclosure and confirmation. Preserve free items/profile/looks/stats, revoke only local unlocks, and disable the UI/action in release bundles.
+- Prepare a release AAB with optional private upload signing; unsigned output is labelled and cannot be treated as a Play submission. Keep the existing debug key/package for testing. Defer cloud activation to renewed account permission and actual relay secrets; migrate clients before retiring public legacy TURN credentials.
+
+
 ## 2026-11-11 — Explicit readiness, resilient camera sessions and honest Store previews
 
 - Require both P2P players to press Ready; camera permission is preparation, not consent. Customisation/camera/rule changes revoke readiness. Keep computer starts immediate. Rematches re-enter the ready lobby.

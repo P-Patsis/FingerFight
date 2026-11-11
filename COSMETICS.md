@@ -1,5 +1,12 @@
 # Layered cosmetics and the Store
 
+## 2026-11-11 — Frontal idle previews and prototype Store reset
+
+Opening a preview or changing hands resets its decorative rotation and pose clock. Automatic yaw/roll is smaller; manual edge-on rotation retains a minimum width, and the next hand starts frontal. Fist/charge/release and reduced motion remain. The bottom lobby action becomes Done while editing/trying on, then Ready or Start fight after closing.
+
+Prototype Store → Developer tools → Reset Store unlocks is a confirmed local action. It revokes local unlock grants and removes newly locked equipment, retaining free items, profile, saved looks and stats. Saved looks cannot bypass normal ownership validation when reapplied. Release AABs disable developer controls; no paid entitlement system is active. Updated artifacts/idle-preview-review.svg and geometry-only PNG show actual fitted poses, not browser/phone screenshots.
+
+
 ## 2026-11-11 — Free previews and interactive idle poses
 
 Locked Store items support Preview and camera try-on using a temporary loadout; leaving Store restores the equipped look. Preview colour changes do not grant or persist the item. Watch ad currently reports unavailable until a real reward provider is configured; the old production instant-grant stub is disabled. No purchase product is live.

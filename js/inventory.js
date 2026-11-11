@@ -106,6 +106,13 @@ export class Inventory {
     return true;
   }
 
+  /** Prototype developer action: revoke local grants while preserving profile/looks/preferences. */
+  resetUnlocks() {
+    this.granted.clear();this.#write(OWNED_KEY,'[]');
+    if(!this.owns(this.baseId)){this.base='cartoon';this.#write(BASE_KEY,this.base);}
+    this.#sanitize();this.baseColor=this.handColors[this.baseId]||null;this.#saveHands();
+  }
+
   /** The equipped base hand id (an unknown or unset one gives the default). */
   get baseId() { return skinIdOf(this.base || 'cartoon'); }
 
