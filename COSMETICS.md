@@ -1,5 +1,14 @@
 # Layered cosmetics and the Store
 
+## 2026-11-11 — Free previews and interactive idle poses
+
+Locked Store items support Preview and camera try-on using a temporary loadout; leaving Store restores the equipped look. Preview colour changes do not grant or persist the item. Watch ad currently reports unavailable until a real reward provider is configured; the old production instant-grant stub is disabled. No purchase product is live.
+
+Idle puppets subtly rotate, accept pointer drag, and cycle open → fist/charge → extension/release. The renderer consumes decorative landmarks with stable open-hand fitting; these never enter finger detection or network data. Reduced motion freezes automatic changes. Skeleton previews do not inherit puppet particles. Existing 90-particle/6-emitter limits remain. Inline lobby/results customisation uses the same controls without visiting Profile. Camera/session changes repaint CPU-backed item thumbnails.
+
+Review artifacts: artifacts/idle-preview-review.svg (actual rig paths) and idle-preview-geometry.png (geometry only, no skin/GPU rendering). These do not substitute for phone screenshots. Device review remains needed for black-thumbnail reproduction, drag feel, charge timing, camera counting and FPS.
+
+
 ## 2026-11-06 — Store height and Saved looks alignment
 
 Store's preview/controls/category rows and item carousel keep their natural heights inside the scrolling layout. Opening a colour or fitting panel no longer makes the rows shrink away; fitting disclosures now have separate Profile/Store state. Saved looks uses centred 14px bold text matching Adjust Hand Size, with the full-width fitting sliders preserved. No cosmetic, rig, counting, particle or network changes.

@@ -5,7 +5,7 @@ const open=pose(true),fist=pose(false);
 // Decoration only. These landmarks never enter the detector, vote window or network snapshots.
 export class PreviewMotion{
  constructor(){this.yaw=0;this.roll=0;this.started=null;this.moved=false;}
- drag(dx,dy){this.yaw+=dx*.012;this.roll=clamp(this.roll+dy*.004,-.45,.45);if(Math.abs(dx)+Math.abs(dy)>2)this.moved=true;}
+ drag(dx,dy){this.yaw+=dx*.012;this.roll=clamp(this.roll+dy*.004,-.45,.45);this.travel=(this.travel||0)+Math.abs(dx)+Math.abs(dy);if(this.travel>3)this.moved=true;}
  consumeClick(){const moved=this.moved;this.moved=false;return moved;}
  sample(now,reduced=false){
   this.started??=now;const t=Math.max(0,(now-this.started)/1000),phase=t%8;
@@ -19,7 +19,7 @@ export class PreviewMotion{
 export function bindPreviewDrag(canvas,motion,{enabled=()=>true,repaint=()=>{}}={}){
  let pointer=null,last=null;
  canvas.dataset.rotatePreview='true';canvas.setAttribute('aria-label',(canvas.getAttribute('aria-label')||'Puppet preview')+'. Drag to rotate');
- canvas.addEventListener('pointerdown',e=>{if(!enabled()||e.button>0)return;pointer=e.pointerId;last={x:e.clientX,y:e.clientY};motion.moved=false;canvas.setPointerCapture?.(pointer);});
+ canvas.addEventListener('pointerdown',e=>{if(!enabled()||e.button>0)return;pointer=e.pointerId;last={x:e.clientX,y:e.clientY};motion.moved=false;motion.travel=0;canvas.setPointerCapture?.(pointer);});
  canvas.addEventListener('pointermove',e=>{if(e.pointerId!==pointer||!last)return;motion.drag(e.clientX-last.x,e.clientY-last.y);last={x:e.clientX,y:e.clientY};repaint();});
  const stop=e=>{if(e.pointerId===pointer){canvas.releasePointerCapture?.(pointer);pointer=null;last=null;}};
  canvas.addEventListener('pointerup',stop);canvas.addEventListener('pointercancel',stop);

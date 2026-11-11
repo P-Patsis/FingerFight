@@ -1518,7 +1518,7 @@ function refreshPreview() {
   storeAnim.ps.setElement(puppet?(rec.skin.id==='sand'?'sand':rec.skin.id==='elemental'?gen.el:null):null);
   if (rec.skin.id !== 'comic') storeAnim.comic.clear();
   storeAnim.ps.setFit(rec.skin.fit);
-  storeAnim.ps.setSand(rec.skin.sand);
+  storeAnim.ps.setSand(puppet?rec.skin.sand:null);
   startStoreAnim();
 }
 /** The still preview has no real hand to shake, so a sand hand is jolted for a moment every few seconds to show its collapse (decoration only). */
@@ -1537,11 +1537,11 @@ function startStoreAnim(){
     const c=$(large?'storePreview':'viewPreview'),ctx=c.getContext('2d');if(!ctx)return;
     const mode=currentScreen==='store'?'puppet':effectiveStyle().mode,rec=storeAnim.rec,pose=previewMotion.sample(now,fx.reducedMotion?.());
     const dt=storeAnim.last?Math.min(.1,(now-storeAnim.last)/1000):0;storeAnim.last=now;
-    const jolt=fx.reducedMotion?.()?null:demoJolt(rec,now),hands=previewHandPx(c.width,c.height,rec.skin,rec.layers,pose.lms,mode,pose.fitLms);
+    const jolt=fx.reducedMotion?.()||!mode.endsWith('puppet')?null:demoJolt(rec,now),hands=previewHandPx(c.width,c.height,rec.skin,rec.layers,pose.lms,mode,pose.fitLms);
     const points=jolt?hands.map(lm=>lm.map(p=>({x:p.x+jolt.x,y:p.y+jolt.y}))):hands;
     try{
       ctx.save();try{ctx.setTransform?.(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#0f172a';ctx.fillRect(0,0,c.width,c.height);
-       storeAnim.ps.update(dt,points);if(rec.skin.id==='comic')storeAnim.comic.update(points,pose.count,dt,c.width,c.height);
+       if(mode.endsWith('puppet'))storeAnim.ps.update(dt,points);else storeAnim.ps.clear();if(rec.skin.id==='comic'&&mode.endsWith('puppet'))storeAnim.comic.update(points,pose.count,dt,c.width,c.height);
        const options={...rec,ps:storeAnim.ps,backs:pose.backs,live:true,noBg:true,previewLms:pose.lms,previewFitLms:pose.fitLms,alphas:storeAnim.ps.bodyAlphas(),partAlphas:storeAnim.ps.partAlphas(),hd:storeAnim.hd,comic:storeAnim.comic,dt,jolt};
        if(large){storeAnim.ps.drawBackdrop(ctx);drawPuppetPicture(ctx,c.width,c.height,pose.lms,[],1,rec.skin,false,options);}
        else drawViewPreview(ctx,c.width,c.height,mode,rec.skin,options,style.skel||SKELETON_COLOR,style.skelStyle||undefined);

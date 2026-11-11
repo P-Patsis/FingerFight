@@ -1,5 +1,14 @@
 # Finger Fight: decisions
 
+## 2026-11-11 — Explicit readiness, resilient camera sessions and honest Store previews
+
+- Require both P2P players to press Ready; camera permission is preparation, not consent. Customisation/camera/rule changes revoke readiness. Keep computer starts immediate. Rematches re-enter the ready lobby.
+- Keep lobby/result editing inline. Coalesce tracker loads, invalidate old RAF generations and restore drawing state on failure. Use CPU-backed thumbnails and redraw on camera/context changes rather than sharing fragile GPU-backed surfaces.
+- Use absolute round deadlines with foreground catch-up, validated phase/advance messages and a bounded unanswered-round timeout. Browser/OS suspension cannot be bypassed; an active peer may advance or end the match. Forfeit is explicit and recorded once.
+- Preview locked Store cosmetics through temporary loadouts, never ownership mutation. Disable the default instant-grant demo provider in production. Real rewarded-ad and optional one-time purchase integration await actual account/product configuration; never show a pretend ad reward or checkout.
+- Animate idle landmark geometry with stable open-hand framing, not canvas transforms overridden by the rig. Preserve reduced motion, real tracking, network validation and existing particle budgets. Pointer dragging suppresses the subsequent painting click, including many small movements.
+
+
 ## 2026-11-06 — Store sections retain their height
 
 - Give Store's direct scrolling sections fixed flex shrink behavior, and use a column inside the pinned group with non-shrinking preview/colour/category children. Category rows retain a 44px minimum; the item carousel retains its natural height. Expanded controls overflow by scrolling instead of squashing the rows below them. Scope these rules to Store.

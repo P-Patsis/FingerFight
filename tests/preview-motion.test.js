@@ -17,5 +17,5 @@ test('preview drag captures only enabled pointer gestures and leaves the stored 
  const events={},canvas={dataset:{},attrs:{},getAttribute(){return'Preview';},setAttribute(k,v){this.attrs[k]=v;},addEventListener(k,fn){events[k]=fn;},setPointerCapture(){},releasePointerCapture(){}};
  const motion=new PreviewMotion();let repaint=0,enabled=false;bindPreviewDrag(canvas,motion,{enabled:()=>enabled,repaint:()=>repaint++});
  events.pointerdown({pointerId:1,clientX:0,clientY:0});events.pointermove({pointerId:1,clientX:30,clientY:0});assert.equal(repaint,0);
- enabled=true;events.pointerdown({pointerId:1,clientX:0,clientY:0});events.pointermove({pointerId:1,clientX:30,clientY:0});events.pointerup({pointerId:1});assert.equal(repaint,1);assert.ok(motion.yaw>0);
+ enabled=true;events.pointerdown({pointerId:1,clientX:0,clientY:0});events.pointermove({pointerId:1,clientX:30,clientY:0});events.pointerup({pointerId:1});assert.equal(repaint,1);assert.ok(motion.yaw>0);motion.moved=false;motion.travel=0;for(let n=0;n<5;n++)motion.drag(1,0);assert.equal(motion.consumeClick(),true,'slow drags also suppress the painting click action');
 });
