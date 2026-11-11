@@ -77,7 +77,7 @@ test('Camera off in the Store; and the Profile\'s merged panel: Customise turns 
   $('tryBtn').onclick();                                             // "Try on (camera)" brings the camera
   await until(() => events.includes('run'), 'camera on');
   assert.deepEqual(events, ['start', 'run']);
-  assert.equal($('custArea').hidden, false);
+  assert.equal($('custArea').hidden, true,'camera entry does not force the editor open');
   assert.equal($('wearTop').parentElement, $('cWearTop')); assert.equal($('cWearTop').hidden, true, 'the puppet fitting pane is not shown beside the live camera'); assert.equal($('camBox').parentElement, $('liveBox'));
   assert.equal($('wearTop').classList.contains('pmode'), true, 'Profile mode hides Test snap and Camera off: no camera buttons at all in Profile mode');
   assert.equal(b.byId.get('wearPhoto'), undefined, 'the standalone Photo button is gone');
@@ -93,8 +93,8 @@ test('Camera off in the Store; and the Profile\'s merged panel: Customise turns 
   pick('photo-puppet'); assert.equal(cam().overlay.puppet, true); assert.equal(feedHidden(), false, 'Photo + puppet: my live picture with the puppet over it');
   pick('photo-skeleton'); assert.equal(cam().overlay.puppet, false, 'Photo + skeleton: my live picture with the skeleton over it'); assert.equal(feedHidden(), false);
   assert.deepEqual(shown(), { top: false, live: true, fit: false, two: false });
-  assert.equal($('stickyTop').classList.contains('stuck'), true, 'the top block is pinned while customising');
-  assert.equal($('custDone').hidden, false, 'the small Done sits in the preview corner'); assert.equal($('custBtn').hidden, true);
+  assert.equal($('stickyTop').classList.contains('stuck'), false, 'camera-only preview does not open customisation');
+  assert.equal($('custDone').hidden, false, 'the small Done sits in the preview corner'); assert.equal($('custBtn').hidden, false);
   pick('puppet'); assert.equal(feedHidden(), true);
   $('custDone').onclick();                                           // Done
   assert.ok(events.includes('stop'), 'tracks stopped'); assert.equal(cam().cameraOn, false);

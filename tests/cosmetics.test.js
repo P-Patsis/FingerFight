@@ -310,7 +310,8 @@ test('unlock: the stub grants at once and can be replaced; a refusing or throwin
   const src = read('js/unlock.js');
   assert.match(src, /STUB BOUNDARY/); assert.match(src, /setUnlockProvider/);
   assert.ok(!/fetch\(|XMLHttpRequest|WebSocket|https?:\/\//.test(src.replace(/\/\/.*$/gm, '')), 'no network code in the stub');
-  assert.equal(unlock.unlockProviderName(), 'stub');
+  assert.equal(unlock.unlockProviderName(),'unavailable');
+  unlock.setUnlockProvider(unlock.stubProvider);
   const inv = new Inventory(memStorage()), e = entryOf('dragon');
   assert.equal(inv.owns('dragon'), false);
   assert.match(unlock.unlockLabel(e), /Watch ad.*demo/); assert.match(unlock.unlockLabel(entryOf('goldhand')), /Watch ad.*demo/);
@@ -329,7 +330,7 @@ test('unlock: the stub grants at once and can be replaced; a refusing or throwin
   assert.deepEqual(await unlock.unlockItem(inv2, entryOf('goldhand')), { granted: true, receipt: 'tok_123' }); assert.equal(inv2.owns('goldhand'), true);
   assert.throws(() => unlock.setUnlockProvider({}), /request/);
   unlock.resetUnlockProvider();
-  assert.equal(unlock.unlockProviderName(), 'stub');
+  assert.equal(unlock.unlockProviderName(), 'unavailable');
 });
 
 test('no ad SDK or payment code anywhere in the web app', () => {
@@ -442,6 +443,7 @@ test('items can be loaded from any base path and a broken item is skipped, not f
 
 // ---- the Store screen -------------------------------------------------------------------------------------------------------------
 test('Store unlocks unowned items; Customise equips and reorders the owned collection with colours and effects', async () => {
+  unlock.setUnlockProvider(unlock.stubProvider);
   await loadCatalog(); resetItems(); await loadCatalog();
   assert.ok($('storeBtn') && $('storeBack') && $('storeGrid') && $('storePreview'));
   $('storeBtn').onclick();
@@ -555,7 +557,7 @@ test('Store keeps refused unlocks, hides obtained items and explains an exhauste
   try {
     unlock.setUnlockProvider({name:'refused',request:async()=>({granted:false,error:'not completed'})});
     await unlockButton().onclick();assert.ok(card());assert.match($('storeMsg').textContent,/Not unlocked/);
-    unlock.resetUnlockProvider();await unlockButton().onclick();
+    unlock.setUnlockProvider(unlock.stubProvider);await unlockButton().onclick();
     assert.equal(card(),undefined);
     assert.ok(!$('storeGrid').children.some(c=>c.dataset.id));
     assert.match($('storeGrid').children[0].textContent,/own everything/);

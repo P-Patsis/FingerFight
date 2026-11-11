@@ -43,7 +43,7 @@ test('a stranger connects and is accepted at once (no approval); the lobby is th
   assert.equal(welcome.name, 'Fighter', 'random opponents see the profile name (no typed name here, so the default)');
   assert.equal($('joinPrompt').hidden, true);
   assert.equal($('randomNote').hidden, false); assert.equal($('privateBox').hidden, true);
-  assert.equal($('settingsCard').hidden, true); assert.equal($('startBtn').hidden, true);
+  assert.equal($('settingsCard').hidden, true); assert.equal($('startBtn').hidden, false);
   assert.equal($('nameGuest').textContent, 'Fighter 4242');
   assert.equal($('randomBtn').hidden, false, 'search UI is reset');
 });
@@ -60,6 +60,7 @@ test('photo reveal styles are not offered against a random opponent and cannot b
 
 test('if MY connection died I lose, and say so', async () => {
   conn.send({ t: 'ready', ready: true });
+  await until(()=>!$('startBtn').disabled,'Ready available');$('startBtn').onclick();
   await until(() => got.some(m => m.t === 'round'), 'a fight is on', 8000);
   Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true });
   conn.close();

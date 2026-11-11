@@ -117,17 +117,22 @@ function reachOf(lms, ar, skin, layers) {
 /** Puppet picture: the skin posed on the landmarks, fitted to the picture like the skeleton (a little more room: it is wider than the bones). */
 export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers = true, rec = null) {
   if (!rec?.noBg) { ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h); }       // noBg: the caller already painted the background (it draws under a transform)
-  const px = fitter(lms, w, h, ar, 0.16, reachOf(lms, ar, skin, rec?.layers || []));
+  const fitLms=rec?.previewFitLms||lms;
+  const px = fitter(fitLms, w, h, ar, 0.16, reachOf(fitLms, ar, skin, rec?.layers || []));
   const pts = lms.map(hand => hand.map(px));
   if (rec?.jolt) for (const hand of pts) for (const p of hand) { p.x += rec.jolt.x; p.y += rec.jolt.y; }        // the preview's demo shake (decoration)
+  paintPuppet(ctx,w,h,pts,skin,rec);
+  const tips = raisedTips(lms, hands, px);
+  if (withNumbers && skin.id !== 'comic') annotate(ctx, tips, Math.max(8, h * 0.07));
+  return tips;
+}
+
+function paintPuppet(ctx,w,h,pts,skin,rec){
   const hd = rec?.hd ? pts.map((hand, i) => (rec.hd[i] ??= new HandDynamics()).update(hand, rec.dt || 0, skin, rec.layers || [])) : null;   // a live preview: animations and physics run
   if(['elemental','sand'].includes(skin.id)&&(rec?.ps?rec.ps.drawBody(ctx,pts):drawElementBody(ctx,pts,skin.id==='sand'?'sand':rec?.element||'water',{reduced:true,fit:skin.fit,sand:skin.sand})))pts.forEach((lm,i)=>drawPlan(ctx,rigPlan(lm,skin,rec?.layers||[],rec?.backs?.[i],hd?.[i]).filter(s=>s.part.includes('@')),1,hd?.[i]?.animTime??null));
   else drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs, rec?.alphas, hd, rec?.partAlphas);
   if (skin.id === 'comic') { if (rec?.comic) rec.comic.draw(ctx,w,h); else if (rec?.cb) drawComic(ctx,rec.cb,w,h); }
   if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, rec.seed || 'pic');   // a still of the effects; live previews animate them instead
-  const tips = raisedTips(lms, hands, px);
-  if (withNumbers && skin.id !== 'comic') annotate(ctx, tips, Math.max(8, h * 0.07));
-  return tips;
 }
 
 /** Profile preview: how my current choice looks to the viewer, drawn with the selected skin from a sample open hand.
@@ -136,7 +141,7 @@ export function drawPuppetPicture(ctx, w, h, lms, hands, ar, skin, withNumbers =
 export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELETON_COLOR, skelStyle = DEFAULT_SKELETON_STYLE) {
   const puppet = String(mode).endsWith('puppet');
   const camera = String(mode).startsWith('photo');
-  const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
+  const lms = rec?.previewLms || [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
   if (!camera) {
     if (puppet) drawPuppetPicture(ctx, w, h, lms, [], 1, skin, false, rec); else drawSkeletonPicture(ctx, w, h, lms, [], 1, false, skel, skelStyle);
     return { camera, hand: puppet ? 'puppet' : 'skeleton' };
@@ -147,9 +152,10 @@ export function drawViewPreview(ctx, w, h, mode, skin, rec = null, skel = SKELET
   ctx.fillStyle = '#64748b';                                         // a head and shoulders, to read as "a camera picture of you"
   ctx.beginPath(); ctx.arc(w * 0.2, h * 0.32, h * 0.16, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.ellipse(w * 0.2, h * 0.95, w * 0.17, h * 0.34, 0, 0, 7); ctx.fill();
-  const px = fitter(lms, w * 0.6, h, 1, puppet ? 0.16 : 0.1, puppet ? reachOf(lms, 1, skin, rec?.layers || []) : []);        // the hand sits in the right 60% of the picture
+  const reference=rec?.previewFitLms||lms;
+  const px = fitter(reference, w * 0.6, h, 1, puppet ? 0.16 : 0.1, puppet ? reachOf(reference, 1, skin, rec?.layers || []) : []);        // the hand sits in the right 60% of the picture
   const at = p => { const q = px(p); return { x: q.x + w * 0.4, y: q.y }; };
-  if (puppet) { const pts = lms.map(hand => hand.map(at)); drawPuppet(ctx, pts, skin, rec?.layers || [], rec?.backs); if (skin.id === 'comic' && rec?.cb) drawComic(ctx,rec.cb,w,h); if (rec?.emitters?.length && !rec.live) snapshot(ctx, rec.emitters, pts, 'preview'); }
+  if (puppet) {rec?.ps?.drawBackdrop(ctx);paintPuppet(ctx,w,h,lms.map(hand=>hand.map(at)),skin,rec);}
   else {
     for (const hand of lms) drawBones(ctx, hand.map(at), skel, Math.max(2, h * 0.016), skelStyle);
   }
@@ -184,8 +190,9 @@ export function drawFromMessage(ctx, w, h, msg) {
 }
 
 /** The sample open hand used by the Profile preview and the Store, as pixel points in a w x h picture: for animating particles on it. */
-export function previewHandPx(w, h, skin = null, layers = []) {
-  const lms = [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })];
-  const px = fitter(lms, w, h, 1, 0.16, skin ? reachOf(lms, 1, skin, layers) : []);
-  return lms.map(hand => hand.map(px));
+export function previewHandPx(w,h,skin=null,layers=[],lms=null,mode='puppet',reference=null){
+  lms ||= [statesToLandmarks({thumb:true,index:true,middle:true,ring:true,pinky:true})];
+  reference ||= lms;
+  const photo=mode.startsWith('photo'),px=fitter(reference,photo?w*.6:w,h,1,.16,skin?reachOf(reference,1,skin,layers):[]);
+  return lms.map(hand=>hand.map(p=>{const q=px(p);return photo?{x:q.x+w*.4,y:q.y}:q;}));
 }

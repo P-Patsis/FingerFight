@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installBrowser, peers, network, sleep, until, Conn } from './harness.js';
 
-const b = installBrowser('?sim=1');
+const b = installBrowser('?sim=1');localStorage.setItem('ff-favbg','0');localStorage.setItem('ff-favsong','0');
 const $ = id => b.byId.get(id);
 await import('../js/main.js');
 
@@ -64,7 +64,7 @@ test('a friend joins and is accepted; both get ready; the host configures the fi
   $('acceptBtn').onclick();
   assert.equal($('nameGuest').textContent, 'Guestscript', 'markup characters stripped');
   assert.equal(sentOf(conn, 'welcome')[0].name, 'Hank');
-  assert.equal($('startBtn').disabled, true, 'not startable until both cameras are ready');
+  assert.equal($('startBtn').textContent,'Ready');assert.equal(sentOf(conn,'start').length,0,'camera preparation never starts a match');
   conn.emit('data', { t: 'ready', ready: true });
   await until(() => !$('startBtn').disabled, 'start enabled once both are ready');
 
@@ -92,7 +92,7 @@ test('a friend joins and is accepted; both get ready; the host configures the fi
   assert.equal(played.at(-1), 2);
   $('bgPicker').children[3].onclick(); $('musicPicker').children[0].onclick();
   assert.deepEqual([sentOf(conn, 'settings').at(-1).settings.background, sentOf(conn, 'settings').at(-1).settings.music], [3, 0]);
-  music.setArena = origArena;
+  music.setArena = origArena;conn.emit('data',{t:'ready',ready:true});
 });
 
 test('game 1: the host points, the guesser is right, the host loses', async () => {
@@ -126,7 +126,7 @@ test('game 1: the host points, the guesser is right, the host loses', async () =
 });
 
 test('game 2 (rematch): wrong guess + middle finger is only a miss (and the filter hides it); the host then wins', async () => {
-  $('againBtn').onclick();
+  $('againBtn').onclick();assert.equal(b.visible()[0],'lobby');conn.emit('data',{t:'ready',ready:true});$('startBtn').onclick();
   assert.equal(sentOf(conn, 'start').length, 2);
   await until(() => sentOf(conn, 'round').length === 2, 'round 1 of the rematch');
   await until(() => simButton('[data-count]', '4'), 'controls again');

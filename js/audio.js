@@ -10,13 +10,13 @@
 
 let ctx = null, master = null, sfxBus = null, musicBus = null;
 let muted = load('ff-muted') === '1';
-let volume = clamp01(load('ff-vol') === null ? 0.7 : Number(load('ff-vol')));
+let volume = clamp01(load('ff-vol') === null ? 0.45 : Number(load('ff-vol')));
 let noiseBuf = null;
 let background = false;        // the page is hidden or not focused: all audio (music, loops, effects) is paused
 
 function load(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function save(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } }
-function clamp01(v) { return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.7; }
+function clamp01(v) { return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.45; }
 
 function applyVolume() {
   if (master) master.gain.value = muted ? 0 : volume * volume;     // squared: the slider feels even to the ear

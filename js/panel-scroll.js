@@ -8,7 +8,7 @@ export function scrollSticky(panel,screen,delta){
  left-=move(panel,left);
  if(left)move(screen,left);
 }
-const isControl=target=>!!target?.closest?.('input,textarea,select,.cp-sv');
+const isControl=target=>!!target?.closest?.('input,textarea,select,.cp-sv,[data-rotate-preview]');
 export function bindStickyScroll(panel,fallbackScreen){
  if(!panel?.addEventListener)return;
  const screen=()=>panel.closest?.('.screen')||fallbackScreen;

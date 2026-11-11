@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-11 — IN PROGRESS: match lifecycle, previews, readiness and Store pass
+
+- Confirmed repo started clean at 5837f27; the Nov 6–11 requested batch had not been implemented before this continuation. User reports a real random phone/laptop match worked; this is user-reported device evidence, not an automated claim.
+- Implemented locally: lobby/result Customise stays inline; camera preview does not force Profile/editor navigation. Single-flight tracking-model loading prevents concurrent GPU models; tracking-loop generations reject callbacks surviving release/restart. Render errors restore canvas state; CPU-backed thumbnail contexts and camera-edge redraw protect item previews. Laptop identity/camera bounds and opaque collage-label edge added. New-user arena/song are random, existing preferences retained, default volume 45%.
+- P2P start control is now Ready/Cancel ready for each player; camera permission/preparation never means agreement to start. Host launches only after both explicit readiness flags. Editing and rule changes revoke readiness. Match menu exposes continue/forfeit. No backend deployment or ad/payment setup attempted.
+- Focused verification: camera model coalescing/stale RAF/counting/canvas restoration 3/3 pass; inline customisation/computer flow/try-on hooks 3/3 pass. Full-suite/release work is pending. Now also implemented: bounded wall-clock deadlines, foreground catch-up, background phase/advance requests, 20-second unanswered-round timeout, explicit forfeit, temporary Store previews/camera loadouts without ownership changes, unavailable-by-default ad provider, geometry-based idle yaw/roll and pointer rotation, fist/charge/release preview cycle with fixed framing. Dedicated background-round and Store/context-restoration regressions pass 2/2; idle charge/release/drag/reduced-motion checks pass 3/3; renderer/try-on/Store checks pass 42/42. First full run passed 400/407, with old auto-ready fixtures and one closed-editor category refresh caught and updated. Remaining: final full game/backend checks, review artifacts, docs, commit/push, Pages verification and new APK. Real-phone visual/GPU/FPS review remains required.
+
+
 ## 2026-11-06 — Store collapse repair and Saved looks sizing
 
 - Changed: Store's direct scrolling sections retain natural height. The pinned group now uses a column with non-shrinking preview/colour/category sections; category rows keep 44px minimum height and the item carousel cannot shrink away. Expanded controls scroll rather than squeezing the rows below them. These height rules are scoped to Store. Profile and Store now remember fitting-menu expansion independently, while fitting values remain shared.

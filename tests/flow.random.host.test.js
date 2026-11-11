@@ -43,7 +43,7 @@ test('a stranger connects and is accepted at once (no approval); the lobby is th
   assert.equal(welcome.name, 'Fighter', 'random opponents see the profile name (no typed name here, so the default)');
   assert.equal($('joinPrompt').hidden, true);
   assert.equal($('randomNote').hidden, false); assert.equal($('privateBox').hidden, true);
-  assert.equal($('settingsCard').hidden, true); assert.equal($('startBtn').hidden, true);
+  assert.equal($('settingsCard').hidden, true); assert.equal($('startBtn').hidden, false);
   assert.equal(welcome.yourName, 'Fighter (2)', 'two players called Fighter: the guest is numbered');
   assert.equal($('nameGuest').textContent, 'Fighter (2)');
   assert.equal($('randomBtn').hidden, false, 'search UI is reset');
@@ -59,11 +59,11 @@ test('photo reveal styles are not offered against a random opponent and cannot b
   assert.match($('styleNote').textContent, /no camera photo is stored or sent/i);
 });
 
-test('the match starts by itself once both cameras are on; the round carries only drawn data', async () => {
+test('the match waits for both Ready buttons; the round carries only drawn data', async () => {
   conn.send({ t: 'ready', ready: true });
-  await sleep(100);$('custBtn').onclick();assert.equal(b.visible()[0],'profile');
+  await sleep(100);$('custBtn').onclick();assert.equal(b.visible()[0],'lobby');
   await sleep(1700);assert.equal(got.some(m=>m.t==='start'),false,'autostart waits while customising');
-  $('custDone').onclick();assert.equal(b.visible()[0],'lobby');
+  $('custDone').onclick();assert.equal(b.visible()[0],'lobby');assert.equal(got.some(m=>m.t==='start'),false,'camera preparation does not consent');$('startBtn').onclick();
   await until(() => got.some(m => m.t === 'start'), 'the host auto-starts the random match', 8000);
   await until(() => got.some(m => m.t === 'round'), 'round 1');
   await until(() => simButton('[data-count]', '3'), 'controls');

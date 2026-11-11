@@ -37,6 +37,7 @@ test('the searcher skips empty slots and a full one, joins the waiting host in s
 
 test('against a random host: skeleton reveals are drawn locally, photo-carrying messages are refused', async () => {
   hostConn.send({ t: 'ready', ready: true });
+  await until(()=>!$('startBtn').disabled,'Ready available');$('startBtn').onclick();
   hostConn.send({ t: 'start', settings: SETTINGS });
   await until(() => b.visible()[0] === 'game', 'game');
   hostConn.send({ t: 'round', n: 1 });

@@ -474,6 +474,7 @@ export function animState(anim, m, time, strength = 1) {
 export function drawPlan(ctx, plan, alpha = 1, time = null, strength = 1, partAlphas = null) {
   if (typeof Path2D === 'undefined' || !(alpha > 0.01)) return;
   ctx.save();
+  try {
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   for (const step of plan) {
     let opacity = alpha;
@@ -494,7 +495,7 @@ export function drawPlan(ctx, plan, alpha = 1, time = null, strength = 1, partAl
       if (moved) ctx.setTransform(...step.m);
     }
   }
-  ctx.restore();                                         // restores the caller's transform and alpha
+  } finally {ctx.restore();}                              // restore even when a path/draw operation fails
 }
 
 /** One call: pose [skin] on each hand ([hands]: lists of 21 {x, y} pixel points) and draw it.

@@ -9,7 +9,7 @@ test('new match has two lives and announces each finger reduction prominently on
  host.on('connection',c=>{conn=c;c.on('data',m=>{if(m.t==='hello')c.send({t:'welcome',v:2,kind:'private',name:'Host',settings:DEFAULTS,ready:true});});});
  $('codeInput').value='ABCD-EFGH-JKLM-NPQR';await $('joinBtn').onclick();await until(()=>$('nameHost').textContent==='Host','welcome');
  assert.equal($('valHits').textContent,'2');assert.equal($('valMax').textContent,'5');assert.equal($('shrinkBtn').textContent,'On');
- conn.send({t:'start',settings:DEFAULTS});await until(()=>b.visible()[0]==='game','game');assert.equal($('topHp').children.length,2);assert.equal($('botHp').children.length,2);
+ await until(()=>!$('startBtn').disabled,'camera prepared');$('startBtn').onclick();conn.send({t:'start',settings:DEFAULTS});await until(()=>b.visible()[0]==='game','game');assert.equal($('topHp').children.length,2);assert.equal($('botHp').children.length,2);
  for(let n=1;n<=10;n++){
   conn.send({t:'round',n});await until(()=>$('roundLabel').textContent==='ROUND '+n&&$('banner').children[0]?.textContent!=='GET READY','round '+n);
   const primary=$('banner').children[0].textContent;

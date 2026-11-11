@@ -1,5 +1,8 @@
 import { API_URL } from './service-config.js';
 import { bindStickyScroll, revealStickyControl } from './panel-scroll.js';
+import { initialFavourites } from './preferences.js';
+import { DeadlineQueue } from './round-clock.js';
+import { PreviewMotion, bindPreviewDrag } from './preview-motion.js';
 import { Service } from './service.js';
 import { Matchmaker } from './matchmaking.js';
 import { initSocial } from './social.js';
@@ -78,7 +81,7 @@ let idle = newIdle();                          // consecutive rounds each player
 let token = 0;                          // bumped to cancel pending timeouts from an old round or game
 let bannerTimer = null;
 
-let computer=null,customiseReturn='menu',editingMatch=false;
+let computer=null,customiseReturn='menu',editingMatch=false,camPreparation=null,storePreviewId=null,storePreviewColor=null;
 let matchKind = null;                   // 'private' (friends, long code) | 'random' (strangers: puppet/skeleton only)
 let roomCodeRaw = '';                   // the private match code, without dashes
 let pendingGuest = null;                // private match: a guest waiting for the host to accept
@@ -147,15 +150,17 @@ globalThis.addEventListener?.('popstate', () => {
 
 function show(id) {
   if (tryOn.on || tryOn.busy) stopTryOn();                // the try-on camera never outlives its screen
-  if (cust.on && id !== 'profile') leaveCust();           // and the Profile's customise mode ends with the Profile
+  if (cust.on && id !== currentScreen) {leaveCust();editingMatch=false;}           // and the Profile's customise mode ends with the Profile
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+  if(currentScreen==='store'&&id!=='store'){storePreviewId=null;storePreviewColor=null;}
   currentScreen = id;
   wake.want(id === 'game');
   // the style and sound cards are shared by the Profile screen and the lobby: the same controls, so nothing is duplicated or out of step
   $('custOnly').hidden = !['profile','lobby'].includes(id);                // customise / try-on lives in the Profile only (the lobby shares the opponent-view part)
   if (id === 'store') { $('wearSlotStore').append($('wearCard')); layoutWear('store'); }
   if (id === 'profile') { $('styleSlotProfile').append($('styleCard')); $('appSlotProfile').append($('appCard')); layoutWear('profile'); renderProfileItems(); }
-  else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('appSlot').append($('appCard')); }
+  else if (id === 'lobby') { $('styleSlot').append($('styleCard')); $('appSlot').append($('appCard'));layoutWear('profile');renderProfileItems(); }
+  else if(id==='over'&&!$('overStyleSlot').hidden){$('overStyleSlot').append($('styleCard'));layoutWear('profile');}
   if (id === 'menu') updateRejoin();
   if (id === 'lobby' || id === 'game' || id === 'over') { if (currentMusic >= 0) music.setArena(currentMusic); }   // a match: the arena's loop (lazy, silent if the file is missing)
   else appScene();                                               // everywhere else: my favourite background and song
@@ -174,11 +179,7 @@ function setBackground(i) {
 
 // ---- favourite background + song (Profile): the menus wear the background and play the song; a new room starts with both (the host can still change them in the lobby)
 const clampBg = n => (Number.isInteger(n) && n >= 0 && n < BACKGROUNDS.length ? n : 0);
-const favInit = () => {
-  const bg = store_get('ff-favbg') !== null ? Number(store_get('ff-favbg')) : Number(store_get('ff-bg'));         // the host's old last choice becomes the first favourite
-  const raw = store_get('ff-favsong') !== null ? Number(store_get('ff-favsong')) : (store_get('ff-music') !== null ? Number(store_get('ff-music')) : -1);   // -1 = no song
-  return { bg: clampBg(bg), music: Number.isInteger(raw) && raw >= 0 && raw < TRACK_NAMES.length ? raw : -1 };
-};
+const favInit=()=>initialFavourites(store_get,BACKGROUNDS.length,TRACK_NAMES.length);
 const fav = favInit();
 if (store_get('ff-favbg') === null || store_get('ff-favsong') === null) { store.set('ff-favbg', String(fav.bg)); store.set('ff-favsong', String(fav.music)); }   // written once, so the favourites survive the old keys going away
 /** The scene outside a match (menu, Profile, Store, Stats...): the favourite background, and the favourite song if there is one. */
@@ -213,10 +214,8 @@ function setMusic(i) {
 /** Shows the match's background and plays its music: two separate settings. */
 function setScene() { setBackground(settings.background); setMusic(settings.music); }
 
-function later(ms, fn) {
-  const t = token;
-  setTimeout(() => { if (t === token) fn(); }, ms);
-}
+const deadlines=new DeadlineQueue();
+function later(ms,fn){const t=token;deadlines.after(ms,fn,()=>t===token);}
 
 function showBanner(big, small = '', ms = 900, cls = '') {
   const b = $('banner');
@@ -301,15 +300,16 @@ $('profileBtn').onclick = () => { customiseReturn='menu';editingMatch=false; if 
 $('profileBack').onclick = () => editingMatch?closeMatchCustomise():show('menu');
 function openMatchCustomise(){
   if(inGame)return;
-  customiseReturn=currentScreen;editingMatch=true;autoStarted=false;
+  customiseReturn=currentScreen;editingMatch=true;autoStarted=false;$('custOnly').hidden=false;
   if(me){ready[me]=false;send({t:'ready',ready:false});}
-  buildStyleCard();renderProfile();show('profile');enterCust();
+  if(currentScreen==='over'){$('overStyleSlot').hidden=false;$('overStyleSlot').append($('styleCard'));}
+  buildStyleCard();layoutWear('profile');enterCust();renderLobby();
 }
 function closeMatchCustomise(){
-  const destination=customiseReturn;editingMatch=false;
-  show(destination);
-  if(me){ready[me]=camReady;send({t:'ready',ready:camReady});}
-  if(destination==='lobby'||destination==='over')renderLobby();
+  stopTryOn();leaveCust();editingMatch=false;
+  if(currentScreen==='over')$('overStyleSlot').hidden=true;
+  if(me&&matchKind==='computer')ready[me]=camReady;
+  hookCamera();renderViewPreview(effectiveStyle().mode);renderLobby();
 }
 $('overCustomise').onclick=openMatchCustomise;
 renderWho();
@@ -561,7 +561,7 @@ function onLinkClosed(reason) {
   if (randomFight && !iDropped) { forfeitWin(); return; }       // a stranger who drops or quits the fight loses it
   resetAll();
   show('menu');
-  menuMsg(randomFight ? 'You lost the match: your connection dropped.'
+  menuMsg(reason==='round-timeout'?'The other player did not answer before the round deadline. Match ended.':randomFight ? 'You lost the match: your connection dropped.'
     : wasPlaying ? 'Your opponent left the fight.' : 'The connection closed (' + reason + ').', true);
 }
 
@@ -632,7 +632,7 @@ function backToLobby(msg, keepGuest = false, keepReady = false) {
   fightLog = []; streak = { side: null, n: 0 };
   idle = newIdle();
   if (!keepGuest) { names.guest = ''; pendingGuest = null; guestToken = null; }
-  if (!keepReady) ready = { host: false, guest: false };      // keepReady: both cameras are already enabled, so nobody could ready up again
+  if (!keepReady || matchKind!=='computer') ready = { host: matchKind==='computer'&&camReady, guest:matchKind==='computer' };      // keepReady: both cameras are already enabled, so nobody could ready up again
   fx.clearFx(); $('banner').replaceChildren(); netBadge('');
   setScene();
   show('lobby');
@@ -769,8 +769,8 @@ function onMessage(m) {
       renderLobby();
       break;
     case 'settings':
-      if (me !== 'guest' || !names.host) break;
-      settings = normalizeSettings(m.settings);
+      if (me !== 'guest' || !names.host || inGame) break;
+      invalidateReady();settings = normalizeSettings(m.settings);
       renderLobby();
       break;
     case 'ready':
@@ -779,13 +779,22 @@ function onMessage(m) {
       renderLobby();
       break;
     case 'start':
-      if (me !== 'guest' || !names.host || editingMatch) break;
+      if (me !== 'guest' || !names.host || editingMatch || !ready.guest || !camReady) break;
       settings = normalizeSettings(m.settings);
       startGame();
       break;
     case 'sync':                                    // guest: the host's view of the fight after a reconnect
       if (me !== 'guest' || !inGame || !game) break;
       applySync(m);
+      break;
+    case 'advance':
+      if(me==='host'&&inGame&&game&&!game.over&&Number.isInteger(m.n)&&m.n===game.round+1&&(!round||round.resolved))nextRound();
+      break;
+    case 'phase':
+      if(inGame&&round&&m.n===round.n&&round.phase==='intro')startGuessPhase();
+      break;
+    case 'forfeit':
+      if(inGame&&game&&!game.over&&m.n===(round?.n||0))forfeitWin();
       break;
     case 'round':
       if (me === 'guest' && inGame && Number.isInteger(m.n) && m.n === game.round + 1) beginRound(m.n);
@@ -821,10 +830,11 @@ function enterLobby() {
 }
 
 /** Host-only changes to the arena: [change] is {background?, music?}; remembered on this phone and sent to the guest with the other settings (validated on arrival). */
+function invalidateReady(){if(matchKind==='computer')return;ready={host:false,guest:false};send({t:'ready',ready:false});}
 function setArena(change) {
   if (me !== 'host') return;
   settings = normalizeSettings({ ...settings, ...change });                  // this match only: the favourites are changed in the Profile
-  setScene(); send({ t: 'settings', settings }); renderLobby();
+  invalidateReady();setScene(); send({ t: 'settings', settings }); renderLobby();
 }
 function buildBgPicker() {
   const box = $('bgPicker'), music = $('musicPicker');
@@ -849,8 +859,10 @@ const effectiveStyle = () => (matchKind === 'random' && !isSafeView(style.mode) 
 /** The STORE's try-on has no view choice: a photo view shows my live camera picture behind the puppet, any other view the puppet alone (the items are what is tried on).
  *  The Profile's top window shows the selected view itself (skeleton, puppet, with or without the live photo); its puppet fitting lives in the customise controls. Preview only, never sent. */
 const tryOnView = () => (effectiveStyle().mode.startsWith('photo-') ? 'photo-puppet' : 'puppet');
-const inProfileCust = () => cust.on && !$('profile').hidden;
-const applyOverlay = () => cam?.setOverlay?.(tryOn.on ? (inProfileCust() ? effectiveStyle().mode : tryOnView()) : effectiveStyle().mode, style.skin, style.stack, style.baseColor, style.skel, style.skelStyle);   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
+const previewScreen=()=>['profile','lobby','over'].includes(currentScreen);
+const inProfileCust = () => cust.on && previewScreen();
+function storePreviewLoadout(){const load=storePreviewId?inv.loadoutWith(storePreviewId):inv.loadout();if(storePreviewId&&storePreviewColor){if(entryOf(storePreviewId)?.layer==='base')load.baseColor=storePreviewColor;else load.stack=load.stack.map(s=>({...s,color:storePreviewColor}));}return load;}
+const applyOverlay=()=>{const load=currentScreen==='store'?storePreviewLoadout():{base:style.skin,stack:style.stack,baseColor:style.baseColor};cam?.setOverlay?.(tryOn.on?(previewScreen()?effectiveStyle().mode:tryOnView()):effectiveStyle().mode,load.base,load.stack,load.baseColor,style.skel,style.skelStyle);};   // a try-on shows the puppet alone on a dark background, or over my own live picture when Photo is on (preview only, never sent)
 
 function buildStyleCard() {
   const modes = $('modePicker');
@@ -861,9 +873,11 @@ function buildStyleCard() {
     b.dataset.mode = v;
     b.onclick = () => {
       if (!viewsFor(matchTypeNow()).includes(v)) return;
+      if(inGame)return;
+      if(me&&matchKind!=='computer'){ready[me]=false;send({t:'ready',ready:false});}
       style.mode = v; store.set('ff-mode', v);
       profileView.layer = v.endsWith('skeleton') ? 'skeleton' : 'base'; profileView.reset = true;     // the category below follows the view (the chips can still be tapped after)
-      renderStyle(); if (!$('profile').hidden) renderProfileItems();
+      renderStyle(); if (previewScreen()) renderProfileItems();if(me&&currentScreen==='lobby')renderLobby();
     };
     modes.append(b);
   }
@@ -895,6 +909,7 @@ function renderStyle() {
   $('styleNote').textContent = 'In random matches, no camera photo is stored or sent to your opponent. Only a puppet or skeleton is shared.';
   $('styleNote').classList.remove('err');
   renderViewPreview(mode);
+  if(storeAnim.rec)refreshPreview();
   applyOverlay();
   layoutPreview();
 }
@@ -919,8 +934,8 @@ function renderLobby() {
   $('nameGuest').textContent = labelOf('guest') || 'Waiting…';
   $('dotHost').classList.toggle('on', !!names.host);
   $('dotGuest').classList.toggle('on', !!names.guest);
-  $('stHost').textContent = names.host ? (ready.host ? 'ready' : 'camera off') : '';
-  $('stGuest').textContent = matchKind==='computer'?'computer ready':names.guest ? (ready.guest ? 'ready' : 'camera off') : '';
+  $('stHost').textContent = names.host ? (ready.host ? 'ready' : 'not ready') : '';
+  $('stGuest').textContent = matchKind==='computer'?'computer ready':names.guest ? (ready.guest ? 'ready' : 'not ready') : '';
   $('valSeconds').textContent = settings.seconds;
   $('valHits').textContent = settings.hits;
   $('valMax').textContent = settings.maxFingers;
@@ -935,19 +950,15 @@ function renderLobby() {
   if (pendingGuest) $('joinPrompt').scrollIntoView?.({ block: 'nearest' });
   if (pendingGuest) $('joinText').textContent = pendingGuest + ' wants to join your match.';
   $('camBtn').hidden = camReady || camBusy;
-  const canStart = !editingMatch && me === 'host' && link?.open && !!names.guest && ready.host && ready.guest;
-  $('startBtn').hidden = me !== 'host' || random;           // a random match starts by itself
-  $('startBtn').disabled = !canStart;
-  if(!$('over').hidden)$('againBtn').disabled=!canStart;
-  $('lobbyMsg').textContent = me === 'guest' ? (names.host ? (random ? 'Starts when you both have your camera on.' : 'The host starts the fight.') : 'Waiting for the host to accept you…')
-    : pendingGuest ? 'Accept or decline the player above.'
-    : !names.guest ? (random ? 'Waiting…' : 'Send the code to your friend. Waiting for them to join…')
-    : !(ready.host && ready.guest) ? (matchKind==='computer'?'Enable your camera to play against the computer.':'Both players need to enable their camera.') : '';
-  if(random&&!canStart)autoStarted=false;
-  if (random && canStart && !autoStarted) {
-    autoStarted = true;
-    setTimeout(() => { if (me === 'host' && !inGame && !$('lobby').hidden) $('startBtn').onclick(); }, 1500);
-  }
+  const canStart=!editingMatch&&!cust.on&&!tryOn.busy&&me==='host'&&link?.open&&!!names.guest&&ready.host&&ready.guest;
+  $('startBtn').hidden=false;
+  $('startBtn').textContent=matchKind==='computer'?'Start fight':ready[me]?'Cancel ready':'Ready';
+  $('startBtn').disabled=!me||!camReady||camBusy||tryOn.busy||editingMatch||cust.on||!link?.open||!names[other(me)];
+  if(!$('over').hidden)$('againBtn').disabled=matchKind==='computer'?!canStart:me!=='host'||!link?.open||editingMatch;
+  $('lobbyMsg').textContent=pendingGuest?'Accept or decline the player above.':!names[other(me)]?(me==='guest'&&matchKind==='private'?'Waiting for the host to accept you…':'Waiting for the other player…'):!camReady?'Enable your camera to prepare your hand.':editingMatch?'Choose your puppet, then tap Done.':matchKind==='computer'?'':ready[me]?'Waiting for the other player to press Ready.':'Choose your puppet, then press Ready.';
+  if(!canStart)autoStarted=false;
+  if(matchKind!=='computer'&&canStart&&!autoStarted&&!inGame&&currentScreen==='lobby'){autoStarted=true;launchMatch();}
+
 }
 
 $('settingsCard').addEventListener('click', e => {
@@ -956,10 +967,10 @@ $('settingsCard').addEventListener('click', e => {
   if (!step) return;
   const [key, delta] = step.dataset.step.split(':');
   settings = normalizeSettings({ ...settings, [key]: settings[key] + Number(delta) });
-  send({ t: 'settings', settings });
+  invalidateReady();send({ t: 'settings', settings });
   renderLobby();
 });
-$('shrinkBtn').onclick = () => { if (me === 'host') { settings = normalizeSettings({ ...settings, shrink: !settings.shrink }); send({ t: 'settings', settings }); renderLobby(); } };
+$('shrinkBtn').onclick = () => { if (me === 'host') { settings = normalizeSettings({ ...settings, shrink: !settings.shrink }); invalidateReady();send({ t: 'settings', settings }); renderLobby(); } };
 
 $('copyBtn').onclick = async () => {
   try { await navigator.clipboard.writeText(formatCode(roomCodeRaw)); $('lobbyMsg').textContent = 'Code copied. Send it to your friend.'; }
@@ -974,6 +985,9 @@ $('shareBtn').onclick = async () => {
   } catch { $('lobbyMsg').textContent = 'Share this link: ' + url; }
 };
 $('leaveBtn').onclick = () => { if (askLeave(currentScreen)) leave(); };
+$('gameMenuBtn').onclick=()=>{$('gameMenu').hidden=!$('gameMenu').hidden;};
+$('gameResume').onclick=()=>{$('gameMenu').hidden=true;};
+$('gameForfeit').onclick=()=>{if(!askLeave('game'))return;send({t:'forfeit',n:round?.n||0});if(inGame&&game&&!game.over)endOfMatch(false);clearSession();resetAll();show('menu');menuMsg('Match forfeited.');};
 $('overLeave').onclick = () => { if (askLeave(currentScreen)) leave(); };
 $('camBtn').onclick = enableCamera;
 
@@ -985,12 +999,11 @@ function leave() {
   menuMsg('');
 }
 
-async function enableCamera() {
-  sfx.unlock();
-  if (camReady || camBusy) return;
-  camBusy = true;
-  if (me) renderLobby();                                // hides the button while the attempt runs
-  try { await enableCameraNow(); } finally { camBusy = false; if (me) renderLobby();updateTryOnButtons(); }   // ... and brings it back if it failed
+function enableCamera() {
+  sfx.unlock();if(camReady)return Promise.resolve();if(camPreparation)return camPreparation;
+  camBusy=true;if(me)renderLobby();
+  const pending=enableCameraNow().finally(()=>{if(camPreparation===pending){camBusy=false;camPreparation=null;if(me)renderLobby();updateTryOnButtons();}});
+  camPreparation=pending;return pending;
 }
 
 async function enableCameraNow() {
@@ -999,10 +1012,11 @@ async function enableCameraNow() {
   const status = t => { $('camStatus').textContent = t; };
   status(SIM ? 'Simulator: no camera needed.' : 'Loading the hand model (about 17 MB, once)…');
   cam = cam || (SIM ? new SimCam() : new HandCam($('video'), $('overlayCanvas')));
+  const target=cam;
   hookCamera();
   const slow = setTimeout(() => status('Still loading the hand model… this is slow. It is a one-time download (about 17 MB); keep this page open.'), 20000);
   try {
-    await cam.load();
+    await target.load();
   } catch (e) {
     clearTimeout(slow);
     status('Could not load the hand model (' + (e.message || e) + '). Check your internet connection (or a VPN / ad-blocker blocking cdn.jsdelivr.net or storage.googleapis.com).');
@@ -1010,24 +1024,29 @@ async function enableCameraNow() {
     return;
   }
   clearTimeout(slow);
-  if (!cam) return;                                  // the player left while the model was loading
+  if (cam!==target) return;                           // the player left while the model was loading
   let err;
-  try { err = await cam.startCamera(); } catch (e) { err = 'Could not start the camera (' + (e.message || e) + ').'; }
-  if (!cam) return;
+  try { err = await target.startCamera(); } catch (e) { err = 'Could not start the camera (' + (e.message || e) + ').'; }
+  if(cam!==target){target.release?.();return;}
   if (err === 'cancelled') { $('camBtn').disabled = false; return; }
   if (err) { status(err); failed(); return; }
   cam.stopCamera();                              // permission and model are checked; the camera stays OFF until a guess window opens
   camReady = true;
-  ready[me] = !editingMatch;
+  ready[me] = matchKind==='computer'&&!editingMatch;
   status('Camera ready. It switches on only while you guess, and off at the snap.');
-  send({ t: 'ready', ready: !editingMatch });
+  send({ t: 'ready', ready: ready[me] });
   renderLobby();
 }
 
-$('startBtn').onclick = () => {
-  if (me !== 'host'||editingMatch||!ready.host||!ready.guest||!link?.open) return;
-  send({ t: 'start', settings });
-  startGame();
+function launchMatch(){
+  if(me!=='host'||editingMatch||cust.on||!ready.host||!ready.guest||!link?.open)return;
+  stopTryOn();send({t:'start',settings});startGame();
+}
+$('startBtn').onclick=()=>{
+  if(!me||!camReady||camBusy||tryOn.busy||editingMatch||cust.on||!link?.open||!names[other(me)])return;
+  stopTryOn();
+  if(matchKind==='computer'){ready.host=true;launchMatch();return;}
+  ready[me]=!ready[me];send({t:'ready',ready:ready[me]});renderLobby();
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -1037,18 +1056,26 @@ $('startBtn').onclick = () => {
 // ---------------------------------------------------------------------------------------------
 const storeView = { category: 'all', layer: 'all', reset: false };
 const profileView = { category: 'all', layer: 'base', reset: false };
-let storeAnim = { raf: 0, ps: null, last: 0, rec: null, hd: [], comic: new ComicMotion() };
-const wearVisible = () => !$('store').hidden || !$('profile').hidden;
+const previewMotion=new PreviewMotion();
+let storeAnim = { epoch:0, raf: 0, ps: null, last: 0, rec: null, hd: [], comic: new ComicMotion() };
+const wearVisible = () => currentScreen==='store'||currentScreen==='profile'||currentScreen==='lobby'||currentScreen==='over'&&!$('overStyleSlot').hidden;
 const storeMsg = t => { $('storeMsg').textContent = t; };
 
 function sampleLandmarks() { return [statesToLandmarks({ thumb: true, index: true, middle: true, ring: true, pinky: true })]; }
 
 /** A small still of the puppet wearing [load] ({base, baseColor, stack}): used on every item card. */
+const thumbnailLoads=new WeakMap();
 function drawCard(canvas, load) {
-  try {
-    const rec = resolveLoadout(load.base, load.stack, load.baseColor);
-    drawPuppetPicture(canvas.getContext('2d'), canvas.width, canvas.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, backs: [true], seed: load.base + JSON.stringify(load.stack) });
-  } catch { /* previews are decoration */ }
+  if(!thumbnailLoads.has(canvas))canvas.addEventListener?.('contextrestored',()=>drawCard(canvas,thumbnailLoads.get(canvas)));
+  thumbnailLoads.set(canvas,load);
+  const ctx=canvas.getContext('2d',{alpha:false,willReadFrequently:true});if(!ctx)return;
+  try {ctx.reset?.();ctx.setTransform?.(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+    const rec=resolveLoadout(load.base,load.stack,load.baseColor);
+    drawPuppetPicture(ctx,canvas.width,canvas.height,sampleLandmarks(),[],1,rec.skin,false,{...rec,backs:[true],seed:load.base+JSON.stringify(load.stack)});
+  }catch{ctx.setTransform?.(1,0,0,1,0,0);ctx.globalAlpha=1;drawSkeletonPicture(ctx,canvas.width,canvas.height,sampleLandmarks(),[],1,false);}
+}
+function redrawThumbnails(){
+  for(const id of ['profileGrid','storeGrid'])for(const card of $(id).children)for(const node of card.children||[]){const load=thumbnailLoads.get(node);if(load)drawCard(node,load);}
 }
 
 function chip(box, value, label, current, onPick, rerender) {
@@ -1079,6 +1106,9 @@ function itemCard(e) {
     };
     card.onkeydown = ev => { if (ev?.key === 'Enter' || ev?.key === ' ') { ev.preventDefault?.(); card.onclick(); } };
   } else {
+    card.onclick=()=>previewStoreItem(e.id);
+    card.onkeydown=ev=>{if(ev?.target?.tagName!=='BUTTON'&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault?.();card.onclick();}};
+    const preview=el('button','btn small ghost','Preview');preview.type='button';preview.dataset.act='preview';preview.onclick=ev=>{ev?.stopPropagation?.();previewStoreItem(e.id);};card.append(preview);
     const btn = el('button', 'btn small ghost', unlockLabel(e));
     btn.type = 'button'; btn.dataset.act = 'unlock';
     btn.onclick = async ev => {
@@ -1087,7 +1117,7 @@ function itemCard(e) {
       const r = await unlockItem(inv, e);                         // STUB today (js/unlock.js); a native build swaps the provider
       storeMsg(r.granted ? e.name + ' unlocked. Find it in Customise.' : 'Not unlocked' + (r.error ? ' (' + r.error + ')' : '') + '.');
       if (r.granted) sfx.ui();
-      syncStyle();
+      btn.disabled=false;syncStyle();
     };
     card.append(btn);
   }
@@ -1218,9 +1248,15 @@ function fillGrid(grid, list) {
   for (const e of list) grid.append(itemCard(e));
 }
 
+function previewStoreItem(id){
+  if(!entryOf(id))return;storePreviewId=id;storePreviewColor=null;
+  storeMsg('Previewing '+entryOf(id).name);refreshPreview();applyOverlay();
+  for(const card of $('storeGrid').children)card.classList?.toggle('previewing',card.dataset.id===id);
+}
 function renderStoreGrid() {
   const available = filterCatalog(catalog(), storeView).filter(e => !inv.owns(e.id));
   fillGrid($('storeGrid'), available);
+  for(const card of $('storeGrid').children)card.classList?.toggle('previewing',card.dataset.id===storePreviewId);
   if (!available.length) $('storeGrid').children[0].textContent = 'You own everything in this category. Find your items in Customise.';
 }
 
@@ -1246,7 +1282,7 @@ function renderProfileItems() {
   else fillGrid(grid, filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
   const reset = profileView.reset; profileView.reset = false;
   renderWear();
-  if (reset) resetCategoryItems(grid, $('profile'), $('profileLayers'), $('stickyTop'));
+  if (reset) resetCategoryItems(grid, $(previewScreen()?currentScreen:'profile'), $('profileLayers'), $('stickyTop'));
 }
 
 /** Where the shared pieces (preview / camera, category colour panel, worn list) sit: inside the Store's Wearing card, or in the Profile's customise area. */
@@ -1262,16 +1298,17 @@ function layoutWear(where) {
  *  views); while the camera is not on, a puppet view shows the stationary puppet wearing everything, a skeleton view its static picture.
  *  The whole top block (preview, hand row, colour, type chips) is pinned while customising. */
 function layoutPreview() {
-  const c = inProfileCust(), live = c && tryOn.on, puppetView = effectiveStyle().mode.endsWith('puppet');
+  const c = inProfileCust(), live = previewScreen() && tryOn.on, puppetView = effectiveStyle().mode.endsWith('puppet');
   const photoView = effectiveStyle().mode.startsWith('photo-');
-  const which = !c ? 'static' : live ? 'live' : puppetView && !photoView ? 'fit' : 'static';      // a photo view without the camera keeps its placeholder (person + hand)
+  const which = live ? 'live' : !c ? 'static' : puppetView && !photoView ? 'fit' : 'static';      // a photo view without the camera keeps its placeholder (person + hand)
   $('viewPreviewBox').hidden = which !== 'static';
   $('liveBox').hidden = which !== 'live';
   $('cWearTop').hidden = which !== 'fit';
   $('wearBox').hidden = false;
   $('stickyTop').classList.toggle('stuck', c);
   $('saveLookBtn').hidden = !c;
-  $('custBtn').hidden = c; $('tryBtn').hidden = c; $('custDone').hidden = !c;
+  $('custBtn').hidden = c; $('tryBtn').hidden = c; $('custDone').hidden = !(c||live);
+  $('tryBtn').textContent=live?'■':'📷';
   $('tryNow').hidden = !c;           // customising without the camera: the corner offers to turn it on
   $('profileLayers').hidden = !c; $('cCat').hidden = !c; $('looksRow').hidden = !c; if (!c) { $('lookEdit').hidden = true; picker.layer = null; }
   updateTryOnButtons();
@@ -1285,7 +1322,7 @@ function leaveCust() {
   $('custArea').hidden = true;
   layoutPreview();
 }
-$('custDone').onclick = () => { if(editingMatch){closeMatchCustomise();return;} if (cust.on) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
+$('custDone').onclick = () => { if(editingMatch){closeMatchCustomise();return;} if (cust.on||tryOn.on) { leaveCust(); stopTryOn(); } };      // the small Done in the preview's corner: camera off
 /** Opens the customise area WITHOUT the camera (the camera only starts through a Try-on button). */
 function enterCust() {
   if (cust.on) return;
@@ -1293,8 +1330,8 @@ function enterCust() {
   $('custArea').hidden = false;
   layoutWear('profile'); renderProfileItems(); layoutPreview();
 }
-$('custBtn').onclick = ()=>$('lobby').hidden?enterCust():openMatchCustomise();                                    // "Customise": pick and arrange, no camera
-$('tryBtn').onclick = () => { if(!$('lobby').hidden)openMatchCustomise();else enterCust();startTryOn(); };          // "Try on (camera)": the same area with the camera ON (says why when it cannot)
+$('custBtn').onclick = ()=>currentScreen==='profile'?enterCust():openMatchCustomise();                                    // "Customise": pick and arrange, no camera
+$('tryBtn').onclick = () => {if(tryOn.on||tryOn.busy)stopTryOn();else startTryOn();};          // "Try on (camera)": the same area with the camera ON (says why when it cannot)
 $('tryNow').onclick = () => { if(cust.on){if(tryOn.on)stopTryOn();else return startTryOn();} };          // customising without the camera and now wanting it
 
 /** The first colour a category starts from when nothing was picked: the default of its first colourable item (the hand: the worn hand). */
@@ -1399,9 +1436,10 @@ function renderCatColor() {
   if (layer === 'base' && !inv.handTintable) {
     box.append(el('p', 'fine', 'This hand keeps its own colours. Pick Cartoon, Neon or Dragon to recolour it.'));
   }
-  const st = inv.categoryStyle(layer), cur = st.c || categoryDefault(layer);
-  const apply = c => { inv.setCategoryColor(layer, c); syncStyle(); };
-  if(layer!=='base'||inv.handTintable)colorRow(box, layer, cur, apply, c => { inv.setCategoryColor(layer, c); liveColor(); });
+  const previewing=currentScreen==='store'&&!!storePreviewId;
+  const st=inv.categoryStyle(layer),cur=previewing?(storePreviewColor||entryOf(storePreviewId)?.tint?.default||categoryDefault(layer)):(st.c||categoryDefault(layer));
+  const apply=c=>{if(previewing){storePreviewColor=c;refreshPreview();applyOverlay();renderCatColor();}else{inv.setCategoryColor(layer,c);syncStyle();}};
+  if(layer!=='base'||inv.handTintable)colorRow(box, layer, cur, apply, c => {if(previewing){storePreviewColor=c;refreshPreview();applyOverlay();}else{inv.setCategoryColor(layer,c);liveColor();} });
   if (layer === 'nails') {
     const ctl = el('div', 'ctl'), val = el('b', '', String(gen.nl));
     const sl = document.createElement('input'); sl.type = 'range'; sl.min = '0'; sl.max = '10'; sl.step = '1'; sl.value = String(gen.nl); sl.dataset.act = 'naillength'; sl.setAttribute('aria-label', 'Nail length');
@@ -1469,12 +1507,15 @@ function renderWear() {
 
 /** The big preview: the puppet with everything worn and its particle effects running (the same capped particle system the camera uses). */
 function refreshPreview() {
-  const rec = resolveLoadout(style.skin, style.stack, style.baseColor);
+  const load=currentScreen==='store'?storePreviewLoadout():{base:style.skin,stack:style.stack,baseColor:style.baseColor};
+  const rec = resolveLoadout(load.base,load.stack,load.baseColor);
+  if(storeAnim.rec?.skin.id!==rec.skin.id){storeAnim.hd=[];previewMotion.started=null;}
   storeAnim.rec = rec;
   if (!storeAnim.ps) storeAnim.ps = new ParticleSystem();
-  storeAnim.ps.setEmitters(rec.emitters);
-  storeAnim.ps.setHandStyle(rec.skin.id);
-  storeAnim.ps.setElement(rec.skin.id==='sand'?'sand':rec.skin.id === 'elemental' ? gen.el : null);
+  const puppet=currentScreen==='store'||effectiveStyle().mode.endsWith('puppet');
+  storeAnim.ps.setEmitters(puppet?rec.emitters:[]);
+  storeAnim.ps.setHandStyle(puppet?rec.skin.id:null);
+  storeAnim.ps.setElement(puppet?(rec.skin.id==='sand'?'sand':rec.skin.id==='elemental'?gen.el:null):null);
   if (rec.skin.id !== 'comic') storeAnim.comic.clear();
   storeAnim.ps.setFit(rec.skin.fit);
   storeAnim.ps.setSand(rec.skin.sand);
@@ -1487,34 +1528,30 @@ function demoJolt(rec, now) {
   const phase = (now / 1000) % 6;
   return phase > 1.2 ? null : { x: Math.sin(now / 26) * 26, y: 0 };
 }
-function startStoreAnim() {
-  const c = $('storePreview'), ctx = c.getContext?.('2d');
-  if (!ctx || typeof globalThis.requestAnimationFrame !== 'function' || storeAnim.raf || tryOn.on) return;
-  storeAnim.last = 0;
-  const paint = now => {
-    const dt = storeAnim.last ? (now - storeAnim.last) / 1000 : 0;
-    storeAnim.last = now;
-    try {
-      const rec = storeAnim.rec, hands = previewHandPx(c.width, c.height, rec.skin, rec.layers);
-      ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, c.width, c.height);
-      ctx.save();
-      const jolt = demoJolt(rec, now);
-      storeAnim.ps.update(dt, jolt ? hands.map(lm => lm.map(p => ({ x: p.x + jolt.x, y: p.y + jolt.y }))) : hands);
-      if (rec.skin.id === 'comic') storeAnim.comic.update(jolt ? hands.map(lm => lm.map(p => ({x:p.x+jolt.x,y:p.y+jolt.y}))) : hands, 5, dt, c.width, c.height);
-      storeAnim.ps.drawBackdrop(ctx);
-      drawPuppetPicture(ctx, c.width, c.height, sampleLandmarks(), [], 1, rec.skin, false, { ...rec, ps: storeAnim.ps, backs: [true], live: true, noBg: true, alphas: storeAnim.ps.bodyAlphas(), partAlphas: storeAnim.ps.partAlphas(), hd: storeAnim.hd, comic: storeAnim.comic, dt, jolt });
-      ctx.restore();
-      storeAnim.ps.draw(ctx);
-    } catch { /* decoration */ }
+function stopPreviewAnimation(){storeAnim.epoch++;if(storeAnim.raf)globalThis.cancelAnimationFrame?.(storeAnim.raf);storeAnim.raf=0;storeAnim.last=0;}
+function startStoreAnim(){
+  if(!storeAnim.rec||typeof globalThis.requestAnimationFrame!=='function'||storeAnim.raf||tryOn.on||!wearVisible())return;
+  const epoch=++storeAnim.epoch;storeAnim.last=0;
+  const paint=now=>{
+    const fit=inProfileCust()&&effectiveStyle().mode==='puppet',large=currentScreen==='store'||fit;
+    const c=$(large?'storePreview':'viewPreview'),ctx=c.getContext('2d');if(!ctx)return;
+    const mode=currentScreen==='store'?'puppet':effectiveStyle().mode,rec=storeAnim.rec,pose=previewMotion.sample(now,fx.reducedMotion?.());
+    const dt=storeAnim.last?Math.min(.1,(now-storeAnim.last)/1000):0;storeAnim.last=now;
+    const jolt=fx.reducedMotion?.()?null:demoJolt(rec,now),hands=previewHandPx(c.width,c.height,rec.skin,rec.layers,pose.lms,mode,pose.fitLms);
+    const points=jolt?hands.map(lm=>lm.map(p=>({x:p.x+jolt.x,y:p.y+jolt.y}))):hands;
+    try{
+      ctx.save();try{ctx.setTransform?.(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#0f172a';ctx.fillRect(0,0,c.width,c.height);
+       storeAnim.ps.update(dt,points);if(rec.skin.id==='comic')storeAnim.comic.update(points,pose.count,dt,c.width,c.height);
+       const options={...rec,ps:storeAnim.ps,backs:pose.backs,live:true,noBg:true,previewLms:pose.lms,previewFitLms:pose.fitLms,alphas:storeAnim.ps.bodyAlphas(),partAlphas:storeAnim.ps.partAlphas(),hd:storeAnim.hd,comic:storeAnim.comic,dt,jolt};
+       if(large){storeAnim.ps.drawBackdrop(ctx);drawPuppetPicture(ctx,c.width,c.height,pose.lms,[],1,rec.skin,false,options);}
+       else drawViewPreview(ctx,c.width,c.height,mode,rec.skin,options,style.skel||SKELETON_COLOR,style.skelStyle||undefined);
+       storeAnim.ps.draw(ctx);
+      }finally{ctx.restore();}
+    }catch{renderViewPreview(mode);}
   };
-  const frame = now => {
-    storeAnim.raf = 0;
-    if (!wearVisible() || tryOn.on) return;                          // left the screen (or the camera took over): the loop ends by itself
-    if (!storeAnim.last || now - storeAnim.last >= 33) paint(now);   // about 30 fps is plenty for a preview
-    storeAnim.raf = globalThis.requestAnimationFrame(frame);
-  };
-  if (fx.reducedMotion?.()) { paint(0); return; }                    // reduced motion: one still picture, no loop
-  storeAnim.raf = globalThis.requestAnimationFrame(frame);
+  const frame=now=>{if(epoch!==storeAnim.epoch)return;storeAnim.raf=0;if(!wearVisible()||tryOn.on)return;if(!storeAnim.last||now-storeAnim.last>=33)paint(now);storeAnim.raf=requestAnimationFrame(frame);};
+  if(fx.reducedMotion?.()){paint(0);return;}
+  storeAnim.raf=requestAnimationFrame(frame);
 }
 
 /** A colour is being dragged: update what shows the colour, but do not rebuild the lists (that would close the picker). */
@@ -1525,7 +1562,7 @@ function liveColor() {
   clearTimeout(liveTimer);
   liveTimer = setTimeout(() => {
     if (!$('store').hidden) renderStoreGrid();
-    if (!$('profile').hidden && cust.on && profileView.layer !== 'base') fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
+    if (inProfileCust() && profileView.layer !== 'base') fillGrid($('profileGrid'), filterCatalog(catalog(), { layer: profileView.layer }).filter(e => inv.owns(e.id)));
     renderViewPreview(effectiveStyle().mode);
   }, 250);
 }
@@ -1537,22 +1574,27 @@ async function startTryOn() {
   if (SIM) { msg('The simulator has no camera: the preview above shows your puppet.'); return false; }
   const my = ++tryOn.token;
   const stale = () => my !== tryOn.token || !wearVisible();
-  tryOn.busy = true; updateTryOnButtons();
+  tryOn.busy = true;
+  if(me&&matchKind!=='computer'){ready[me]=false;send({t:'ready',ready:false});renderLobby();}
+  updateTryOnButtons();
+  if(camPreparation)await camPreparation;
+  if(stale()){tryOn.busy=false;updateTryOnButtons();return false;}
   msg('Loading the hand model (about 17 MB, once)…');
   try {
     cam = cam || new HandCam($('video'), $('overlayCanvas'));
     hookCamera();
     try { await cam.load(); } catch (e) { msg('Could not load the hand model (' + (e.message || e) + '). Check your internet connection, then try again.'); return false; }
     if (stale()) return false;
+    if(me&&matchKind!=='computer'){ready[me]=false;send({t:'ready',ready:false});renderLobby();}
     const err = await cam.startCamera();
     if (err === 'cancelled' || stale()) { if (err !== 'cancelled') { cam.release(); } return false; }
     if (err) { msg(err); return false; }
-    tryOn.on = true;
+    stopPreviewAnimation();tryOn.on = true;redrawThumbnails();
     cam.onError = e => msg('Hand tracking error: ' + e);
     cam.onLost = () => { stopTryOn(); msg('The camera stopped. Check the browser camera permission, then tap the camera button to try again.'); };
     applyOverlay();                                                    // tryOn.on: the puppet with everything worn, over the live picture
     const box = $('camBox');
-    if (inProfileCust()) $('liveBox').append(box); else { $('wearBox').append(box); $('storePreview').hidden = true; }     // Profile: the top window; Store: the Wearing card
+    if (previewScreen()) $('liveBox').append(box); else { $('wearBox').append(box); $('storePreview').hidden = true; }     // Profile: the top window; Store: the Wearing card
     box.hidden = false;
     layoutPreview();
     camIndicator(true);
@@ -1577,14 +1619,14 @@ function stopTryOn() {
   const box = $('camBox');
   box.hidden = true; if (box.parentElement !== document.body) document.body.append(box);
   $('storePreview').hidden = false;
-  if (was) { layoutPreview(); applyOverlay(); $('wearMsg').textContent = ''; updateTryOnButtons(); if (wearVisible()) startStoreAnim(); }
+  if (was) { hookCamera();redrawThumbnails();renderViewPreview(effectiveStyle().mode);layoutPreview(); applyOverlay(); $('wearMsg').textContent = ''; updateTryOnButtons(); if (wearVisible()) startStoreAnim(); }
 }
 function updateTryOnButtons() {
   $('wearCamOff').hidden = !(tryOn.on || tryOn.busy);
   $('tryNow').hidden = !cust.on;
   $('tryNow').textContent=tryOn.busy?'…':tryOn.on?'■':'📷';
   const label=tryOn.busy?'Starting camera…':tryOn.on?'Stop camera':'Try on with camera';
-  for(const id of ['tryNow','storeSnap']){$(id).title=label;$(id).setAttribute('aria-label',label);}
+  for(const id of ['tryNow','tryBtn','storeSnap']){$(id).title=label;$(id).setAttribute('aria-label',label);}
   $('tryNow').disabled=tryOn.busy||camBusy;
   $('tryBtn').disabled=tryOn.busy||camBusy;
   $('tryNow').setAttribute('aria-pressed',String(tryOn.on));
@@ -1602,7 +1644,7 @@ function renderStats() {
 $('statsBtn').onclick = () => { renderStats(); show('stats'); };
 $('statsBack').onclick = () => show('menu');
 $('statsReset').onclick = () => { if (typeof globalThis.confirm !== 'function' || globalThis.confirm('Reset all your stats?')) { stats.reset();practiceStats.reset(); renderStats(); } };
-$('storePreview').onclick = () => { if (inv.baseId === 'painting') { rerollPainting(); liveColor(); } };
+$('storePreview').onclick = () => {if(previewMotion.consumeClick())return; if ((storePreviewId||inv.baseId) === 'painting') { rerollPainting(); liveColor(); } };
 $('storeBtn').onclick = () => { show('store'); renderStore(); };
 $('profileStore').onclick = () => { show('store'); renderStore(); };
 $('storeBack').onclick = () => show('menu');
@@ -1636,9 +1678,9 @@ function startGame() {
   $('roundLabel').textContent = 'ROUND 1';
   $('roleLabel').textContent = '';
   $('timerNum').textContent = settings.seconds;
-  show('game');
+  $('gameMenu').hidden=true;show('game');
   showBanner('GET READY', '', 1100);
-  if (me === 'host') later(1500, nextRound);
+  later(1500,()=>{if(me==='host')nextRound();else send({t:'advance',n:1});});
 }
 
 function renderHp(side, flashFrom = null) {
@@ -1663,7 +1705,7 @@ function beginRound(n) {
   game.round = n;
   if(matchKind==='computer')computer?.begin(n,settings);
   const pointer = pointerFor(n);
-  round = { n, pointer, phase: 'intro', reveal: null, guessMsg: null, resolved: false };
+  round = { n, pointer, endsAt:Date.now()+1900+settings.seconds*1000, phase: 'intro', reveal: null, guessMsg: null, resolved: false };
   $('roundLabel').textContent = 'ROUND ' + n;
   const pointing = pointer === me;
   $('mid').className = pointing ? 'point' : 'guess';
@@ -1681,37 +1723,35 @@ function beginRound(n) {
 }
 
 async function startGuessPhase() {
-  const t = token;
-  round.phase = 'guess';
-  contentEl(other(me)).replaceChildren(el('div', 'thinking', '✋ ???'));   // their hand stays hidden until the reveal
-  if (!SIM) {
-    hookCamera(); // Restore match error/loss handlers after a local try-on.
-    const err = await cam.startCamera();                             // the camera is switched on only now, for this one guess window
-    if (t !== token || !round) { cam.release(); camIndicator(false); return; }
-    if (err) $('camStatus').textContent = err;
-    camIndicator(!err);
-  }
-  setupCameraUI();                                                   // both players hold up fingers to their own camera
+  if(!round||round.phase!=='intro')return;
+  const t=token,target=cam;round.phase='guess';send({t:'phase',n:round.n});
+  contentEl(other(me)).replaceChildren(el('div','thinking','✋ ???'));
   runTimer(settings.seconds);
+  if(round.phase!=='guess')return;
+  if(document.hidden){endGuessPhase(true);return;}
+  if(!SIM){
+    hookCamera();let err;try{err=await target.startCamera();}catch(e){err=e.message||'Camera could not start';}
+    if(t!==token||!round||round.phase!=='guess'){if(target!==cam)target.release();return;}
+    if(err)$('camStatus').textContent=err;camIndicator(!err);
+  }
+  setupCameraUI();
 }
 
 /** A red "camera on" badge that is visible exactly while the camera is running. */
 function camIndicator(on) { $('camLive').hidden = !on; }
 
-function runTimer(seconds) {
-  const t = token;
-  const end = performance.now() + seconds * 1000;
-  let lastWhole = seconds + 1;
-  const id = setInterval(() => {
-    if (t !== token) { clearInterval(id); return; }
-    const left = Math.max(0, end - performance.now());
-    const whole = Math.ceil(left / 1000);
-    $('timerNum').textContent = whole;
-    $('timerBar').firstElementChild.style.transform = 'scaleX(' + (left / (seconds * 1000)).toFixed(3) + ')';
-    $('timerWrap').classList.toggle('urgent', whole <= 2 && left > 0);
-    if (whole !== lastWhole) { lastWhole = whole; if (whole <= 3 && whole > 0) sfx.tick(); }
-    if (left <= 0) { clearInterval(id); endGuessPhase(); }
-  }, 100);
+let roundTick=null;
+function runTimer(seconds){
+  const t=token,end=round.endsAt;let lastWhole=seconds+1,id;
+  const tick=()=>{
+    if(t!==token||!round||round.phase!=='guess'){clearInterval(id);if(roundTick===tick)roundTick=null;return;}
+    const left=Math.max(0,end-Date.now()),whole=Math.ceil(left/1000);
+    $('timerNum').textContent=whole;$('timerBar').firstElementChild.style.transform='scaleX('+Math.min(1,left/(seconds*1000)).toFixed(3)+')';
+    $('timerWrap').classList.toggle('urgent',whole<=2&&left>0);
+    if(whole!==lastWhole){lastWhole=whole;if(whole<=3&&whole>0)sfx.tick();}
+    if(left<=0){clearInterval(id);if(roundTick===tick)roundTick=null;endGuessPhase();}
+  };
+  roundTick=tick;id=setInterval(tick,100);id?.unref?.();tick();
 }
 
 // ---- both roles: your camera (or the simulator) fills the bottom panel. The pointer's fingers are the answer,
@@ -1846,10 +1886,11 @@ function releaseCamera() {
 }
 
 // ---- the timer ran out
-function endGuessPhase() {
+function endGuessPhase(forceNoHand=false) {
   if (!round || round.phase !== 'guess') return;
   round.phase = 'waiting';
-  let snap = cam.snap(effectiveStyle());
+  let snap=cam?.snap(effectiveStyle())||{count:0,noHand:true,gesture:null,view:'puppet',skin:style.skin,hands:statesFromCount(0),photo:''};
+  if(forceNoHand)snap={...snap,count:0,noHand:true,gesture:null,photo:'',view:'puppet',hands:statesFromCount(0),lm:null};
   if(!snap.noHand&&snap.count<curMin())snap={...snap,noHand:true,count:0};         // both phones snap at 0, in the style I chose (puppet/skeleton only in random matches)
   releaseCamera();
   if (round.pointer === me) {
@@ -1863,7 +1904,8 @@ function endGuessPhase() {
     send({ t: 'guess', n: round.n, ...round.guessMsg });
   }
   if(matchKind==='computer'){const reply=computer?.message();if(reply)onMessage(reply);}
-  later(9000, () => { if (round && !round.resolved) { showBanner('LOST CONNECTION?', 'Waiting for your opponent…', 2500); } });
+  later(9000,()=>{if(round&&!round.resolved)showBanner('WAITING','Your opponent has not answered yet.',2500);});
+  later(20000,()=>{if(round&&!round.resolved){send({t:'bye'});onLinkClosed('round-timeout');}});
   tryResolve();
 }
 
@@ -2010,7 +2052,7 @@ function playResult(result, reveal, before) {
 function finishRound(ms) {
   later(Math.max(0, ms - 500), () => sfx.roundEnd());
   if (game.over) { later(ms, knockout); return; }
-  if (me === 'host') later(ms + 1500, nextRound);
+  later(ms+1500,()=>{if(me==='host')nextRound();else send({t:'advance',n:game.round+1});});
 }
 
 /** The final screen: every round as a column, player 1's hand above and player 2's below. A correct guess is tinted green. */
@@ -2099,6 +2141,7 @@ $('settingsBtn').onclick = () => {
 
 $('againBtn').onclick = () => {
   if (me === 'host' && opponentGone && matchKind === 'private' && link) { backToLobby(''); return; }     // the guest left: reopen the room
+  if(matchKind!=='computer'){if(me==='host'&&link?.open){send({t:'lobby'});backToLobby('Press Ready when you want to play again.',true,false);}return;}
   if (me !== 'host' || !link?.open||editingMatch||!ready.host||!ready.guest) return;
   send({ t: 'start', settings });
   startGame();
@@ -2108,6 +2151,7 @@ $('againBtn').onclick = () => {
 // Reset
 // ---------------------------------------------------------------------------------------------
 function resetAll() {
+  deadlines.clear();roundTick=null;
   const oldQueue=queueSearch;queueSearch=null;if(oldQueue)queueCleanup=Promise.all([queueCleanup,oldQueue.cancel()]).then(()=>{});
   token++;
   inGame = false;
@@ -2123,8 +2167,9 @@ function resetAll() {
   ready = { host: false, guest: false };
   settings = freshSettings();
   if (cam && !SIM) { try { cam.stream?.getTracks().forEach(t => t.stop()); } catch { /* ignore */ } }
-  cam = null; camReady = false; camBusy = false; camAutoFailed = false;
+  cam = null;camPreparation=null; camReady = false; camBusy = false; camAutoFailed = false;
   computer?.clear();computer=null;editingMatch=false;customiseReturn='menu';
+  $('overStyleSlot').hidden=true;
   matchKind = null; roomCodeRaw = ''; pendingGuest = null; autoStarted = false;
   clearTimeout(helloTimer);
   guestToken = null; opponentGone = false; netBadge(''); camIndicator(false);
@@ -2166,8 +2211,8 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location
 }
 
 // The camera must never stay on in the background: leave the page (home button, app switch, screen off) and it goes dark.
-const camOff = () => { if (tryOn.on) stopTryOn(); if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; if (!$('calib').hidden) { $('calibMsg').textContent = 'Camera switched off (the page was hidden). Tap Camera test again.'; dbg?.show(false); } } };
-document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); else link?.nudge?.(); });
+const camOff = () => { if(inGame&&round?.phase==='guess')endGuessPhase(); if (tryOn.on) stopTryOn(); if (cam && !SIM) { cam.release(); camIndicator(false); const b = $('camBox'); b.hidden = true; if (!$('calib').hidden) { $('calibMsg').textContent = 'Camera switched off (the page was hidden). Tap Camera test again.'; dbg?.show(false); } } };
+document.addEventListener?.('visibilitychange', () => { if (document.hidden) camOff(); else {deadlines.flush();roundTick?.();link?.nudge?.();redrawThumbnails();renderViewPreview(effectiveStyle().mode);} });
 globalThis.addEventListener?.('pagehide', camOff);
 bindPageFocus(document, globalThis);                          // sound stops with the page (hidden tab, another app in front, window blurred) and resumes when it is visible AND focused
 globalThis.addEventListener?.('online', () => link?.nudge?.());       // wifi / 4G came back: re-open the match link now, not at the next timer
@@ -2176,3 +2221,6 @@ if (missingIds.length) setTimeout(() => showFatal('This page is out of date (mis
 
 bindStickyScroll($('stickyTop'),$('profile'));
 bindStickyScroll($('storeSticky'),$('store'));
+
+for(const id of ['storePreview','viewPreview'])bindPreviewDrag($(id),previewMotion,{enabled:()=>!tryOn.on&&wearVisible(),repaint:()=>startStoreAnim()});
+$('viewPreview').onclick=()=>{if(previewMotion.consumeClick())return;if(inv.baseId==='painting'){rerollPainting();liveColor();}};

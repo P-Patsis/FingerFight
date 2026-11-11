@@ -23,7 +23,7 @@ test('a guest who never shows a hand forfeits after 3 rounds; the host wins and 
   const click = step => $('settingsCard').fire('click', { target: { closest: () => ({ dataset: { step } }) } });
   for (let i = 0; i < 7; i++) click('hits:1');          // 10 hits: nobody can be knocked out in 3 rounds
   click('seconds:-1'); click('seconds:-1');
-  $('startBtn').onclick();
+  conn.emit('data',{t:'ready',ready:true});$('startBtn').onclick();
 
   // round 1: the guest guesses (no hand), round 2: the guest points (no hand), round 3: the guest guesses (no hand)
   await until(() => sentOf(conn, 'reveal').length === 1, 'host reveal 1', 15000);

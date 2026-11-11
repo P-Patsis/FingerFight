@@ -27,6 +27,7 @@ test('a random match is found and starts; the screen wake lock is held during th
   await until(() => b.visible()[0] === 'lobby' && of('welcome').length, 'lobby');
   assert.equal(locks.length, 0, 'no lock in the lobby');
   conn.send({ t: 'ready', ready: true });
+  await until(()=>!$('startBtn').disabled,'Ready available');$('startBtn').onclick();
   await until(() => of('start').length, 'auto start', 8000);
   await until(() => b.visible()[0] === 'game', 'game screen');
   await until(() => locks.length === 1, 'wake lock requested for a random match');

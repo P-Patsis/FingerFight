@@ -640,3 +640,25 @@ body > #wearCard, body > #wearTop, body > #catColor, body > #wearListBox { displ
 #storeSticky > *, #storeSticky .store-live > *, #storeSticky .wear-top > *, #storeSticky .cat-color > * { flex-shrink: 0; }
 #storeCats, #storeLayers { flex: 0 0 auto; min-height: 44px; align-items: center; }
 #storeGrid { flex: 0 0 auto; }
+
+/* Keep identity and live match camera at the same useful width as the rest of the app. */
+#profile > .card { width: min(100%, var(--w)); max-width: var(--w); }
+#game #camBox { position: relative; inset: auto; height: 100%; width: auto; aspect-ratio: 4 / 3; max-width: 100%; flex: none; }
+#game #camBox video, #game #camBox canvas { object-fit: contain; }
+#lobby #styleCard, #over #styleCard { width: 100%; box-sizing: border-box; }
+#overStyleSlot { width: min(100%, 440px); }
+.collage { padding: 0; background: #0f172a; isolation: isolate; }
+.cg { padding: 8px 8px 8px 0; }
+.cg-lab { padding-left: 8px; background: #0f172a; box-shadow: -12px 0 #0f172a; }
+
+.game-menu-btn { position:absolute;top:max(8px,env(safe-area-inset-top));left:8px;z-index:30;min-height:44px; }
+.game-menu { position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:35;background:#0f172a;border:1px solid #64748b; }
+#game > .game-menu-btn { margin-top:0; }
+
+.item-card.previewing { border-color:var(--gold);background:#2a2208; }
+#store .item-card.locked {cursor:pointer;}
+
+canvas[data-rotate-preview="true"] {touch-action:none;cursor:grab;}
+canvas[data-rotate-preview="true"]:active {cursor:grabbing;}
+
+#game .panel.opp .hud {padding-left:48px;min-height:44px;box-sizing:border-box;}

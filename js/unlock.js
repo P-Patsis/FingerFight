@@ -1,7 +1,7 @@
 // How a locked cosmetic becomes owned. THIS FILE IS THE STUB BOUNDARY.
 //
-// Every locked item is an AD-LOCK ("Watch ad to unlock"); there is no payment path and no price anywhere in the app. Today the unlock is a
-// placeholder that grants at once. No ad network, no payment processor, no
+// Every locked item is an AD-LOCK ("Watch ad to unlock"); there is no payment path and no price anywhere in the app. The production default refuses unlocks until a real provider is installed.
+// The exported stub is only for explicitly selected development/tests. No ad network, no payment processor, no
 // network request of any kind exists in the web app. The Store (main.js) knows only two things from here:
 //   unlockItem(inventory, entry)  - ask the current provider; grant the item only if the provider says granted
 //   unlockLabel(entry)            - the button text
@@ -17,14 +17,15 @@ export const stubProvider = Object.freeze({
   async request(entry) { return { granted: true, receipt: 'stub:' + entry.id }; },
 });
 
-let provider = stubProvider;
+export const unavailableProvider=Object.freeze({name:'unavailable',async request(){return{granted:false,error:'Rewarded ads are not available yet'};}});
+let provider = unavailableProvider;
 /** Installs the provider the Store will use (native build). Anything without a request() function is refused. */
 export function setUnlockProvider(p) {
   if (!p || typeof p.request !== 'function') throw new Error('unlock provider needs a request(entry) function');
   provider = p;
 }
 export const unlockProviderName = () => provider.name || 'custom';
-export function resetUnlockProvider() { provider = stubProvider; }
+export function resetUnlockProvider() { provider = unavailableProvider; }
 
 /** Asks the provider to unlock [entry] and grants it on success. Resolves {granted, receipt, error?}; never throws. */
 export async function unlockItem(inventory, entry) {

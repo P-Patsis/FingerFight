@@ -38,7 +38,8 @@ function drawSkeleton(ctx, hands, w, h, lineWidth, color = '#22d3ee', skelStyle 
 }
 
 export class HandCam {
-  constructor(video, canvas) {
+  constructor(video, canvas, {loadVision=()=>import(MP+'/vision_bundle.mjs')}={}) {
+    this.loadVision=loadVision;
     this.video = video; this.canvas = canvas; this.ctx = canvas.getContext('2d');
     this.facing = 'user';
     this.overlay = { puppet: false, skin: 'cartoon', rec: resolveLoadout('cartoon', []) };   // what is drawn over the live camera picture: the skeleton, or the puppet in this skin (+ cosmetics)
@@ -61,8 +62,12 @@ export class HandCam {
   }
 
   async load() {
-    if (this.landmarker) return;
-    const mod = await import(MP + '/vision_bundle.mjs');
+    if(this.landmarker)return;
+    if(!this.loading)this.loading=this.#load().finally(()=>{this.loading=null;});
+    return this.loading;
+  }
+  async #load() {
+    const mod = await this.loadVision();
     const fileset = await mod.FilesetResolver.forVisionTasks(MP + '/wasm');
     const make = delegate => mod.HandLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: MODEL, delegate }, runningMode: 'VIDEO', numHands: 2 });
@@ -154,12 +159,14 @@ export class HandCam {
   run() {
     if (this.running || !this.landmarker) return;
     this.running = true;
+    const runId=this.runId=(this.runId||0)+1;
+    this.lastTime=-1;
     this.samples = [];
     const step = () => {
       const v = this.video;
-      if (v.readyState >= 2 && v.currentTime !== this.lastTime) {
+      if (v.readyState >= 2 && v.videoWidth>0 && v.videoHeight>0 && v.currentTime !== this.lastTime) {
         this.lastTime = v.currentTime;
-        if (this.canvas.width !== v.videoWidth) { this.canvas.width = v.videoWidth; this.canvas.height = v.videoHeight; }
+        if (this.canvas.width !== v.videoWidth || this.canvas.height !== v.videoHeight) { this.canvas.width = v.videoWidth; this.canvas.height = v.videoHeight; }
         const t0 = performance.now();
         let res;
         try { res = this.landmarker.detectForVideo(v, t0); } catch (e) {
@@ -202,7 +209,7 @@ export class HandCam {
     };
     let lastErr = '', bad = 0;
     const loop = () => {
-      if (!this.running) return;
+      if (!this.running || this.runId!==runId) return;
       let wait = 0;
       if (this.pendingCpu) wait = 50;        // the CPU delegate is being prepared
       else try { step(); bad = 0; } catch (e) {   // one bad frame (or a model hiccup) must not stop the tracking for good ...
@@ -284,7 +291,7 @@ export class HandCam {
   }
 
   pause() {
-    this.running = false;
+    this.running = false;this.runId=(this.runId||0)+1;
     this.cloak.clear();
     this.comic.clear();
     this.particles.clear(); this.lastPaint = 0; this.lastDraw = 0; this.lastPts = null;
@@ -303,7 +310,7 @@ export class HandCam {
   release() {
     this.pause();
     this.stopCamera();
-    this.samples = [];
+    this.samples = [];this.puppetBroken=false;this.hd=[];
   }
 
   get cameraOn() { return !!this.stream && this.stream.getTracks().some(t => t.readyState === 'live'); }

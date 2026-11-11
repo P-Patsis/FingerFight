@@ -61,12 +61,13 @@ test('joining again; accepted; settings shown and locked; guest reports ready', 
   hostConn.send({ t: 'welcome', v: 2, kind: 'private', name: 'Hank<b>', settings: SETTINGS, ready: true });
   await until(() => $('nameHost').textContent === 'Hankb', 'welcome processed');
   assert.equal($('stage').className, 'bg-2');
-  assert.equal($('startBtn').hidden, true, 'only the host starts');
+  assert.equal($('startBtn').hidden, false, 'guest has an explicit Ready control');
   assert.ok($('settingsCard').classList.contains('locked'));
   $('settingsCard').fire('click', { target: { closest: () => ({ dataset: { step: 'hits:1' } }) } });
   assert.equal($('valHits').textContent, '1', 'a guest cannot change settings');
   assert.equal($('privateBox').hidden, true, 'the guest does not see the host controls');
-  await until(() => sentByGuest('ready').some(m => m.ready === true), 'guest reports its camera ready');
+  await until(()=>!$('startBtn').disabled,'camera prepared');assert.equal(sentByGuest('ready').some(m=>m.ready),false);$('startBtn').onclick();
+  await until(() => sentByGuest('ready').some(m => m.ready === true), 'guest explicitly agrees to start');
 });
 
 test('a welcome of the wrong kind is ignored', async () => {

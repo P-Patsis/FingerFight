@@ -92,7 +92,7 @@
     <div id="storeGrid" class="store-grid hrow items-row"></div>
     <div id="sWearList"></div>
     <p id="storeMsg" class="msg" role="status"></p>
-    <p class="fine">Only items you haven’t obtained appear here. Equip your collection in Customise. Demo unlocks are free for now.</p>
+    <p class="fine">Preview items for free before unlocking. Equip your collection in Customise.</p>
   </section>
 
   <!-- ===== Stats (local only) ===== -->
@@ -178,7 +178,7 @@
     </div></div>
     <div id="appSlot"><div class="card" id="appCard">
       <h3 class="card-h">App settings</h3>
-      <div class="sound-row"><span>Sound</span><button id="muteBtn" class="toggle on">On</button><label class="vol">Volume <input id="volSlider" type="range" min="0" max="100" step="5" value="70" aria-label="Volume"></label></div>
+      <div class="sound-row"><span>Sound</span><button id="muteBtn" class="toggle on">On</button><label class="vol">Volume <input id="volSlider" type="range" min="0" max="100" step="5" value="45" aria-label="Volume"></label></div>
       <div class="set"><span>Hide rude gestures (show only the number)</span><button id="rudeBtn" class="toggle on">On</button></div>
       <div class="set" id="photoRow"><span>Show my opponent's photos</span><button id="photoBtn" class="toggle on">On</button></div>
     </div></div>
@@ -190,6 +190,8 @@
 
   <!-- ===== Game ===== -->
   <section id="game" class="screen" hidden>
+    <button id="gameMenuBtn" class="game-menu-btn btn small ghost" type="button" aria-label="Match menu">☰</button>
+    <div id="gameMenu" class="game-menu card" hidden><button id="gameResume" class="btn" type="button">Continue match</button><button id="gameForfeit" class="btn danger" type="button">Forfeit and leave</button><p class="fine">Round timers keep running while this menu is open.</p></div>
     <div id="top" class="panel opp">
       <div class="hud"><span class="pname" id="topName"></span><div class="hp" id="topHp"></div></div>
       <div class="content" id="topContent"></div>
@@ -224,6 +226,7 @@
     <p id="overText" class="tag"></p>
     <div id="collage" class="collage" hidden></div>
     <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-label="Advertisement space">Advertisement</div>
+    <div id="overStyleSlot" hidden></div>
     <button id="overCustomise" class="btn ghost">Customise puppet</button>
     <button id="againBtn" class="btn big">Play again</button>
     <button id="settingsBtn" class="btn">Back to lobby (change settings)</button>
