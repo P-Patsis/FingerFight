@@ -6,7 +6,13 @@ Android runs its bundled copy of the game in Capacitor, at `https://localhost`. 
 
 Private matches use a long random room code and allow direct connections, with TURN as a fallback. Random matches enforce TURN-only connections to hide the opponent's IP; the current legacy relay is `free.expressturn.com` (UDP/TCP 3478). The server credentials already shipped in `js/ice.js` are public and revocable, not a production secret. Relay/network availability still affects whether a match connects.
 
-APK 0.1.3 and the current website can find each other using the existing protocol, including random opponents. Their legacy random matcher uses eight public rendezvous slots; active matches retain those slots. Crossplay is supported by the code, but a completed real APK-to-phone/browser match has not been verified on devices. Computer practice is entirely local.
+APK 0.1.7 and the current website can find each other using the existing protocol, including random opponents. Their legacy random matcher uses eight public rendezvous slots; active matches retain those slots. The user reports a real random phone/laptop match worked. This is user-reported evidence; this release still needs device acceptance checks. Computer practice is entirely local.
+
+## Ready controls and background deadlines (0.1.7)
+
+Both P2P players press Ready after camera preparation. Editing cosmetics/view/rules cancels readiness; rematches return to the lobby. Computer matches keep their Start fight button. The in-game menu offers resume/forfeit without pausing the round.
+
+Round timing uses absolute deadlines. Backgrounding locks the current hand before camera release; foregrounding catches up overdue callbacks. Validated phase/advance messages let the active peer drive progress when browser timers throttle. An unanswered round ends after a bounded 20-second wait. If both operating systems suspend the apps, no browser code executes until one resumes. Test Wi-Fi/mobile data, tab changes and native backgrounding on real devices; automated tests do not prove OS timing behavior.
 
 ## Shared server queue implemented, awaiting deployment
 
