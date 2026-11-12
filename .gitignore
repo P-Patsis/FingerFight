@@ -21,3 +21,7 @@ android/app/src/main/assets/capacitor.config.json
 android/app/src/main/assets/capacitor.plugins.json
 *.keystore
 artifacts/*.apk
+
+# Upload bundles and private signing material
+artifacts/*.aab
+*.jks

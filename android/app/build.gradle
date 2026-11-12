@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// Upload signing is opt-in. Never use the debug key for a Play bundle.
+def uploadNames = ['FF_UPLOAD_KEYSTORE','FF_UPLOAD_STORE_PASSWORD','FF_UPLOAD_ALIAS','FF_UPLOAD_KEY_PASSWORD']
+def uploadValues = uploadNames.collect { System.getenv(it) }
+def hasUploadSigning = uploadValues.every { it != null && !it.isEmpty() }
+if (uploadValues.any { it != null && !it.isEmpty() } && !hasUploadSigning) {
+    throw new GradleException('Provide all four FF_UPLOAD_* signing environment variables, or none for an unsigned bundle.')
+}
+
 android {
     namespace = "io.github.ppatsis.fingerfight"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +15,8 @@ android {
         applicationId "io.github.ppatsis.fingerfight"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "0.1.7-prototype"
+        versionCode 9
+        versionName "0.1.8-prototype"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,11 +25,21 @@ android {
         }
     }
     signingConfigs {
+        if (hasUploadSigning) {
+            upload {
+                storeFile file(uploadValues[0])
+                storePassword uploadValues[1]
+                keyAlias uploadValues[2]
+                keyPassword uploadValues[3]
+            }
+        }
         debug { storeFile file("../../.android-tools/debug.keystore") }
     }
     buildTypes {
         debug { applicationIdSuffix ".debug" }
         release {
+            debuggable false
+            if (hasUploadSigning) signingConfig signingConfigs.upload
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

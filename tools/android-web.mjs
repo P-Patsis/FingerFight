@@ -22,6 +22,8 @@ const hands = new URL('js/hands.js', out);
 await writeFile(hands, (await readFile(hands, 'utf8'))
   .replace("'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14'", "new URL('../vendor/vision', import.meta.url).href")
   .replace("'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'", "new URL('../vendor/vision/hand_landmarker.task', import.meta.url).href"));
+// Developer controls are available in the prototype, disabled in Play bundles.
+if(process.env.FF_ANDROID_RELEASE==='1')await writeFile(new URL('js/dev-tools.js',out),'export const DEVELOPMENT_TOOLS = false;\n');
 const main = new URL('js/main.js', out);
 await writeFile(main, (await readFile(main, 'utf8')).replace("if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator", "if (false && typeof navigator !== 'undefined' && 'serviceWorker' in navigator")
   .replace("location.origin + location.pathname + '#room='", "'https://p-patsis.github.io/FingerFight/#room='"));

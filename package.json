@@ -9,7 +9,8 @@
     "build:backend": "node backend/build.mjs",
     "build:android:web": "node tools/android-web.mjs",
     "sync:android": "npm run build:android:web && cap sync android",
-    "build:android": "bash tools/android-build.sh"
+    "build:android": "bash tools/android-build.sh",
+    "build:android:bundle": "bash tools/android-build.sh bundle"
   },
   "dependencies": {
     "@capacitor/android": "8.6.0",
