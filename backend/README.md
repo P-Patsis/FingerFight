@@ -6,6 +6,8 @@ Use `bash tools/cf.sh` for the isolated CLI installed in .git/cloudflare-cli. It
 
 `npm run build:backend` then `node tools/cf-api.mjs upload` uploads the prepared module bundle to the recorded project-owned target and preserves encrypted secrets. Configure other resources with discovered `cf` commands or the verified Cloudflare REST API. `node tools/backend-smoke.mjs` checks actual HTTPS health/CORS/auth/disabled-relay/pairing/ack/cancel and cleans temporary users through D1; its initial run stopped before user creation because of TLS failure; the follow-up live run passed after the owner saved the TURN secret. Runtime service tests remain required before publishing API_URL.
 
+See [MULTIPLAYER_SETUP.md](../MULTIPLAYER_SETUP.md) for the single current rollout checklist and owner actions.
+
 ## Run and verify
 
 Requires Node 22+ (the local adapter uses `node:sqlite`; Node may print its experimental-feature warning). From the repository root:

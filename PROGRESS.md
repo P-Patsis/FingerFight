@@ -1,5 +1,12 @@
 # Finger Fight: progress
 
+## 2026-11-13 — Rollout checklist and analytics-secret attachment check
+
+- Owner reports creating the read-only usage-monitor token and asks us to track every remaining action. Rechecked production secret names: only TURN_API_TOKEN is present; TURN_USAGE_API_TOKEN is not attached yet. Instructed owner to paste the analytics token directly into that Production Worker secret and Deploy. No secret values requested or printed.
+- Added MULTIPLAYER_SETUP.md as the current owner/agent rollout checklist, including secret attachment, billing dates, live relay/cutoff verification, website/APK migration, two-device acceptance and legacy credential retirement. Relay remains off; clients unchanged.
+- Independent preflight: the exact account-wide GraphQL aggregation also accepts the proposed full-period date filter and returns empty/zero usage through the scoped CLI OAuth identity. This does not validate the missing runtime analytics secret or confirm the real billing-period dates.
+
+
 ## 2026-11-13 — TURN secret saved; live API and D1 queue verified
 
 - Confirmed TURN_API_TOKEN is attached as a Worker secret by listing names only; no value read/printed. This proves attachment, not validity for TURN minting. TURN_RELAY_ENABLED remains false and the permanent runtime analytics secret is not yet attached.
