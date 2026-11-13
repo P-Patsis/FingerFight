@@ -1,0 +1,7 @@
+{
+  "account_id": "b331e06464be5d1ea3f4af6175826fc5",
+  "worker_name": "fingerfight-api",
+  "database_id": "4e5d6d65-ae92-456d-817f-038d9488aa54",
+  "database_name": "fingerfight-prod",
+  "public_url": "https://fingerfight-api.fingerfight-ppatsis.workers.dev"
+}

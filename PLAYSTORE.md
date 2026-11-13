@@ -1,6 +1,6 @@
 # Finger Fight — Google Play release preparation
 
-The debug APK remains the phone-testing build. A Play release uses `io.github.ppatsis.fingerfight` (without `.debug`) and an Android App Bundle. Release builds disable the prototype Store-reset controls. No app has been uploaded to Play and no production backend has been activated.
+The debug APK remains the phone-testing build. A Play release uses `io.github.ppatsis.fingerfight` (without `.debug`) and an Android App Bundle. Release builds disable the prototype Store-reset controls. No app has been uploaded to Play and the initial backend is uploaded but relay/client activation remains disabled.
 
 ## Verified build (2026-11-12)
 
@@ -19,7 +19,7 @@ Google requires upload-key signing for an AAB; Play App Signing signs the APKs d
 
 Current Android and website players share PeerJS signaling and WebRTC gameplay. Random matches require TURN to hide peer IPs. The legacy queue has eight rendezvous slots and ships a reusable public ExpressTURN credential. The user reported phone/laptop matching worked; this is not a public-capacity or service-availability guarantee.
 
-The replacement Worker/D1 shared queue and authenticated TURN credential endpoint already exist and have 19 passing backend tests. `API_URL` remains empty. Account access was previously rejected; renewed access/deployment permission has been requested before touching that account. Activation needs:
+The replacement Worker/D1 shared queue and authenticated TURN credential endpoint already exist and have 19 passing backend tests. `API_URL` remains empty. The owner subsequently approved a scoped project-local CLI login: dedicated Worker/D1 are uploaded, and monitor/cleanup schedules registered. HTTPS checks currently fail, runtime secrets/billing dates are pending, and no client migration is enabled. Activation needs:
 
 1. Dedicated Worker/D1 deployment, configured allowed origins (`https://p-patsis.github.io`, `https://localhost`), authentication, quotas and cleanup.
 2. TURN provider key/API token stored as Worker secrets. Existing Cloudflare implementation issues credentials valid for 3600 seconds and advertises refresh after 3300 seconds. Only temporary credentials reach clients; the provider API token never does. [Cloudflare credential generation](https://developers.cloudflare.com/realtime/turn/generate-credentials/).

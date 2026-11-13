@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-13 — Deploy through a project-local, scoped CLI login
+
+- Custom Codex UI did not display connected-app consent; after explicit user approval, use Cloudflare's browser/device CLI login rather than requesting a token in chat. Pin CLI 1.0.0-beta.31 in .git/cloudflare-cli, isolate XDG state in .git, disable telemetry and keep credentials untracked/private. Do not change HOME, global packages or shell configuration.
+- Request only account/profile read/background access, Worker script write, D1 write, account analytics read and Calls read. Keep billing/DNS/token-provisioning permissions excluded. User enters permanent TURN/runtime analytics tokens directly into Cloudflare Worker secrets; do not reuse the expiring CLI OAuth credential as a runtime secret.
+- Provision dedicated fingerfight-prod/fingerfight-api resources. Use the CLI for supported resource commands and official multipart REST upload for the prepared module bundle; preserve existing encrypted secrets on subsequent uploads. Record public resource IDs and URL in deploy-target.json.
+- Keep relay disabled and client API_URL empty until actual HTTPS, permanent secrets, usage-monitor/cutoff and crossplay checks pass. Management-API success is not an HTTP/matchmaking acceptance test. HTTPS handshake failures are unresolved; do not weaken TLS or claim a known provisioning cause.
+
+
 ## 2026-11-13 — Add a protective cutoff before enabling usage-based TURN
 
 - Default managed relay issuance off. Gate the production route on trusted server-side account TURN egress, with an 800 decimal GB threshold and persistent stop latch; browser counters are not trusted for billing. Aggregate all TURN keys, not just one game key. Missing/failed analytics and stale billing dates deny credentials.
