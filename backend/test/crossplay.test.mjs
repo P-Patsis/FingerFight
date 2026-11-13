@@ -1,3 +1,4 @@
+import {relayConfig} from '../matchmaking.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -10,7 +11,7 @@ import {Link,newToken} from '../../js/net.js';
 import {FakePeer,network} from '../../tests/harness.js';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const store=()=>{const data=new Map();return{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};};
-function setup(){const DB=openDB();DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp();const env={DB,ALLOWED_ORIGINS:'https://localhost,https://p-patsis.github.io',TURN_SERVERS_JSON:JSON.stringify([{urls:'turn:relay.invalid:3478',username:'temporary',credential:'test'}])};
+function setup(){const DB=openDB();DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp({relay:relayConfig});const env={DB,ALLOWED_ORIGINS:'https://localhost,https://p-patsis.github.io',TURN_SERVERS_JSON:JSON.stringify([{urls:'turn:relay.invalid:3478',username:'temporary',credential:'test'}])};
  const service=origin=>new Service('https://api.test',{storage:store(),fetch:(url,opts)=>app.fetch(new Request(url,{...opts,headers:{...opts.headers,Origin:origin,'CF-Connecting-IP':'192.0.2.1'}}),env)});return{DB,service};}
 test('native and website guests use the same API queue and exchange authenticated PeerJS game messages',async()=>{
  globalThis.Peer=FakePeer;network.clear();const s=setup(),a=s.service('https://localhost'),b=s.service('https://p-patsis.github.io');

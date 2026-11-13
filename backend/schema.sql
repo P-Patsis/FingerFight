@@ -21,3 +21,7 @@ CREATE INDEX IF NOT EXISTS queue_waiting ON queue_tickets(ready,pair_id,joined,e
 CREATE TABLE IF NOT EXISTS queue_pairs(id TEXT PRIMARY KEY REFERENCES matches(id) ON DELETE CASCADE, secret TEXT NOT NULL, host_peer TEXT NOT NULL, guest_peer TEXT NOT NULL, ack_host INTEGER NOT NULL DEFAULT 0, ack_guest INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'pending');
 
 CREATE INDEX IF NOT EXISTS queue_pair_expiry ON queue_pairs(expires);
+
+-- Server-side TURN admission cutoff. No client credentials/passwords are stored here.
+CREATE TABLE IF NOT EXISTS turn_budget_windows(period_start TEXT PRIMARY KEY,period_end TEXT NOT NULL,reported_bytes INTEGER NOT NULL DEFAULT 0,checked INTEGER NOT NULL DEFAULT 0,issued INTEGER NOT NULL DEFAULT 0,blocked INTEGER NOT NULL DEFAULT 0,stopped INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS turn_credentials(username TEXT PRIMARY KEY,key_id TEXT NOT NULL,expires INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,attempted INTEGER NOT NULL DEFAULT 0);

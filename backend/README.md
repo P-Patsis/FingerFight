@@ -25,6 +25,28 @@ Set Worker secrets `TURN_KEY_ID` and `TURN_API_TOKEN` for Cloudflare Realtime TU
 
 For local integration, the HTTP adapter accepts these same environment variables and optional `FF_ALLOWED_ORIGINS` (comma-separated); its default remains localhost. Do not use fake relay credentials for a device connectivity claim. The development URL is `http://localhost:8787`; it is not a phone-accessible deployed endpoint.
 
+## TURN usage cutoff (prepared, not deployed)
+
+The production `/rtc/config` route now uses `turn-budget.mjs`. Relay access defaults to **off** (`TURN_RELAY_ENABLED=false` in deployment metadata). No cloud resources, billing plan, credentials or live clients have been changed by this implementation.
+
+Before enabling the managed Cloudflare relay:
+
+- Apply the idempotent schema again to create `turn_budget_windows` and `turn_credentials`. Preserve the existing database.
+- Set `TURN_ACCOUNT_ID` and the dedicated `TURN_KEY_ID`. Store `TURN_API_TOKEN` and `TURN_USAGE_API_TOKEN` as Worker secrets; the usage token needs Account Analytics permission. Never add these tokens to metadata/browser code/logs.
+- Set `TURN_BUDGET_START` and `TURN_BUDGET_END` to the actual current billing period as UTC `YYYY-MM-DD` dates (start inclusive, end exclusive, at most 32 days). Update them for the next period; stale/missing periods deliberately stop new relay access rather than silently resetting the counter at the wrong date.
+- `TURN_BUDGET_BYTES` defaults to **800000000000** (800 decimal GB); lower values are allowed. The code refuses a configured cutoff above 800 GB. The aggregate queries **all TURN keys in the account**, excluding ingress. The 200 GB buffer assumes other shared-allowance products such as SFU/MoQ are not consuming it; isolate this app's usage or lower the allowance for those products. This does not measure every Cloudflare service or cap the account invoice.
+- `TURN_MAX_CREDENTIALS` defaults to **1000 per configured period**, a conservative pilot limit; the allowed range is 1–10000. Atomic D1 reservations bound concurrent mint attempts; failed mint attempts consume a reservation. Existing per-user issuance rate limits still apply. This is an issuance quota, not a bandwidth guarantee.
+- Configure **both** `* * * * *` (usage checks/revocation retries every minute) and `0 0 * * *` (existing daily maintenance) schedules through the Cloudflare deployment API/dashboard. Minute events skip the daily maintenance scans. The actual schedules have not been created. Each credential request also checks current reported usage, so new users cannot bypass a missing scheduled event; existing credentials still need the monitor/revocation service.
+- Verify real analytics GraphQL permissions/schema/date aggregation, issuance, revocation and Cron behavior before setting `TURN_RELAY_ENABLED=true`. The query is based on the current official analytics examples and tested with a mock upstream, not a live account. Static `TURN_SERVERS_JSON` cannot bypass this production budget gate; use the managed issuer for this deployment.
+
+At or above the byte cutoff or issuance quota, the period is permanently latched shut. Smaller later analytics samples cannot reopen it. Malformed/unavailable analytics deny new credentials and attempt revocations; a later successful below-cutoff check can recover a temporary usage-check outage. Setting `TURN_RELAY_ENABLED=false` also refuses issuance and attempts revocation on requests/monitor runs. There is no public toggle endpoint. Only the operator changes Worker settings.
+
+Only issued usernames/key IDs/expiry/revocation status are stored, never client passwords or provider tokens. Revocations are awaited in batches of at most 32 with four concurrent requests, leaving room under the Workers Free external-subrequest limit. Failed revocations remain queued and are retried without requiring new players. Credential issuance rechecks the persistent stop state after the provider returns, preventing an in-flight mint from escaping a newly tripped cutoff. Expired records are retained for one day then cleaned; the existing issuer uses one-hour credentials.
+
+**This is a protective cutoff, not a guaranteed $0 or exact 800 GB provider billing cap.** Cloudflare analytics are delayed and may be sampled; existing sessions, in-flight traffic, queued/failed revocations, unavailable monitors and other keys/services can still create overshoot or costs. It does not protect the existing public ExpressTURN credentials or clients that have not migrated. Keep provider billing alerts as a separate warning and do not activate usage-based billing on the assumption that this code guarantees no charges.
+
+References: [TURN analytics](https://developers.cloudflare.com/realtime/turn/analytics/), [credential revocation](https://developers.cloudflare.com/realtime/turn/generate-credentials/), [billing and expiry](https://developers.cloudflare.com/realtime/turn/faq/), [Worker limits](https://developers.cloudflare.com/workers/platform/limits/).
+
 ## API
 
 All bodies are bounded JSON (20 KB), all non-health responses are uncached, SQL inputs are bound parameters and sessions are opaque random bearer tokens stored as SHA-256 hashes. Browser requests must match an allowed origin. User/IP buckets bound request volume; production signup abuse controls still need deployment review.

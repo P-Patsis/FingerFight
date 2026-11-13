@@ -5,7 +5,7 @@ import {createApp} from '../worker.mjs';
 import {openDB} from '../sqlite.mjs';
 import {relayConfig} from '../matchmaking.mjs';
 const origin='https://localhost';
-function setup(){const DB=openDB();DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp(),env={DB,ALLOWED_ORIGINS:origin+',https://p-patsis.github.io',APP_ORIGIN:'https://p-patsis.github.io',RP_ID:'p-patsis.github.io'};
+function setup(){const DB=openDB();DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp({relay:relayConfig}),env={DB,ALLOWED_ORIGINS:origin+',https://p-patsis.github.io',APP_ORIGIN:'https://p-patsis.github.io',RP_ID:'p-patsis.github.io'};
  const call=async(path,who,data={},method='POST')=>{const r=await app.fetch(new Request('https://api.test'+path,{method,headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'198.51.100.1',...(who?{Authorization:'Bearer '+who.token}:{})},...(method==='GET'?{}:{body:JSON.stringify(data)})}),env);return{status:r.status,body:await r.json()};};
  const user=async i=>{const r=await call('/players/session',null,{name:'Player '+i});assert.equal(r.status,201,JSON.stringify(r.body));return{...r.body,client:crypto.randomUUID()};};
  const request=(path,u,extra={})=>call(path,u,{client:u.client,...extra});return{DB,env,call,user,request};}

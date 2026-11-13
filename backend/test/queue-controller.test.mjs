@@ -1,3 +1,4 @@
+import {relayConfig} from '../matchmaking.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -10,7 +11,7 @@ import {installBrowser,until,sleep,network} from '../../tests/harness.js';
 // Enable the configured-backend branch without publishing a nonexistent production API URL.
 for(const first of ['controller','opponent'])test('game controller uses the shared queue with '+first+' searching first',async()=>{
  const browser=installBrowser('?sim=1'),DB=openDB();
- globalThis.Capacitor={isNativePlatform:()=>first==='controller'};DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp(),env={DB,ALLOWED_ORIGINS:'https://localhost',TURN_SERVERS_JSON:JSON.stringify([{urls:'turn:test.invalid:3478',username:'test',credential:'temporary'}])};
+ globalThis.Capacitor={isNativePlatform:()=>first==='controller'};DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp({relay:relayConfig}),env={DB,ALLOWED_ORIGINS:'https://localhost',TURN_SERVERS_JSON:JSON.stringify([{urls:'turn:test.invalid:3478',username:'test',credential:'temporary'}])};
  const enabled=Object.getOwnPropertyDescriptor(Service.prototype,'enabled'),request=Service.prototype.request;
  Object.defineProperty(Service.prototype,'enabled',{get:()=>true,configurable:true});
  Service.prototype.request=async function(path,method='GET',data){const r=await app.fetch(new Request('https://api.test'+path,{method,headers:{Origin:'https://localhost','Content-Type':'application/json',...(this.token?{Authorization:'Bearer '+this.token}:{})},...(data===undefined?{}:{body:JSON.stringify(data)})}),env);const result=await r.json();if(!r.ok){const e=new Error(result.error);e.status=r.status;throw e;}return result;};

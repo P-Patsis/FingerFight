@@ -1,4 +1,5 @@
-import {handleQueue,relayConfig,cleanQueue,QueueError} from './matchmaking.mjs';
+import {budgetedRelayConfig,monitorRelayBudget} from './turn-budget.mjs';
+import {handleQueue,cleanQueue,QueueError} from './matchmaking.mjs';
 import {generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse} from '@simplewebauthn/server';
 import {normalizeSettings,effectiveMin,effectiveMax,pointerFor,resolveRound} from '../js/logic.js';
 const encoder=new TextEncoder();
@@ -21,7 +22,7 @@ async function issue(db,user,verified=false){const value=token();await q(db,'INS
 async function allowedPair(db,a,b){need(a!==b,400,'Choose another player');need(!await q(db,'SELECT 1 FROM blocks WHERE (actor=? AND target=?) OR (actor=? AND target=?)',a,b,b,a).first(),403,'This connection is unavailable');}
 async function friendPair(db,a,b){await allowedPair(db,a,b);need(await q(db,"SELECT 1 FROM friends WHERE status='accepted' AND ((sender=? AND recipient=?) OR (sender=? AND recipient=?))",a,b,b,a).first(),403,'Accepted friends only');}
 export const roundCommitment=(match,round,value,nonce)=>digest(`${match}:${round}:${value===null?'null':value}:${nonce}`);
-export function createApp({webauthn={generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse}}={}){
+export function createApp({relay=budgetedRelayConfig,webauthn={generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse}}={}){
  return {async fetch(req,env){
   const origin=req.headers.get('Origin'),allowed=(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean);
   const headers={'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin'};
@@ -53,7 +54,7 @@ export function createApp({webauthn={generateRegistrationOptions,verifyRegistrat
    }
    const u=await session(db,req);await rate(db,'user:'+u.id,100);
    if(path.startsWith('/queue/'))return out(await handleQueue(path,method,data,u,db));
-   if(path==='/rtc/config'&&method==='POST'){need(strict(data,[]));await rate(db,'relay:'+u.id,12,3600);return out(await relayConfig(env));}
+   if(path==='/rtc/config'&&method==='POST'){need(strict(data,[]));await rate(db,'relay:'+u.id,12,3600);return out(await relay(env));}
    if(path==='/me'&&method==='GET')return out({user:publicUser(u)});
    if(path==='/me'&&method==='PATCH'){need(strict(data,['name'])&&nameOf(data.name));await q(db,'UPDATE users SET name=? WHERE id=?',nameOf(data.name),u.id).run();return out({user:publicUser({...u,name:nameOf(data.name)})});}
    if(path==='/auth/logout'&&method==='POST'){await q(db,'DELETE FROM sessions WHERE hash=?',u.sessionHash).run();return out({ok:true});}
@@ -105,7 +106,7 @@ export function createApp({webauthn={generateRegistrationOptions,verifyRegistrat
    if(path==='/leaderboard'&&method==='GET'){const rows=await q(db,"SELECT u.id,u.code,u.name,sum(CASE WHEN m.winner=u.id THEN 1 ELSE 0 END) wins,count(m.id) matches FROM users u LEFT JOIN matches m ON (m.host=u.id OR m.guest=u.id) AND m.state='done' WHERE u.id=? OR u.id IN (SELECT CASE WHEN sender=? THEN recipient ELSE sender END FROM friends WHERE status='accepted' AND (sender=? OR recipient=?)) GROUP BY u.id ORDER BY wins DESC,matches DESC LIMIT 201",u.id,u.id,u.id,u.id).all();return out({leaderboard:rows.results});}
    throw new ApiError(404,'Not found');
   }catch(error){if(error instanceof ApiError||error instanceof QueueError)return out({error:error.message},error.status);if(/UNIQUE constraint failed/.test(error?.message||''))return out({error:'Already exists'},409);console.error(JSON.stringify({event:'api_error',message:'Request failed'}));return out({error:'Request failed'},500);}
- },async scheduled(event,env){await cleanQueue(env.DB);await env.DB.batch([env.DB.prepare('DELETE FROM sessions WHERE expires<unixepoch()'),env.DB.prepare('DELETE FROM challenges WHERE expires<unixepoch()'),env.DB.prepare('DELETE FROM limits WHERE until<unixepoch()'),env.DB.prepare('DELETE FROM invites WHERE expires<unixepoch()-86400'),env.DB.prepare('DELETE FROM users WHERE registered=0 AND created<unixepoch()-2592000 AND NOT EXISTS(SELECT 1 FROM sessions WHERE user_id=users.id)')]);}};
+ },async scheduled(event,env){await monitorRelayBudget(env);if(event?.cron==='* * * * *')return;await cleanQueue(env.DB);await env.DB.batch([env.DB.prepare('DELETE FROM sessions WHERE expires<unixepoch()'),env.DB.prepare('DELETE FROM challenges WHERE expires<unixepoch()'),env.DB.prepare('DELETE FROM limits WHERE until<unixepoch()'),env.DB.prepare('DELETE FROM invites WHERE expires<unixepoch()-86400'),env.DB.prepare('DELETE FROM users WHERE registered=0 AND created<unixepoch()-2592000 AND NOT EXISTS(SELECT 1 FROM sessions WHERE user_id=users.id)')]);}};
 }
 function publicMatch(m){return {id:m.id,host:m.host,guest:m.guest,settings:JSON.parse(m.settings),round:m.round,health:{host:m.hp_host,guest:m.hp_guest},state:m.state,winner:m.winner,forfeit:m.state==='done'&&m.hp_host>0&&m.hp_guest>0?(m.winner===m.host?m.guest:m.host):null};}
 export default createApp();

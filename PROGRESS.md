@@ -1,5 +1,14 @@
 # Finger Fight: progress
 
+## 2026-11-13 — Protective TURN usage cutoff prepared
+
+- Changed: production relay issuance defaults off. Added authenticated server-side admission checks against account-wide Cloudflare TURN egress, default cutoff 800 GB per explicitly configured billing period, sticky D1 stop state, failed-analytics refusal, conservative 1000-credential pilot quota and atomic reservations. Existing per-user rate limits remain. In-flight mints recheck stop state before returning credentials.
+- Existing issued usernames are tracked for provider revocation without storing client passwords/tokens. Disabled/over-budget/unverifiable usage attempts revocation; failed attempts remain pending. Batches are bounded to 32 (four concurrent) and resume on scheduled checks. Minute monitor events skip daily maintenance scans. Expired billing dates stop access until corrected rather than silently resetting at the wrong date.
+- Verified locally: full backend **28/28 pass** (29.5s), including real production HTTP gate, missing/invalid/offline analytics, sticky threshold, concurrent quota, stop-during-mint race, manual switch, scheduled monitor, revocation failure/retry and multi-batch backlog; backend bundle builds successfully. Existing queue/controller tests explicitly inject their fake relay provider; production default tests exercise the real guard. No frontend/rig/camera/Android source changed; no APK rebuild required.
+- Open: backend is undeployed and API_URL remains empty. Actual account analytics permissions/schema, billing-period dates, relay secrets, one-minute/daily Cron events and provider revocation need live verification before enabling. No Cloudflare account lookup, paid activation or credential rotation performed. Current legacy ExpressTURN clients are not protected by this code until migrated.
+- Limitation: this is an application admission cutoff, not a provider-enforced $0/exact-byte billing cap. Analytics delay/sampling, in-flight traffic, pending/failed revocations and other shared-allowance services can cause overshoot. Other cloud costs are outside this TURN guard. Deployment instructions and honest limits recorded in backend/README.md and PLAYSTORE.md.
+
+
 ## 2026-11-12 — Lobby Done/Ready correction, frontal previews and Play preparation
 
 - Changed: the existing bottom Start fight button becomes an enabled Done while customising or trying on a hand; Done closes editing/camera, then the same position shows Ready/Cancel ready for P2P or Start fight for computer. Finishing preview does not silently ready/start a multiplayer game. The random-only photo notice is hidden in private/computer/Profile screens. Match settings and opponent-view panel share a responsive 440px maximum width.

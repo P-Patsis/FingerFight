@@ -1,5 +1,13 @@
 # Finger Fight: decisions
 
+## 2026-11-13 — Add a protective cutoff before enabling usage-based TURN
+
+- Default managed relay issuance off. Gate the production route on trusted server-side account TURN egress, with an 800 decimal GB threshold and persistent stop latch; browser counters are not trusted for billing. Aggregate all TURN keys, not just one game key. Missing/failed analytics and stale billing dates deny credentials.
+- Use explicit real billing-period dates, not an assumed calendar-month reset. Start with a conservative atomic credential quota (1000 per period, configurable up to 10000). Failed mint attempts consume capacity. Never let a static relay configuration bypass this production guard.
+- Track only issued username/key/expiry/revocation state; revoke on stop and retry bounded batches through a one-minute monitor. Recheck stop state after minting. Preserve daily cleanup separately. Use provider expiry as a backstop, not a promise that revocation always succeeds immediately.
+- Keep deployment disabled until account permissions, GraphQL query, schedules, real relay revocation and billing period are verified. No changes to the working public legacy relay or Android/website settings. This cannot promise zero charges: provider-side metering/enforcement and other account services remain outside our control.
+
+
 ## 2026-11-11 — Use the main lobby action for Done and Ready
 
 - Keep one primary action in the original Start fight position: Done during preview/editing, Ready/Cancel ready in P2P, Start fight for computer. Done is enabled independently of camera/peer readiness and closes editing rather than launching a game. Retain the compact viewer Done too.

@@ -33,6 +33,21 @@
       "type": "plain_text",
       "name": "RP_ID",
       "text": "p-patsis.github.io"
+    },
+    {
+      "type": "plain_text",
+      "name": "TURN_RELAY_ENABLED",
+      "text": "false"
+    },
+    {
+      "type": "plain_text",
+      "name": "TURN_BUDGET_BYTES",
+      "text": "800000000000"
+    },
+    {
+      "type": "plain_text",
+      "name": "TURN_MAX_CREDENTIALS",
+      "text": "1000"
     }
   ]
 }
