@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-13 — TURN secret saved; live API and D1 queue verified
+
+- Confirmed TURN_API_TOKEN is attached as a Worker secret by listing names only; no value read/printed. This proves attachment, not validity for TURN minting. TURN_RELAY_ENABLED remains false and the permanent runtime analytics secret is not yet attached.
+- HTTPS health now returns 200 with service=fingerfight/version=1 after the user's new deployment. Earlier handshake failure is resolved from this phone; its exact cause was not established.
+- Actual deployed API smoke checks all passed: health and website CORS, rejection of an untrusted origin, unauthenticated relay denial, authenticated relay remaining paused, two real D1 guest queue tickets paired atomically, both-player acknowledgement, cancellation invalidating the other seat, and cleanup of the two temporary users through D1. Evidence: .git/cf-live-smoke.json at 2026-11-13T17:58:58Z. No real TURN allocation or two-device game is claimed.
+- Next required owner setup: create a permanent custom API token with Account Analytics Read for this account, store it directly as Worker Secret TURN_USAGE_API_TOKEN, and confirm actual billing-period dates. Then validate managed issuance/revocation/cutoff and activate the same API URL in website/APK. Existing clients and ExpressTURN remain unchanged. CLI refresh worked through its scoped private login; no broader permissions requested.
+
+
 ## 2026-11-13 — Scoped Cloudflare login and initial backend deployment
 
 - User explicitly authorised deployment and completed CLI browser approval. The connected MCP account lookup remained rejected without a UI prompt; the custom Codex UI does not expose that approval flow. Installed Cloudflare CLI 1.0.0-beta.31 project-locally in .git/cloudflare-cli (29 packages, no global/app dependency or shell changes). tools/cf.sh keeps OAuth/config/cache/data inside .git with telemetry disabled. Scoped login grants basic account/profile/background access, Workers Scripts Write, D1 Write, Account Analytics Read and Calls Read; no billing/DNS/API-token-provisioning scope. Auth file is private and untracked; no token values printed or committed.
