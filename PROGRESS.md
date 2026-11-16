@@ -1,5 +1,9 @@
 # Finger Fight: progress
 
+## 2026-11-16 — Align Android, multiplayer and Play documentation with the live pilot
+
+- Removed obsolete claims in ANDROID.md, MULTIPLAYER.md and PLAYSTORE.md that the backend/API remained disabled or APK 0.1.8 was current. Document current 0.1.9 delivery, enabled common queue/TURN, limits, remaining physical acceptance and legacy retirement. Clarified the verified unsigned AAB predates the latest multiplayer build and is not a Play upload. No code, provider configuration or game assets changed; no extra build/tests needed for these documentation corrections.
+
 ## 2026-11-16 — Pilot website and APK delivered; no support case required
 
 - Pages deployment of implementation commit dce60fa completed successfully. All 11 checked public files match the committed release, including main, service-config, ICE, Link, renewal, matchmaking and SW. Live URL: https://p-patsis.github.io/FingerFight/. Local verification .git/ui-pages-verification.json.

@@ -4,9 +4,9 @@
 
 Android runs its bundled copy of the game in Capacitor, at `https://localhost`. It does not open or send gameplay to the GitHub website. Website players load that same game from GitHub Pages. Both use PeerJS's public `0.peerjs.com` service to introduce peers, then exchange encrypted WebRTC data-channel messages.
 
-Private matches use a long random room code and allow direct connections, with TURN as a fallback. Random matches enforce TURN-only connections to hide the opponent's IP; the current legacy relay is `free.expressturn.com` (UDP/TCP 3478). The server credentials already shipped in `js/ice.js` are public and revocable, not a production secret. Relay/network availability still affects whether a match connects.
+Private matches use a long random room code and allow direct connections, with TURN as a fallback. Random matches enforce TURN-only connections to hide the opponent's IP; updated clients receive temporary Cloudflare TURN credentials from the authenticated API. Provider secrets stay on the Worker. Old ExpressTURN credentials remain only for legacy clients until migration is accepted. Relay/network availability still affects whether a match connects.
 
-APK 0.1.7 and the current website can find each other using the existing protocol, including random opponents. Their legacy random matcher uses eight public rendezvous slots; active matches retain those slots. The user reports a real random phone/laptop match worked. This is user-reported evidence; this release still needs device acceptance checks. Computer practice is entirely local.
+APK 0.1.9 and the updated website share Cloudflare Worker/D1 guest matchmaking. The previous eight-slot random matcher is no longer used by updated clients. Old APKs do not randomly find new-queue players. Computer practice remains entirely local. New physical crossplay acceptance is still required; successful relay protocol and API tests are separate evidence.
 
 ## Ready controls and background deadlines (0.1.7)
 
@@ -14,7 +14,7 @@ Both P2P players press Ready after camera preparation. Editing cosmetics/view/ru
 
 Round timing uses absolute deadlines. Backgrounding locks the current hand before camera release; foregrounding catches up overdue callbacks. Validated phase/advance messages let the active peer drive progress when browser timers throttle. An unanswered round ends after a bounded 20-second wait. If both operating systems suspend the apps, no browser code executes until one resumes. Test Wi-Fi/mobile data, tab changes and native backgrounding on real devices; automated tests do not prove OS timing behavior.
 
-## Shared server queue implemented, awaiting deployment
+## Shared server queue — enabled pilot
 
 `backend/matchmaking.mjs` and `js/matchmaking.js` add one common queue for updated Android and website clients:
 
@@ -24,17 +24,17 @@ Round timing uses absolute deadlines. Backgrounding locks the current hand befor
 4. Atomically claim two ready players in a D1 transaction. There is no fixed eight-slot limit. Account blocks are checked in both directions; each player has one ticket.
 5. Both clients install the assigned peer identity and pairing secret before acknowledging. Only after both acknowledge does the guest dial the host.
 6. Exchange existing validated game messages over WebRTC. Random matches still reject camera photos. The API receives identity/connection metadata, not camera frames.
-7. Renew the connection lease every 20 seconds; cancel/reload/expired leases release the assignment. A late cancellation cannot remove a newer search. Existing peer reconnect secrets and grace periods still protect the seat. Relay refresh updates future reconnects on this Link without replacing private-match defaults.
+7. Renew the connection lease every 20 seconds; cancel/reload/expired leases release the assignment. A late cancellation cannot remove a newer search. Existing peer reconnect secrets and grace periods still protect the seat. Relay refresh updates ICE configuration and coordinates a host-offered ICE restart over the existing authenticated data channel. Private rooms use the same managed relay as a fallback.
 
 Waiting clients poll every two seconds and stop after two minutes. Initial assignment expires after 60 seconds, connected assignment after 120 seconds without renewal, and a waiting ticket after 90 seconds without polling. Cleanup runs on queue admission/readiness and through the scheduled handler. Limits remain finite: D1/Worker quotas, rate limits, signaling and relay capacity apply. The local concurrency test covers 40 clients/20 distinct pairs, not production load capacity.
 
-A configured backend failure reports an error instead of mixing server-queue players into legacy slots. While `API_URL` is empty, the existing matcher remains in use. After activation, old APKs will **not** randomly find new-queue clients: install the updated APK on both phones. The website updates via its service worker; Android needs a new APK/Play update.
+A configured backend failure reports an error instead of mixing server-queue players into legacy slots. The common `API_URL` is now enabled. Old APKs will **not** randomly find new-queue clients: install the updated APK on both phones. The website updates via its service worker; Android needs a new APK/Play update.
 
-## Activation package and remaining checks
+## Enabled deployment and remaining checks
 
-See `backend/README.md` for the schema, Worker bundle, bindings and relay-secret setup. Production `API_URL` deliberately stays empty until a real endpoint passes runtime checks. Cloudflare account lookup was rejected; no cloud resources or paid plan were created, and no alternative credential route was used.
+Worker fingerfight-api and D1 fingerfight-prod are deployed through the approved project-local CLI login. Both runtime secrets are validated. HTTPS/CORS/auth, real pairing/ack/cancel and bidirectional UDP/TLS relay smoke checks pass. Website deployment and APK package/signature/source/delivery checks pass. See backend/README.md and MULTIPLAYER_SETUP.md for the 800 GB usage guard, 1,000 period issuances, 20 requested-lifetime reservations, rate limits and explicit accounting dates. These are protective pilot limits, not unlimited production capacity or a guaranteed invoice ceiling.
 
-After approval: provision the dedicated database/Worker, configure the relay, verify HTTPS/CORS/auth/queue/leases, set the **same** API URL for both clients, restamp the service worker, rebuild Android and publish. Then test an APK on one phone against an updated browser/second APK on another, preferably Wi-Fi versus mobile data, including background/reconnect, cancellation, full match and rematch.
+Next acceptance: updated APK versus refreshed browser/second updated APK, Wi-Fi versus mobile data, including a match over ten minutes, background/reconnect, cancellation and rematch. Old ExpressTURN retirement follows successful acceptance. No support case or further owner token setup is required.
 
 Queue allocation records are not verified game results. The existing game still scores peer messages; the separately tested commit/reveal API is not yet wired to the round controller. Verified leaderboard UI stays disabled. Native passkey accounts remain hidden until Credential Manager/Digital Asset Links integration is implemented; native guest matching works independently. Browser passkey/friends features retain their existing deployment gates.
 

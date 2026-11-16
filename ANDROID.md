@@ -1,10 +1,10 @@
 # Android prototype
 
-Capacitor 8 packages the existing web game in Android System WebView. It is separate from Cloudflare (the undeployed account/social backend). This prototype keeps guest PeerJS multiplayer and local computer practice; no cloud account or paid service is required to build it. PeerJS still needs internet, and restrictive networks may need TURN.
+Capacitor 8 packages the game and its hand-tracking model locally in Android System WebView. It is separate from Cloudflare, which now runs the shared guest matchmaking API and TURN relay. The APK does not load the game from GitHub Pages; it shares the same backend with website players.
 
-Verified debug build: `assembleDebug` succeeds (3m04s); Android v2 signature and actual bundled source verify; game tests **409/409 pass**. APK is 19,650,426 bytes; SHA-256 `5fc527ed8ac6fbfbf31472eb5f65ad9509f091d131e99370fabb8c36d813fcd7`. Current APK: version code 9 / `0.1.8-prototype`, copied and checksum-verified in Downloads as `FingerFight-0.1.8-debug.apk`. Includes bottom Done/Ready, random-only notice, aligned lobby cards, reset frontal preview and prototype Store-reset control. Website UI source `4d0b8d3` is verified live. Real phone layout, preview motion, Ready/camera/counting and FPS remain unverified.
+Current delivered debug APK: version code 10 / `0.1.9-prototype`, in phone Downloads as `FingerFight-0.1.9-debug.apk`. Build, v2 signature, package contents, model/music and networking source checks pass. Size 19,652,553 bytes; SHA-256 `bd8f7448ee38d498f74ca22ad0cf86f95fc2396a42b5911cae53ee317f18515b`. Game tests 413/413, backend tests 32/32. Physical-device WebRTC/camera/FPS acceptance remains open.
 
-Shared server matchmaking is now implemented in source and tested with the native and website origins, but `API_URL` stays empty until deployment is approved and verified. The 0.1.8 APK still uses legacy PeerJS slots. See [MULTIPLAYER.md](MULTIPLAYER.md). The queue client is bundled but inactive; rebuild with the verified shared API URL after deployment. No real two-device queue result is claimed.
+The common API is enabled at https://fingerfight-api.fingerfight-ppatsis.workers.dev. Updated Android and website players share one random queue. Old APKs use the previous queue. Server-issued TURN credentials request a ten-minute TTL and refresh through explicit ICE renewal; permanent provider secrets remain on the server. See [MULTIPLAYER.md](MULTIPLAYER.md) and [MULTIPLAYER_SETUP.md](MULTIPLAYER_SETUP.md) for verified guards and limits.
 
 ## Play Store preparation
 
@@ -38,6 +38,6 @@ Camera permission is requested when camera use starts. No microphone permission.
 - Check camera indicator goes off in background, then explicitly restart camera. Confirm no tracking loop survives closing try-on.
 - Compare sustained FPS/detect/draw timings against Chrome with the same skin and lighting; review fire, sand, Ghost/Chameleon and elemental effects. Check fist charge/release with one/two fingers, thumb-only, hand loss and reduced-motion; review compact viewer controls and sticky carousels. No FPS gain or parity is claimed until measured.
 
-Play preparation later: release signing, store listing, privacy/data-safety disclosures, age/content assessment and the account's required testing track. No Play upload or backend deployment is part of this build.
+Play preparation later: release signing, store listing, privacy/data-safety disclosures, age/content assessment and the account's required testing track. No Play upload has been made; backend pilot deployment is complete.
 
 Official references: [Capacitor overview](https://capacitorjs.com/docs), [Android](https://capacitorjs.com/docs/android), [v8 requirements](https://capacitorjs.com/docs/updating/8-0). Dependencies are pinned in package-lock.json. `npm test` includes native configuration/lifecycle checks; `node tools/android-check.mjs` checks generated assets after packaging.
