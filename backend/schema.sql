@@ -25,3 +25,4 @@ CREATE INDEX IF NOT EXISTS queue_pair_expiry ON queue_pairs(expires);
 -- Server-side TURN admission cutoff. No client credentials/passwords are stored here.
 CREATE TABLE IF NOT EXISTS turn_budget_windows(period_start TEXT PRIMARY KEY,period_end TEXT NOT NULL,reported_bytes INTEGER NOT NULL DEFAULT 0,checked INTEGER NOT NULL DEFAULT 0,issued INTEGER NOT NULL DEFAULT 0,blocked INTEGER NOT NULL DEFAULT 0,stopped INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS turn_credentials(username TEXT PRIMARY KEY,key_id TEXT NOT NULL,expires INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,attempted INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS turn_revocations(username TEXT PRIMARY KEY REFERENCES turn_credentials(username) ON DELETE CASCADE,status INTEGER NOT NULL,attempted INTEGER NOT NULL);

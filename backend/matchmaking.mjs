@@ -84,14 +84,16 @@ export async function handleQueue(path,method,data,user,db){
  }
  need(false,404,'Not found');
 }
+export const RELAY_TTL_SECONDS=600;
+export const RELAY_REFRESH_MARGIN_SECONDS=60;
 export async function relayConfig(env){
  if(env.TURN_SERVERS_JSON){let ice;try{ice=JSON.parse(env.TURN_SERVERS_JSON);}catch{need(false,503,'Relay configuration unavailable');}
   need(Array.isArray(ice)&&ice.length>0&&ice.length<=8&&ice.every(s=>s&&typeof s.username==='string'&&s.username.length<=1024&&typeof s.credential==='string'&&s.credential.length<=1024&&(Array.isArray(s.urls)?s.urls:[s.urls]).length>0&&(Array.isArray(s.urls)?s.urls:[s.urls]).length<=8&&(Array.isArray(s.urls)?s.urls:[s.urls]).every(u=>typeof u==='string'&&u.length<=512&&/^turns?:[^\s]+$/.test(u))),503,'Relay configuration unavailable');
   return{iceServers:ice,expires:now()+600,managed:true};
  }
  need(env.TURN_KEY_ID&&env.TURN_API_TOKEN,503,'Multiplayer relay is not configured');
- const response=await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/'+encodeURIComponent(env.TURN_KEY_ID)+'/credentials/generate-ice-servers',{method:'POST',headers:{Authorization:'Bearer '+env.TURN_API_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({ttl:3600}),signal:AbortSignal.timeout(10000)});
+ const response=await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/'+encodeURIComponent(env.TURN_KEY_ID)+'/credentials/generate-ice-servers',{method:'POST',headers:{Authorization:'Bearer '+env.TURN_API_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({ttl:RELAY_TTL_SECONDS}),signal:AbortSignal.timeout(10000)});
  need(response.ok,503,'Could not prepare multiplayer relay');const result=await response.json();
  const servers=(Array.isArray(result.iceServers)?result.iceServers:[result.iceServers]).filter(s=>s&&typeof s.username==='string'&&typeof s.credential==='string').map(s=>({username:s.username,credential:s.credential,urls:(Array.isArray(s.urls)?s.urls:[s.urls]).filter(u=>typeof u==='string'&&/^turns?:[^\s]+$/.test(u))})).filter(s=>s.urls.length>0);
- need(servers.length>0,503,'Relay configuration unavailable');return{iceServers:servers,expires:now()+3300,managed:true};
+ need(servers.length>0,503,'Relay configuration unavailable');return{iceServers:servers,expires:now()+RELAY_TTL_SECONDS-RELAY_REFRESH_MARGIN_SECONDS,managed:true};
 }

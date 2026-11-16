@@ -1,5 +1,5 @@
 // Protective admission cutoff, not a provider-enforced dollar/byte ceiling.
-import {QueueError,relayConfig} from './matchmaking.mjs';
+import {QueueError,relayConfig,RELAY_TTL_SECONDS} from './matchmaking.mjs';
 const q=(db,sql,...args)=>db.prepare(sql).bind(...args);
 const now=()=>Math.floor(Date.now()/1000);
 const fail=message=>{throw new QueueError(503,message);};
@@ -21,7 +21,8 @@ export async function revokeIssued(env){
    await q(env.DB,'UPDATE turn_credentials SET attempted=? WHERE username=?',now(),row.username).run();
    const r=await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/'+encodeURIComponent(row.key_id)+'/credentials/'+encodeURIComponent(row.username)+'/revoke',{method:'POST',headers:{Authorization:'Bearer '+env.TURN_API_TOKEN},signal:AbortSignal.timeout(10000)});
    await r.body?.cancel();
-   if(r.status===204||r.status===404)await q(env.DB,'UPDATE turn_credentials SET revoked=1 WHERE username=? AND key_id=?',row.username,row.key_id).run();
+   await q(env.DB,'INSERT INTO turn_revocations(username,status,attempted) VALUES(?,?,?) ON CONFLICT(username) DO UPDATE SET status=excluded.status,attempted=excluded.attempted',row.username,r.status,now()).run();
+   if(r.status===204)await q(env.DB,'UPDATE turn_credentials SET revoked=1 WHERE username=? AND key_id=?',row.username,row.key_id).run();
   }catch{/* Keep pending; never log tokens or provider response bodies. */}
  }));
 }
@@ -65,7 +66,7 @@ export async function budgetedRelayConfig(env){
  let result;
  try{result=await relayConfig(env);}catch{await block(env,p);fail(UNAVAILABLE);}
  try{
-  for(const server of result.iceServers)await q(env.DB,'INSERT INTO turn_credentials(username,key_id,expires) VALUES(?,?,?) ON CONFLICT(username) DO NOTHING',server.username,env.TURN_KEY_ID,now()+3600).run();
+  for(const server of result.iceServers)await q(env.DB,'INSERT INTO turn_credentials(username,key_id,expires) VALUES(?,?,?) ON CONFLICT(username) DO NOTHING',server.username,env.TURN_KEY_ID,now()+RELAY_TTL_SECONDS).run();
   const row=await q(env.DB,'SELECT blocked,stopped FROM turn_budget_windows WHERE period_start=?',p.start).first();
   if(!row||row.blocked||row.stopped){await revokeIssued(env);fail(PAUSED);}
  }catch(error){

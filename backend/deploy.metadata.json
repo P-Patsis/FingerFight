@@ -58,6 +58,16 @@
       "type": "plain_text",
       "name": "TURN_KEY_ID",
       "text": "df9ea5c6f4b81dfc03e39fcf9bcba620"
+    },
+    {
+      "type": "plain_text",
+      "name": "TURN_BUDGET_START",
+      "text": "2026-11-13"
+    },
+    {
+      "type": "plain_text",
+      "name": "TURN_BUDGET_END",
+      "text": "2026-12-13"
     }
   ]
 }

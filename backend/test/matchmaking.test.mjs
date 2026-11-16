@@ -46,8 +46,8 @@ test('relay config is authenticated, refuses missing secrets and never exposes A
 
 test('managed relay mints short-lived credentials server-side and strips STUN entries and API secrets',async()=>{
  const original=globalThis.fetch;let called=false;
- globalThis.fetch=async(url,opts)=>{called=true;assert.equal(url,'https://rtc.live.cloudflare.com/v1/turn/keys/key-id/credentials/generate-ice-servers');assert.equal(opts.headers.Authorization,'Bearer server-only-token');assert.equal(JSON.parse(opts.body).ttl,3600);return Response.json({iceServers:[{urls:['stun:stun.cloudflare.com:3478']},{urls:['turn:turn.cloudflare.com:3478','turns:turn.cloudflare.com:443?transport=tcp'],username:'temporary-user',credential:'temporary-credential'}]});};
- try{const r=await relayConfig({TURN_KEY_ID:'key-id',TURN_API_TOKEN:'server-only-token'});assert.ok(called);assert.equal(r.iceServers.length,1);assert.ok(!JSON.stringify(r).includes('server-only-token'));assert.ok(r.expires<=Math.floor(Date.now()/1000)+3300);}
+ globalThis.fetch=async(url,opts)=>{called=true;assert.equal(url,'https://rtc.live.cloudflare.com/v1/turn/keys/key-id/credentials/generate-ice-servers');assert.equal(opts.headers.Authorization,'Bearer server-only-token');assert.equal(JSON.parse(opts.body).ttl,600);return Response.json({iceServers:[{urls:['stun:stun.cloudflare.com:3478']},{urls:['turn:turn.cloudflare.com:3478','turns:turn.cloudflare.com:443?transport=tcp'],username:'temporary-user',credential:'temporary-credential'}]});};
+ try{const r=await relayConfig({TURN_KEY_ID:'key-id',TURN_API_TOKEN:'server-only-token'});assert.ok(called);assert.equal(r.iceServers.length,1);assert.ok(!JSON.stringify(r).includes('server-only-token'));assert.ok(r.expires<=Math.floor(Date.now()/1000)+540);}
  finally{globalThis.fetch=original;}
 });
 test('connected queue renews its lease and deleting either identity does not strand the other seat',async()=>{

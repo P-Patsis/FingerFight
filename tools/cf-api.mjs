@@ -13,11 +13,12 @@ export async function cfRequest(path,{method='GET',body}={}){
  if(!response.ok||value.success===false)throw new Error(`Cloudflare ${method} ${path}: HTTP ${response.status}, error codes ${(value.errors||[]).map(e=>e.code).join(',')}`);
  return value;
 }
-export async function uploadWorker(){
+export async function uploadWorker({overrides={}}={}){
  const target=JSON.parse(await readFile(new URL('backend/deploy-target.json',root),'utf8'));
  if(!/^[a-f0-9]{32}$/.test(target.account_id)||target.worker_name!=='fingerfight-api')throw new Error('Unexpected deployment target.');
  const metadata=JSON.parse(await readFile(new URL('backend/deploy.metadata.json',root),'utf8'));
  if(metadata.bindings.find(b=>b.name==='DB')?.id!==target.database_id)throw new Error('Database target mismatch.');
+ for(const [name,text]of Object.entries(overrides)){if(!['TURN_RELAY_ENABLED','TURN_BUDGET_START','TURN_BUDGET_END','TURN_BUDGET_BYTES','TURN_MAX_CREDENTIALS'].includes(name)||typeof text!=='string')throw new Error('Unsupported deployment override.');const binding=metadata.bindings.find(b=>b.name===name);if(binding)binding.text=text;else metadata.bindings.push({name,type:'plain_text',text});}
  metadata.keep_bindings=['secret_text'];
  const form=new FormData();form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));form.append('worker.mjs',new Blob([await readFile(new URL('backend/dist/worker.mjs',root))],{type:'application/javascript+module'}),'worker.mjs');
  const r=await cfRequest(`/accounts/${target.account_id}/workers/scripts/${target.worker_name}`,{method:'PUT',body:form});

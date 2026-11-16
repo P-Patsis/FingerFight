@@ -1,5 +1,23 @@
 # Finger Fight: progress
 
+## 2026-11-16 — Shorter TURN credentials and corrected provider diagnosis
+
+- Server TTL reduced from 3,600 to 600 seconds, advertised refresh deadline 540 seconds, matching D1 tracking. Initial protective accounting dates recorded Nov 13–Dec 13; relay remains off and automatic rollover disabled. No paid plan upgrade.
+- New controlled live test minted ten-minute credentials and passed bidirectional UDP and TLS payload checks. Synthetic cutoff stopped further issuance. This time a new credential received documented HTTP 204 revocation acknowledgement, yet a fresh allocation still succeeded 30 seconds later. Thus the earlier 404 on a previously processed credential does not establish the root cause. Alternate body-based route did not resolve behavior and was removed. No more identical retry experiments. No live-client rollout.
+- Final backend build succeeded; 15/15 affected backend tests passed after removing the alternate route (full 30/30 passed before that removal). Deployed final bundle and verified relay=false, Nov 13–Dec 13 window, 800 GB cutoff, 1,000 issuance quota, both secret names preserved and HTTPS health 200. No new APK or public-client migration.
+- Prepared backend/TURN_PROVIDER_CHECK.md with sanitized evidence and provider questions; not sent externally. Updated MULTIPLAYER_SETUP.md to remove obsolete requests for owner tokens and record remaining safety/physical-device checks. Runtime secrets stay private.
+
+## 2026-11-16 — Owner confirms Realtime renewal date
+
+- Owner reports Cloudflare Subscriptions shows Workers Free active and Realtime “Renews on Dec 13, 2026.” Combined with account creation/service setup Nov 13, use initial protective accounting window Nov 13 inclusive to Dec 13 exclusive. Next renewal is directly confirmed; the initial start is inferred from setup. No paid Workers upgrade needed or performed. Relay remains disabled pending provider revocation diagnosis; no automatic rollover enabled.
+
+## 2026-11-16 — Runtime secrets verified; TURN rollout paused pending revocation diagnosis
+
+- Both production secret names are attached. Real runtime analytics reads and temporary TURN credential minting succeeded; controlled UDP/3478 and TLS/443 probes exchanged payloads bidirectionally. Temporary tests restored relay-off configuration and cleaned guest users. No production clients migrated.
+- Synthetic usage cutoff blocked further issuance, but an issued credential still authenticated after 30 seconds. Provider HTTP audit now identifies a 404 response from the revocation endpoint, rather than a confirmed revocation. Fixed backend to accept only 204 as success and retain failed revocations for retry; added numeric status audit table to D1. Audit-enabled Worker deployed with relay disabled. Do not claim immediate traffic cutoff.
+- Local migration includes managed private-room credentials, active ICE refresh, backend guest matching URL and removal of embedded legacy credentials; frontend remains unpublished until rollout checks pass. Game tests 410/410 and backend tests 30/30 passed. Provider diagnosis remains open; no third identical revocation probe attempted.
+- Owner billing page shows $0 and “Usage observed Nov 13–Nov 14”; this does not establish subscription period. Billing dates still unconfirmed and automatic allowance reset remains disabled. Cloudflare Spend limits Beta currently covers Workers/Durable Objects, not TURN. No new token is needed from owner.
+
 ## 2026-11-13 — Rollout checklist and analytics-secret attachment check
 
 - Owner reports creating the read-only usage-monitor token and asks us to track every remaining action. Rechecked production secret names: only TURN_API_TOKEN is present; TURN_USAGE_API_TOKEN is not attached yet. Instructed owner to paste the analytics token directly into that Production Worker secret and Deploy. No secret values requested or printed.

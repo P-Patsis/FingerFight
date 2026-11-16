@@ -1,5 +1,11 @@
 # Finger Fight: decisions
 
+## 2026-11-16 — Require evidence for relay shutdown; retain a conservative pilot
+
+- Mint ten-minute credentials, refresh before expiry and retain the 1,000-issuance pilot quota and 800 GB account-wide TURN high-water cutoff. Unknown usage and invalid/expired accounting periods fail closed. Never automatically infer a renewed billing allowance.
+- Provider HTTP 204 is acknowledgement, not proof that traffic or new allocations have stopped. A controlled fresh allocation still succeeded 30 seconds afterward. Keep migration unpublished and relay disabled pending provider diagnosis/expiry and long-session acceptance. Retain only the documented revocation endpoint; 404 remains pending, not marked successful.
+- Workers Free remains selected. Shared Realtime free usage and analytics delay prevent a guaranteed-zero-charge claim. Do not enable unrelated SFU/MoQ services, paid Workers upgrades or unverified social functionality for this rollout.
+
 ## 2026-11-13 — Deploy through a project-local, scoped CLI login
 
 - Custom Codex UI did not display connected-app consent; after explicit user approval, use Cloudflare's browser/device CLI login rather than requesting a token in chat. Pin CLI 1.0.0-beta.31 in .git/cloudflare-cli, isolate XDG state in .git, disable telemetry and keep credentials untracked/private. Do not change HOME, global packages or shell configuration.

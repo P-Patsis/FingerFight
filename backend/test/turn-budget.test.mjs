@@ -29,7 +29,7 @@ test('default production route is paused even when mint secrets exist; no unauth
 });
 test('under-budget request mints only after trusted usage and records revocable username without storing passwords/tokens',async()=>{
  const s=setup();try{s.usage(799_000_000_000);const r=await budgetedRelayConfig(s.env);assert.equal(s.mints,1);assert.equal(r.iceServers[0].username,'temporary-1');assert.ok(!JSON.stringify(r).includes('private-'));
- const rows=(await s.DB.prepare('SELECT * FROM turn_credentials').all()).results;assert.equal(rows.length,1);assert.ok(!JSON.stringify(rows).includes('client-password'));assert.ok(!JSON.stringify(rows).includes('private-'));
+ const rows=(await s.DB.prepare('SELECT * FROM turn_credentials').all()).results;assert.equal(rows.length,1);assert.ok(rows[0].expires<=Math.floor(Date.now()/1000)+600);assert.ok(rows[0].expires>=Math.floor(Date.now()/1000)+595);assert.ok(!JSON.stringify(rows).includes('client-password'));assert.ok(!JSON.stringify(rows).includes('private-'));
  }finally{s.close();}
 });
 test('800 GB cutoff is sticky, revokes existing credentials, and cannot be reopened by a smaller delayed analytics total',async()=>{
@@ -62,5 +62,10 @@ test('cap tripping while credential generation is in flight prevents returning t
 
 test('revocations stay bounded per invocation and progress through a backlog without new mint requests',async()=>{
  const s=setup();try{for(let i=0;i<40;i++)await s.DB.prepare('INSERT INTO turn_credentials(username,key_id,expires) VALUES(?,?,?)').bind('old-'+i,'key',Math.floor(Date.now()/1000)+3600).run();s.env.TURN_RELAY_ENABLED='false';await monitorRelayBudget(s.env);assert.equal(s.revoked.length,32);await monitorRelayBudget(s.env);assert.equal(s.revoked.length,40);assert.equal((await s.DB.prepare('SELECT count(*) n FROM turn_credentials WHERE revoked=0').first()).n,0);}
+ finally{s.close();}
+});
+
+test('a provider 404 is recorded and retried, not treated as proof of revoked credentials',async()=>{
+ const s=setup(),fetcher=globalThis.fetch;try{await budgetedRelayConfig(s.env);globalThis.fetch=async(url,opts)=>url.endsWith('/revoke')?new Response(null,{status:404}):fetcher(url,opts);s.env.TURN_RELAY_ENABLED='false';await monitorRelayBudget(s.env);assert.equal((await s.DB.prepare('SELECT revoked FROM turn_credentials').first()).revoked,0);assert.equal((await s.DB.prepare('SELECT status FROM turn_revocations').first()).status,404);globalThis.fetch=fetcher;await monitorRelayBudget(s.env);assert.equal((await s.DB.prepare('SELECT revoked FROM turn_credentials').first()).revoked,1);assert.equal((await s.DB.prepare('SELECT status FROM turn_revocations').first()).status,204);}
  finally{s.close();}
 });
