@@ -1,5 +1,13 @@
 # Finger Fight: progress
 
+## 2026-11-16 — Guarded pilot enabled; support-case demand withdrawn
+
+- Corrected the earlier escalation: connection acceptance/continued traffic after requested expiry does not establish continued billing. Cloudflare explicitly documents billing/analytics cessation before delayed disconnection (https://developers.cloudflare.com/realtime/turn/faq/). The short-delay tests do not prove a provider billing defect, and requiring an owner support case before proceeding was premature. No case submitted or required for this pilot. Preserve the raw observations as unresolved enforcement-delay evidence; do not claim independently verified immediate revocation or a guaranteed $0 invoice.
+- Read existing account/key usage by minute through scoped CLI: 20,016 egress bytes across the known diagnostic buckets. Bucket timestamps alone cannot assign charges to packets before/after expiry. No further identical expiry probes or owner tokens requested.
+- Enabled the common production backend with existing guards: 800 GB high-water cutoff, 1,000 issuances per initial Nov 13–Dec 13 window, 20 requested-lifetime reservations, per-IP/user rate limits, failed-analytics/stale-window refusal. Automatic window rollover remains disabled. Old public credentials are not retired until physical-device acceptance.
+- Live enabled smoke passed: HTTPS/web CORS, untrusted origin/unauthenticated denial, native-origin temporary credentials, real bidirectional UDP and TLS relay, D1 pairing, both acknowledgements, cancellation and guest cleanup. Secrets preserved. Existing test evidence: 413/413 game and 32/32 backend. Physical browser/WebRTC renewal and phone camera/FPS acceptance still require owner testing.
+- APK 0.1.9/code 10 delivery prepared for Downloads/FingerFight-0.1.9-debug.apk; exact copy verification recorded locally. Publishing the matching website from main next; do not mix the old APK random queue with the new website.
+
 ## 2026-11-16 — Prepared app checkpoint on work/managed-multiplayer-20261116 (UNPUBLISHED)
 
 - This branch contains the common HTTPS guest backend config, managed private-room relay preparation/refresh, explicit active-channel ICE renegotiation, removal of embedded reusable TURN credentials, separate disabled account UI gate, SW cache update and Android 0.1.9/code 10. Tests: 413/413 game and 32/32 backend in this prepared working tree. APK built/signature/source verified; no device installation or FPS result claimed.

@@ -1,4 +1,6 @@
-# TURN revocation verification — unresolved
+# TURN enforcement observations — optional follow-up
+
+**Current status:** A support case is not required for the guarded pilot. Earlier escalation was premature: these connection tests do not measure whether billing continues. Cloudflare documents billing/analytics stopping before delayed disconnection. The observations below remain useful if further investigation is needed; no provider defect or charge was established.
 
 Target: Cloudflare Realtime TURN, finger-fight app. No secrets or issued usernames are included here.
 

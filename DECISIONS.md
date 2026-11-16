@@ -1,5 +1,10 @@
 # Finger Fight: decisions
 
+## 2026-11-16 — Use documented billing semantics for guarded pilot; withdraw premature escalation
+
+- Treat post-expiry connection acceptance as an enforcement observation, not proof of billable overshoot. Provider documentation explicitly separates billing/analytics cessation from delayed disconnect. Requiring immediate connection rejection as a prerequisite for any pilot was too strong. No owner support case is required to proceed. Preserve evidence and uncertainty; no independent billing-stop, instant-revocation or guaranteed-zero-charge claim.
+- Enable the authorised pilot using verified admission/usage guards and server-issued credentials. The 800 GB headroom and quotas remain protective rather than a provider invoice ceiling. Publish common website/APK queue together, require real-device acceptance including a game exceeding ten minutes, and keep legacy credential retirement separate so old clients are not silently broken.
+
 ## 2026-11-16 — Renew active ICE and bound pilot credential bursts
 
 - Full gathered SDP for ICE renewal travels over the existing authenticated data channel. Only host creates offers; guest can request renewal. Correlate answers, cap SDP size, roll back failed offers and ignore departed connections. Do not depend on PeerJS private methods or its initial trickle-candidate handler, which can be disabled after ICE completion. Preserve relay-only transport policy.

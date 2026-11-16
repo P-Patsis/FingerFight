@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {cfRequest} from './cf-api.mjs';
+import {spawnSync} from 'node:child_process';
+const enabled=process.argv.includes('--relay-enabled');
 const target=JSON.parse(await readFile(new URL('../backend/deploy-target.json',import.meta.url),'utf8'));
 const base=target.public_url;if(!base?.startsWith('https://fingerfight-api.'))throw new Error('Unexpected smoke-test target');
 const ids=[],checks={},users=[];
@@ -14,7 +16,12 @@ try{
  assert.equal((await call('/players/session',{origin:'https://untrusted.example',body:{name:'Denied'}})).status,403);checks.badOriginDenied=true;
  assert.equal((await call('/rtc/config')).status,401);checks.unauthenticatedRelayDenied=true;
  for(const name of ['Deploy smoke A','Deploy smoke B']){const r=await call('/players/session',{body:{name}});assert.equal(r.status,201);ids.push(r.body.user.id);users.push({...r.body,client:crypto.randomUUID()});}
- for(const u of users){const r=await call('/rtc/config',{token:u.token});assert.equal(r.status,503);assert.match(r.body.error,/paused/);}checks.relayDisabled=true;
+ for(const [i,u] of users.entries()){
+  const r=await call('/rtc/config',{token:u.token});
+  if(enabled){assert.equal(r.status,200);assert.ok(r.body.managed&&r.body.iceServers?.length);assert.ok(r.body.expires>Math.floor(Date.now()/1000)+400);
+   if(i===0){const probe=spawnSync('python3',['tools/turn-probe.py'],{input:JSON.stringify(r.body.iceServers[0]),encoding:'utf8',timeout:60000});checks.relayProtocol=JSON.parse(probe.stdout||'[]');assert.equal(probe.status,0);}
+  }else{assert.equal(r.status,503);assert.match(r.body.error,/paused/);}
+ }checks[enabled?'managedRelayEnabled':'relayDisabled']=true;
  const queue=(path,u,extra={})=>call('/queue/'+path,{token:u.token,body:{client:u.client,...extra}});
  for(const u of users)assert.equal((await queue('join',u)).status,200);
  assert.equal((await queue('ready',users[0])).body.state,'waiting');

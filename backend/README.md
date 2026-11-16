@@ -1,6 +1,6 @@
-# Finger Fight backend — initial deployment, relay disabled
+# Finger Fight backend — guarded multiplayer pilot
 
-The deployed Worker is **fingerfight-api**, with dedicated D1 **fingerfight-prod**, at https://fingerfight-api.fingerfight-ppatsis.workers.dev. Both runtime secrets are attached and validated; real TURN UDP/TLS payload tests and API/D1 queue checks pass. Relay remains disabled and the frontend migration remains unpublished because provider revocation acknowledgement did not prevent a new allocation after 30 seconds, and a requested ten-minute credential still authenticated at approximately 620 seconds. Requested expiry is not yet an independently verified cost backstop. See [TURN_PROVIDER_CHECK.md](TURN_PROVIDER_CHECK.md) and [the rollout checklist](../MULTIPLAYER_SETUP.md). The published website/APK retain the existing matcher. Workers Free remains selected. Production credential TTL is ten minutes with refresh before expiry; initial usage accounting ends December 13, 2026, with no automatic reset.
+The enabled pilot Worker is **fingerfight-api**, with D1 **fingerfight-prod**, at https://fingerfight-api.fingerfight-ppatsis.workers.dev. Both runtime secrets and live TURN UDP/TLS payloads are verified; API/D1 pairing, acknowledgement and cancellation pass enabled live checks. Website/APK use the common guest queue. Workers Free remains selected. Credentials request ten-minute TTL with refresh before expiry; admission limits are documented below. Initial accounting ends December 13, 2026, without automatic reset. Post-expiry connection acceptance does not establish continued billing; see [enforcement observations](TURN_PROVIDER_CHECK.md) and [rollout checklist](../MULTIPLAYER_SETUP.md).
 
 Use `bash tools/cf.sh` for the isolated CLI installed in .git/cloudflare-cli. It keeps private login state in .git and does not require global installation. If missing, install locally with `npm --cache .git/npm-cache install --prefix .git/cloudflare-cli --no-audit --no-fund --ignore-scripts --omit=optional cf@1.0.0-beta.31`. Browser login: `bash tools/cf.sh auth login --no-browser --no-use-keyring --scopes openid user:read account:read workers-scripts.write d1.write account-analytics.read calls.read`. The owner approves the one-time code in their browser. Do not print credentials or pass secrets through chat/command arguments.
 
@@ -33,7 +33,7 @@ For local integration, the HTTP adapter accepts these same environment variables
 
 ## TURN usage cutoff (prepared, not deployed)
 
-The production `/rtc/config` route now uses `turn-budget.mjs`. Relay access defaults to **off** (`TURN_RELAY_ENABLED=false` in deployment metadata). Dedicated cloud resources and runtime secrets have been provisioned; the published clients have not migrated and Workers Free remains selected.
+The production `/rtc/config` route now uses `turn-budget.mjs`. Relay access is explicitly enabled for the authorised pilot (`TURN_RELAY_ENABLED=true` in deployment metadata); missing/non-true runtime values still refuse access. Dedicated cloud resources and runtime secrets have been provisioned; the published clients have not migrated and Workers Free remains selected.
 
 Before enabling the managed Cloudflare relay:
 
