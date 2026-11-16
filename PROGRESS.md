@@ -1,5 +1,11 @@
 # Finger Fight: progress
 
+## 2026-11-16 — Pilot website and APK delivered; no support case required
+
+- Pages deployment of implementation commit dce60fa completed successfully. All 11 checked public files match the committed release, including main, service-config, ICE, Link, renewal, matchmaking and SW. Live URL: https://p-patsis.github.io/FingerFight/. Local verification .git/ui-pages-verification.json.
+- Android Downloads/FingerFight-0.1.9-debug.apk copied and checksum verified: 19,652,553 bytes; SHA-256 bd8f7448ee38d498f74ca22ad0cf86f95fc2396a42b5911cae53ee317f18515b. APK source/package/signature checks passed. Common backend enabled and enabled live smoke passed.
+- Support-case requirement withdrawn; nothing sent externally. Owner account setup complete. Next acceptance: install this APK, refresh laptop website, test new random queue including a >10-minute game/Ready/background/reconnect. Old APK random matchmaking uses the previous queue. Physical WebRTC/camera/FPS and old ExpressTURN retirement remain open; no claim those happened. Review accounting window before Dec 13.
+
 ## 2026-11-16 — Guarded pilot enabled; support-case demand withdrawn
 
 - Corrected the earlier escalation: connection acceptance/continued traffic after requested expiry does not establish continued billing. Cloudflare explicitly documents billing/analytics cessation before delayed disconnection (https://developers.cloudflare.com/realtime/turn/faq/). The short-delay tests do not prove a provider billing defect, and requiring an owner support case before proceeding was premature. No case submitted or required for this pilot. Preserve the raw observations as unresolved enforcement-delay evidence; do not claim independently verified immediate revocation or a guaranteed $0 invoice.
