@@ -1,5 +1,11 @@
 # Finger Fight: progress
 
+## 2026-11-16 — Prepared app checkpoint on work/managed-multiplayer-20261116 (UNPUBLISHED)
+
+- This branch contains the common HTTPS guest backend config, managed private-room relay preparation/refresh, explicit active-channel ICE renegotiation, removal of embedded reusable TURN credentials, separate disabled account UI gate, SW cache update and Android 0.1.9/code 10. Tests: 413/413 game and 32/32 backend in this prepared working tree. APK built/signature/source verified; no device installation or FPS result claimed.
+- Public Pages source is main (verified via GitHub Pages API), whose game files are unchanged. Backend safety fixes/diagnostic evidence are committed separately on main at 313f7b2. Do not merge this branch or present its APK as working multiplayer until the provider TTL/revocation acceptance blocker is resolved.
+- No owner tokens or subscription changes remain. A provider clarification is needed; backend/TURN_PROVIDER_CHECK.md contains the exact secret-free report. Nothing has been sent externally or left waiting for a response.
+
 ## 2026-11-16 — Burst guard verified live; public rollout remains blocked by provider expiry
 
 - Live D1 capacity check: two concurrent config requests minted credentials. A third reached the prior disabled deployment during propagation, so it was not counted as cap proof. Follow-up after settling, with those two reservations still present and active limit 2, returned capacity-specific 503 with issued=0, blocked=0, stopped=0; no extra credentials minted and no global stop. Restored disabled baseline, retained the two reservations through requested TTL and deleted the temporary user/period.

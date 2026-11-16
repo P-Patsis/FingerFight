@@ -1,4 +1,4 @@
-import { API_URL } from './service-config.js';
+import { API_URL, ACCOUNTS_ENABLED } from './service-config.js';
 import { bindStickyScroll, revealStickyControl } from './panel-scroll.js';
 import { initialFavourites } from './preferences.js';
 import { DeadlineQueue } from './round-clock.js';
@@ -82,6 +82,7 @@ let idle = newIdle();                          // consecutive rounds each player
 let token = 0;                          // bumped to cancel pending timeouts from an old round or game
 let bannerTimer = null;
 
+let privateRelayTimer=null;
 let computer=null,customiseReturn='menu',editingMatch=false,camPreparation=null,storePreviewId=null,storePreviewColor=null;
 let matchKind = null;                   // 'private' (friends, long code) | 'random' (strangers: puppet/skeleton only)
 let roomCodeRaw = '';                   // the private match code, without dashes
@@ -316,7 +317,7 @@ function closeMatchCustomise(){
 $('overCustomise').onclick=openMatchCustomise;
 renderWho();
 const service=new Service(API_URL),social=initSocial(service,{getName:()=>myName(),onBack:()=>show('menu'),invite:async target=>{await $('createBtn').onclick();if(!roomCodeRaw)throw new Error('Could not open a room');await service.request('/invites','POST',{target,code:roomCodeRaw});$('lobbyMsg').textContent='Invitation sent. You will approve your friend when they join.';},join:async code=>{$('codeInput').value=code;await $('joinBtn').onclick();}});
-$('accountBtn').hidden=!service.enabled||globalThis.Capacitor?.isNativePlatform?.()===true;$('accountBtn').onclick=()=>{show('social');social.open();};
+$('accountBtn').hidden=!ACCOUNTS_ENABLED||!service.enabled||globalThis.Capacitor?.isNativePlatform?.()===true;$('accountBtn').onclick=()=>{show('social');social.open();};
 
 function menuMsg(text, err = false) {
   $('menuMsg').textContent = text;
@@ -352,6 +353,22 @@ function makeLink(quiet = false, iceServers = null) {
   }, { relay: matchKind === 'random' && hideIp, iceServers });
 }
 
+/** Private rooms use the same server-issued relay fallback as the random queue. */
+async function preparePrivateRelay(){
+  if(!service.enabled)return null;
+  await service.ensurePlayer(myName());
+  return service.prepareRelay();
+}
+function refreshPrivateRelay(room){
+  clearInterval(privateRelayTimer);
+  if(!service.enabled||!room?.iceServers)return;
+  const timer=setInterval(async()=>{
+    if(link!==room||room.closed||matchKind!=='private'){clearInterval(timer);return;}
+    try{const servers=await service.prepareRelay();if(link===room&&!room.closed)room.setRelayServers(servers);}
+    catch(e){if(link===room&&service.relayUntil<=Date.now())showBanner('ONLINE RELAY UNAVAILABLE','Finish this match and try again.',4000);}
+  },30000);privateRelayTimer=timer;timer.unref?.();
+}
+
 /** Tears down a link. With [only], a stale search attempt closes just its own link and never touches a newer one. */
 function cleanupLink(only) {
   if (only && link !== only) { only.closed = true; try { only.close(); } catch { /* ignore */ } return; }
@@ -376,12 +393,15 @@ $('createBtn').onclick = async () => {
   me = 'host';
   names.host = myName();
   menuMsg('Creating your match…');
-  link = makeLink();
+  const attempt=token;let servers;
+  try{servers=await preparePrivateRelay();}catch(e){if(attempt!==token)return;menuMsg(e.message||'Could not prepare multiplayer.',true);resetAll();return;}
+  if(attempt!==token)return;
+  link = makeLink(false,servers);
   let code = null;
   for (let i = 0; i < 6 && !code; i++) {
     const c = newCode();
     try { await link.host(privateId(c)); code = c; } catch (e) {
-      if (e.message === 'taken') { link.close(); link = makeLink(); continue; }
+      if (e.message === 'taken') { link.close(); link = makeLink(false,servers); continue; }
       menuMsg('Could not create a match (' + e.message + '). Check your internet connection.', true);
       resetAll();
       return;
@@ -390,7 +410,7 @@ $('createBtn').onclick = async () => {
   if (!code) { menuMsg('Could not create a match. Try again.', true); resetAll(); return; }
   roomCodeRaw = code;
   $('roomCode').textContent = formatCode(code);
-  saveSession();
+  refreshPrivateRelay(link);saveSession();
   enterLobby();
 };
 
@@ -403,14 +423,17 @@ $('joinBtn').onclick = async () => {
   me = 'guest';
   names.guest = myName();
   menuMsg('Connecting…');
-  link = makeLink();
+  const attempt=token;let servers;
+  try{servers=await preparePrivateRelay();}catch(e){if(attempt!==token)return;menuMsg(e.message||'Could not prepare multiplayer.',true);resetAll();return;}
+  if(attempt!==token)return;
+  link = makeLink(false,servers);
   try {
     link.setToken(newToken());
     await link.join(privateId(code));
   } catch (e) {
     const why = {
       'no-room': 'There is no match with that code (or the host already left).',
-      timeout: 'Found the match but could not open a direct link in 15 s. One of the two networks (a VPN, school/work wifi or a strict firewall) is probably blocking it. Try the other device on mobile data or without the VPN.' + (hasRelay() ? '' : ' (No relay server is set up for this game yet, so blocked networks cannot work around it.)'),
+      timeout: 'Found the match but could not open a direct link in 15 s. One of the two networks (a VPN, school/work wifi or a strict firewall) is probably blocking it. Try the other device on mobile data or without the VPN.' + (link?.iceServers?.length||hasRelay() ? '' : ' (No relay server is set up for this game yet, so blocked networks cannot work around it.)'),
       network: 'Could not reach the matchmaking server (0.peerjs.com). Check this device\'s internet, VPN or ad-blocker.',
       'server-error': 'The matchmaking server did not answer. Try again in a minute.',
       'socket-error': 'Could not reach the matchmaking server. Check internet, VPN or ad-blocker.',
@@ -423,7 +446,7 @@ $('joinBtn').onclick = async () => {
     return;
   }
   roomCodeRaw = code;
-  enterLobby();
+  refreshPrivateRelay(link);enterLobby();
 };
 
 // ---- random opponent: strangers meet in a few well-known slots, with no server of ours.
@@ -685,7 +708,10 @@ $('rejoinBtn').onclick = async () => {
   resetAll();
   matchKind = 'private'; me = x.role; names = { ...x.names }; roomCodeRaw = x.code;
   menuMsg('Rejoining…');
-  link = makeLink();
+  const attempt=token;let servers;
+  try{servers=await preparePrivateRelay();}catch(e){if(attempt!==token)return;menuMsg(e.message||'Could not prepare multiplayer.',true);resetAll();return;}
+  if(attempt!==token)return;
+  link = makeLink(false,servers);
   try {
     if (x.role === 'guest') await link.join(privateId(x.code), 20000, x.token);
     else { link.setToken(x.token); await link.rehost(privateId(x.code)); if (x.names.guest && x.token) link.expectResume(); else names.guest = ''; }
@@ -695,7 +721,7 @@ $('rejoinBtn').onclick = async () => {
     return;
   }
   $('roomCode').textContent = formatCode(x.code);
-  enterLobby();
+  refreshPrivateRelay(link);enterLobby();
   if (x.role === 'guest') { send({ t: 'rejoined' }); send({ t: 'ready', ready: ready.guest }); }
   else menuMsg('');
   saveSession();
@@ -2163,6 +2189,7 @@ $('againBtn').onclick = () => {
 // Reset
 // ---------------------------------------------------------------------------------------------
 function resetAll() {
+  clearInterval(privateRelayTimer);privateRelayTimer=null;
   deadlines.clear();roundTick=null;
   const oldQueue=queueSearch;queueSearch=null;if(oldQueue)queueCleanup=Promise.all([queueCleanup,oldQueue.cancel()]).then(()=>{});
   token++;

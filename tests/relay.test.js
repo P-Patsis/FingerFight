@@ -56,10 +56,15 @@ test('the camera test screen opens and closes without a camera (simulator), leav
   assert.equal($('camLive').hidden, true, 'the CAMERA ON badge is off');
 });
 
-test('the shipped config has STUN plus a TURN relay, so random matches are allowed', async () => {
+test('updated clients ship STUN without a reusable TURN password and require the authenticated backend', async () => {
   const fresh = await import('../js/ice.js?fresh');
-  assert.ok(fresh.hasRelay());
-  assert.ok(fresh.STUN_SERVERS.length >= 2);
-  const urls = fresh.turnServers().flatMap(s => [].concat(s.urls));
-  assert.ok(urls.includes('turn:free.expressturn.com:3478') && urls.includes('turn:free.expressturn.com:3478?transport=tcp'));
+  assert.equal(fresh.hasRelay(),false);assert.deepEqual(fresh.turnServers(),[]);assert.ok(fresh.STUN_SERVERS.length>=2);
+  const config=await import('../js/service-config.js');assert.equal(new URL(config.API_URL).protocol,'https:');assert.equal(config.ACCOUNTS_ENABLED,false);
+});
+test('relay refresh updates active ICE and future dials while preserving relay-only policy and the data channel',()=>{
+ const l=new Link({}, {relay:true});let seen,closed=false;
+ l.conn={open:true,close(){closed=true;},peerConnection:{getConfiguration:()=>({iceTransportPolicy:'relay'}),setConfiguration:c=>seen=c}};
+ l.peer={options:{config:{iceTransportPolicy:'relay'}}};
+ const servers=[{urls:'turns:fresh.invalid:443',username:'temporary',credential:'new'}];l.setRelayServers(servers);
+ assert.equal(seen.iceTransportPolicy,'relay');assert.ok(seen.iceServers.includes(servers[0]));assert.equal(l.peer.options.config.iceTransportPolicy,'relay');assert.equal(closed,false);assert.equal(l.conn.open,true);
 });

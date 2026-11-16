@@ -1,2 +1,4 @@
-// Set only after deploying and verifying the backend. Empty keeps existing guest/P2P play independent.
-export const API_URL = '';
+// Common HTTPS backend for browser and Android guest multiplayer.
+export const API_URL = 'https://fingerfight-api.fingerfight-ppatsis.workers.dev';
+// Accounts/friends are a separate launch; guest matching does not require them.
+export const ACCOUNTS_ENABLED = false;

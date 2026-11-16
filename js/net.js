@@ -6,6 +6,7 @@
 //   random:  'ffight-r-' + slot number, a few well-known slots where strangers find each other (see main.js)
 
 import { STUN_SERVERS, turnServers } from './ice.js';
+import {RelayRenewal} from './relay-renewal.js';
 
 const PRIVATE = 'ffight-p-';
 const RANDOM = 'ffight-r-';
@@ -51,6 +52,7 @@ export class Link {
   /** handlers: onOpen(), onMessage(obj), onClose(reason), onStatus(text), onReconnecting(), onReconnected(), canResume() */
   constructor(handlers, opts = {}) {
     this.h = handlers;
+    this.renewal=new RelayRenewal(()=>this.closed||this.grace?null:this.conn,()=>this.role);
     this.relay = !!opts.relay;
     this.iceServers = opts.iceServers || null;
     this.peer = null;
@@ -68,10 +70,13 @@ export class Link {
 
   get open() { return !!this.conn && this.conn.open && !this.grace; }
 
-  /** Refresh credentials for future dials without replacing a healthy channel or private-match defaults. */
+  /** Refresh active ICE credentials and future dials without replacing a healthy data channel. */
   setRelayServers(list) {
+    if(list===this.iceServers)return;
     this.iceServers = list;
-    if (this.peer?.options?.config) this.peer.options.config.iceServers = [...STUN_SERVERS, ...list];
+    const iceServers=[...STUN_SERVERS,...list];
+    if (this.peer?.options?.config) this.peer.options.config.iceServers = iceServers;
+    const pc=this.conn?.peerConnection;if(pc?.setConfiguration)try{pc.setConfiguration({...pc.getConfiguration(),iceServers});this.renewal.request();}catch{/* A closing channel uses the fresh credentials on its next dial. */}
   }
 
   expectPair(pair) { this.pairGuard = pair; }
@@ -209,6 +214,7 @@ export class Link {
   }
 
   #adopt(conn, onOpen, onResumed, trusted = false) {
+    this.renewal.close();
     let authenticated = !this.pairGuard || !!onResumed || trusted;
     this.conn = conn;
     this.lastSeen = Date.now();
@@ -225,6 +231,7 @@ export class Link {
         authenticated = true;
       }
       if (!authenticated && d.t !== 'ping') return;
+      if (d.t === 'ice-renew') { void this.renewal.receive(d); return; }
       if (d.t === 'ping') { this.peerPings = true; return; }
       if (d.t === 'resumed') { this.#resumedOk(); return; }
       if (d.t === 'resume') return;                       // only meaningful on a fresh connection (see #incoming)
@@ -355,6 +362,7 @@ export class Link {
       return;
     }
     this.closed = true;
+    this.renewal.close();
     this.timers.forEach(clearTimeout);
     clearInterval(this.hb);
     this.h.onClose?.(reason);
@@ -379,6 +387,7 @@ export class Link {
 
   /** Host only: disconnect the current guest (declined, or never said hello) and keep the room open for another. */
   dropGuest() {
+    this.renewal.close();
     const c = this.conn;
     this.conn = null;                 // events from the old connection are now ignored
     this.token = null;
@@ -390,7 +399,9 @@ export class Link {
   }
 
   close() {
+    this.renewal.close();
     this.closed = true;
+    this.renewal.close();
     this.timers.forEach(clearTimeout);
     clearInterval(this.hb);
     try { this.conn?.close(); } catch { /* ignore */ }

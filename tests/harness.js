@@ -1,5 +1,6 @@
 // A tiny fake browser (DOM + PeerJS + storage) so js/main.js can run in plain Node. Only what the game uses.
 import fs from 'node:fs';
+import {Service} from '../js/service.js';
 import { setTurnServers } from '../js/ice.js';
 import path from 'node:path';
 
@@ -94,6 +95,8 @@ export class FakePeer {
 
 /** Installs the fake browser globals. [search] is the page's query string, e.g. '?sim=1'; [hash] the URL fragment. */
 export function installBrowser(search, hash = '') {
+  // Legacy-controller fixtures stay offline; backend integration tests explicitly enable their in-memory API.
+  Object.defineProperty(Service.prototype,'enabled',{get:()=>false,configurable:true});
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const byId = new Map();
   for (const m of html.matchAll(/<(\w+)([^>]*?)\sid="([^"]+)"([^>]*)>/g)) {
