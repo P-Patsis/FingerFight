@@ -68,6 +68,11 @@
       "type": "plain_text",
       "name": "TURN_BUDGET_END",
       "text": "2026-12-13"
+    },
+    {
+      "type": "plain_text",
+      "name": "TURN_MAX_ACTIVE_CREDENTIALS",
+      "text": "20"
     }
   ]
 }

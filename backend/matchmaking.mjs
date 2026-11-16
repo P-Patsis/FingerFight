@@ -95,5 +95,5 @@ export async function relayConfig(env){
  const response=await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/'+encodeURIComponent(env.TURN_KEY_ID)+'/credentials/generate-ice-servers',{method:'POST',headers:{Authorization:'Bearer '+env.TURN_API_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({ttl:RELAY_TTL_SECONDS}),signal:AbortSignal.timeout(10000)});
  need(response.ok,503,'Could not prepare multiplayer relay');const result=await response.json();
  const servers=(Array.isArray(result.iceServers)?result.iceServers:[result.iceServers]).filter(s=>s&&typeof s.username==='string'&&typeof s.credential==='string').map(s=>({username:s.username,credential:s.credential,urls:(Array.isArray(s.urls)?s.urls:[s.urls]).filter(u=>typeof u==='string'&&/^turns?:[^\s]+$/.test(u))})).filter(s=>s.urls.length>0);
- need(servers.length>0,503,'Relay configuration unavailable');return{iceServers:servers,expires:now()+RELAY_TTL_SECONDS-RELAY_REFRESH_MARGIN_SECONDS,managed:true};
+ need(servers.length>0&&new Set(servers.map(s=>s.username)).size===1,503,'Relay configuration unavailable');return{iceServers:servers,expires:now()+RELAY_TTL_SECONDS-RELAY_REFRESH_MARGIN_SECONDS,managed:true};
 }

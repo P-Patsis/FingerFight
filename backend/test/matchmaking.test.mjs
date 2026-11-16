@@ -60,3 +60,9 @@ test('connected queue renews its lease and deleting either identity does not str
  assert.equal((await s.request('/queue/join',b)).status,200);
  }finally{s.DB.close();}
 });
+
+test('a single relay reservation cannot return multiple independently usable credentials',async()=>{
+ const original=globalThis.fetch;
+ globalThis.fetch=async()=>Response.json({iceServers:['one','two'].map(username=>({urls:['turn:turn.cloudflare.com:3478'],username,credential:'temporary'}))});
+ try{await assert.rejects(()=>relayConfig({TURN_KEY_ID:'key',TURN_API_TOKEN:'private'}),/Relay configuration unavailable/);}finally{globalThis.fetch=original;}
+});

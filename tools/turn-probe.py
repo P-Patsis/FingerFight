@@ -85,14 +85,35 @@ def probe(mode,credential):
  finally:
   for client in clients:client.close()
 
+def lifetime_probe(credential,duration):
+ clients=[];started=time.monotonic();last_refresh=started;last_ok=0
+ try:
+  for _ in range(2):
+   client=Relay('udp',credential['username'],credential['credential']);clients.append(client);client.allocate()
+  a,b=clients;a.permit(b);b.permit(a)
+  while time.monotonic()-started<duration:
+   try:
+    if time.monotonic()-last_refresh>=60:
+     for client in clients:client.request(4,attr(0x0d,struct.pack('!I',600)))
+     a.permit(b);b.permit(a);last_refresh=time.monotonic()
+    a.relay_to(b,b'fingerfight-expiry-check');b.relay_to(a,b'fingerfight-expiry-response');last_ok=round(time.monotonic()-started)
+   except Exception as error:
+    return {'lastPayloadSeconds':last_ok,'stoppedAtSeconds':round(time.monotonic()-started),'reason':str(error)}
+   time.sleep(5)
+  return {'lastPayloadSeconds':last_ok,'stillRelayingAtEnd':True}
+ finally:
+  for client in clients:client.close()
+
 if __name__=='__main__':
  credential=json.load(sys.stdin)
- if '--expect-revoked' in sys.argv:
+ if '--lifetime' in sys.argv:
+  print(json.dumps(lifetime_probe(credential,int(sys.argv[sys.argv.index('--lifetime')+1]))));sys.exit(0)
+ if '--expect-revoked' in sys.argv or '--expect-rejected' in sys.argv:
   client=None;result={'revokedCredentialRejected':False}
   try:
    client=Relay('udp',credential['username'],credential['credential']);client.allocate();result['reason']='credential still accepted'
   except RuntimeError as error:
-   result['reason']=str(error);result['revokedCredentialRejected']=str(error) in ['TURN returned error 401','TURN returned error 403','TURN returned error 441']
+   result['reason']=str(error);result['revokedCredentialRejected']=str(error) in (['TURN returned error 401','TURN returned error 403','TURN returned error 441']+(['TURN returned error 400'] if '--expect-rejected' in sys.argv else []))
   except Exception as error:result['error']=str(error)
   finally:
    if client:client.close()

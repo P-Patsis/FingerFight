@@ -1,5 +1,31 @@
 # Finger Fight: progress
 
+## 2026-11-16 — Burst guard verified live; public rollout remains blocked by provider expiry
+
+- Live D1 capacity check: two concurrent config requests minted credentials. A third reached the prior disabled deployment during propagation, so it was not counted as cap proof. Follow-up after settling, with those two reservations still present and active limit 2, returned capacity-specific 503 with issued=0, blocked=0, stopped=0; no extra credentials minted and no global stop. Restored disabled baseline, retained the two reservations through requested TTL and deleted the temporary user/period.
+- Production defaults now include 20 requested-lifetime reservations. Actual credential lifetime remains unverified, so this is not a provider bandwidth/session ceiling. Full backend tests 32/32 and game tests 413/413 pass. Both runtime secrets preserved; final deployment health/config readback recorded locally.
+- Prepared frontend and Android migration will be backed up on work/managed-multiplayer-20261116, separate from main. GitHub Pages configuration verified to serve main; no migration is being published against the disabled backend. Owner has completed setup. Remaining external issue is provider TTL/revocation/billable-byte semantics, documented with a copyable question in backend/TURN_PROVIDER_CHECK.md. No support message sent and no response is being awaited.
+
+## 2026-11-16 — Provider TTL comparison failed; preserve the prepared migration separately
+
+- Separate TTL-60 temporary bundle: normal pre-expiry UDP/TLS payload test passed. At 91 seconds both a previously used credential and one never used before expiry authenticated fresh allocations. This rules out only already-active connection caching as the sole explanation; actual provider TTL/grace/billing semantics remain unresolved. Restored normal bundle/relay off and removed the temporary guest/period. No identical expiry retry planned.
+- Prepared a copyable sanitized provider question in backend/TURN_PROVIDER_CHECK.md; not sent externally. This is an external acceptance blocker, not an owner token/subscription setup omission. No further account setup or paid upgrade performed.
+- Keeping frontend migration/Android 0.1.9 prepared separately from the public main release until provider behaviour is understood. APK was built and verified but deliberately not delivered as a working multiplayer update against a paused backend.
+
+## 2026-11-16 — Real expiry acceptance failed; continue targeted diagnosis
+
+- Ten-minute test completed: payload still relayed at 617 seconds and a fresh allocation at ~620 seconds accepted the credential. Wrong-password control returned TURN 400 as expected. This is not a verified expiry/cost backstop. Restored normal bundle/relay off, removed temporary guest and isolated period. No live-client activation.
+- Final backend suite including the burst guard and one-username-per-reservation validation passed 32/32. APK signature verifies; no phone installation or physical WebRTC result claimed.
+- Running a different 60-second temporary-bundle comparison to distinguish a cached, previously used credential from a never-used one at first allocation after expiry. Temporary source is inside .git and provider/client secrets remain only in process memory/stdin. No more identical revocation retries. Prepared support evidence but did not send messages to anyone.
+
+## 2026-11-16 — Active expiry test, explicit ICE renewal and pilot burst guard
+
+- Continued without owner setup requests. Ten-minute real allocation/expiry probe running; intentionally wrong password was rejected with TURN error 400. This is an authentication negative control, not a provider outage. Actual expiry result is not yet claimed.
+- Fixed an active-session renewal gap: changing ICE configuration alone did not request renegotiation. Added bounded full-SDP ICE restart over the existing authenticated data channel, host-only offers to avoid glare, correlated answers, timeout rollback and stale-connection guards. Included module in SW/native shell. Game tests 413/413 and backend tests 30/30 passed before the additional burst guard.
+- Real scheduled monitoring verified: the isolated period checked timestamp advanced to 13:07:10Z without another client config request (mint was 13:03:38Z). Reported account TURN egress 1,492 bytes at that check; not a projected per-match bandwidth measurement.
+- Added atomic unexpired credential reservations (20 default), retained through expiry regardless of revocation acknowledgement. Monthly quota and active reservations share one D1 transaction; capacity rejection does not stop existing matches. D1 table applied. Full backend suite 31/31 passed, then 6/6 issuer tests passed after enforcing one distinct provider credential per reservation; final full suite running.
+- Android 0.1.9-prototype/code 10 built successfully in 3m7s; package/model/music checks and APK signature verification pass. Packaged backend config, ICE list, networking/renewal/matchmaking/service sources match current source. APK 19,652,553 bytes, SHA-256 bd8f7448ee38d498f74ca22ad0cf86f95fc2396a42b5911cae53ee317f18515b. Not yet delivered or published; safety probe still running.
+
 ## 2026-11-16 — Shorter TURN credentials and corrected provider diagnosis
 
 - Server TTL reduced from 3,600 to 600 seconds, advertised refresh deadline 540 seconds, matching D1 tracking. Initial protective accounting dates recorded Nov 13–Dec 13; relay remains off and automatic rollover disabled. No paid plan upgrade.

@@ -69,3 +69,11 @@ test('a provider 404 is recorded and retried, not treated as proof of revoked cr
  const s=setup(),fetcher=globalThis.fetch;try{await budgetedRelayConfig(s.env);globalThis.fetch=async(url,opts)=>url.endsWith('/revoke')?new Response(null,{status:404}):fetcher(url,opts);s.env.TURN_RELAY_ENABLED='false';await monitorRelayBudget(s.env);assert.equal((await s.DB.prepare('SELECT revoked FROM turn_credentials').first()).revoked,0);assert.equal((await s.DB.prepare('SELECT status FROM turn_revocations').first()).status,404);globalThis.fetch=fetcher;await monitorRelayBudget(s.env);assert.equal((await s.DB.prepare('SELECT revoked FROM turn_credentials').first()).revoked,1);assert.equal((await s.DB.prepare('SELECT status FROM turn_revocations').first()).status,204);}
  finally{s.close();}
 });
+
+test('concurrent bursts reserve a bounded number of live credentials, even after acknowledged revocation',async()=>{
+ const s=setup();try{s.env.TURN_MAX_ACTIVE_CREDENTIALS='2';const results=await Promise.allSettled(Array.from({length:12},()=>budgetedRelayConfig(s.env)));
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,2);assert.equal(s.mints,2);assert.equal((await s.DB.prepare('SELECT issued FROM turn_budget_windows').first()).issued,2);
+ await s.DB.prepare('UPDATE turn_credentials SET revoked=1').run();await assert.rejects(()=>budgetedRelayConfig(s.env),/capacity reached/);assert.equal(s.mints,2);
+ await s.DB.prepare('UPDATE turn_credential_slots SET expires=0').run();await budgetedRelayConfig(s.env);assert.equal(s.mints,3);
+ }finally{s.close();}
+});

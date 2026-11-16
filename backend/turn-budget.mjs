@@ -7,9 +7,9 @@ const PAUSED='Online play paused: relay allowance reached.';
 const UNAVAILABLE='Online play paused: relay usage could not be verified.';
 function policy(env){
  const start=Date.parse(env.TURN_BUDGET_START),end=Date.parse(env.TURN_BUDGET_END),t=Date.now();
- const cap=Number(env.TURN_BUDGET_BYTES??800_000_000_000),issues=Number(env.TURN_MAX_CREDENTIALS??1000);
- if(!/^\d{4}-\d{2}-\d{2}$/.test(env.TURN_BUDGET_START||'')||!/^\d{4}-\d{2}-\d{2}$/.test(env.TURN_BUDGET_END||'')||!(start<=t&&t<end&&end-start<=32*86400000)||!Number.isSafeInteger(cap)||cap<=0||cap>800_000_000_000||!Number.isSafeInteger(issues)||issues<1||issues>10000||!env.DB||!env.TURN_ACCOUNT_ID||!env.TURN_USAGE_API_TOKEN||!env.TURN_KEY_ID||!env.TURN_API_TOKEN||env.TURN_SERVERS_JSON)fail(UNAVAILABLE);
- return{start:env.TURN_BUDGET_START,end:env.TURN_BUDGET_END,cap,issues};
+ const cap=Number(env.TURN_BUDGET_BYTES??800_000_000_000),issues=Number(env.TURN_MAX_CREDENTIALS??1000),active=Number(env.TURN_MAX_ACTIVE_CREDENTIALS??20);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(env.TURN_BUDGET_START||'')||!/^\d{4}-\d{2}-\d{2}$/.test(env.TURN_BUDGET_END||'')||!(start<=t&&t<end&&end-start<=32*86400000)||!Number.isSafeInteger(cap)||cap<=0||cap>800_000_000_000||!Number.isSafeInteger(issues)||issues<1||issues>10000||!Number.isSafeInteger(active)||active<1||active>100||!env.DB||!env.TURN_ACCOUNT_ID||!env.TURN_USAGE_API_TOKEN||!env.TURN_KEY_ID||!env.TURN_API_TOKEN||env.TURN_SERVERS_JSON)fail(UNAVAILABLE);
+ return{start:env.TURN_BUDGET_START,end:env.TURN_BUDGET_END,cap,issues,active};
 }
 // Await every revocation. Failed attempts remain in D1 for the next request/scheduled retry.
 export async function revokeIssued(env){
@@ -60,9 +60,14 @@ export async function checkRelayBudget(env){
 }
 export async function budgetedRelayConfig(env){
  const p=await checkRelayBudget(env);
- // Conditional update reserves capacity across concurrent Worker instances; failed mints consume a slot.
- const reserved=await q(env.DB,'UPDATE turn_budget_windows SET issued=issued+1 WHERE period_start=? AND stopped=0 AND blocked=0 AND issued<?',p.start,p.issues).run();
- if(reserved.meta.changes!==1)fail(PAUSED);
+ // One D1 transaction reserves both burst capacity and the period quota. Keep reservations
+ // through expiry even after a revocation acknowledgement; provider enforcement is not assumed.
+ const slot=crypto.randomUUID();
+ const reserved=await env.DB.batch([
+  q(env.DB,'INSERT INTO turn_credential_slots(id,expires) SELECT ?,? WHERE (SELECT count(*) FROM turn_credential_slots WHERE expires>?)<? AND EXISTS(SELECT 1 FROM turn_budget_windows WHERE period_start=? AND stopped=0 AND blocked=0 AND issued<?)',slot,now()+RELAY_TTL_SECONDS+15,now(),p.active,p.start,p.issues),
+  q(env.DB,'UPDATE turn_budget_windows SET issued=issued+1 WHERE period_start=? AND EXISTS(SELECT 1 FROM turn_credential_slots WHERE id=?)',p.start,slot)
+ ]);
+ if(reserved[0].meta.changes!==1)fail('Online relay capacity reached. Try again shortly.');
  let result;
  try{result=await relayConfig(env);}catch{await block(env,p);fail(UNAVAILABLE);}
  try{
@@ -79,4 +84,5 @@ export async function budgetedRelayConfig(env){
 export async function monitorRelayBudget(env){
  try{await checkRelayBudget(env);}catch(error){if(!(error instanceof QueueError))throw error;}
  await q(env.DB,'DELETE FROM turn_credentials WHERE expires<?',now()-86400).run();
+ await q(env.DB,'DELETE FROM turn_credential_slots WHERE expires<=?',now()).run();
 }

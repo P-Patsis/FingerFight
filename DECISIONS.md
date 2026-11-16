@@ -1,5 +1,10 @@
 # Finger Fight: decisions
 
+## 2026-11-16 — Renew active ICE and bound pilot credential bursts
+
+- Full gathered SDP for ICE renewal travels over the existing authenticated data channel. Only host creates offers; guest can request renewal. Correlate answers, cap SDP size, roll back failed offers and ignore departed connections. Do not depend on PeerJS private methods or its initial trickle-candidate handler, which can be disabled after ICE completion. Preserve relay-only transport policy.
+- Atomically reserve at most 20 unexpired credentials plus the existing period quota; each reservation can yield one distinct provider username only. Retain capacity through credential TTL plus mint-time margin even when revocation returns 204. Failed mints conservatively retain their reservation. This limits bursts without treating an acknowledgement as traffic shutdown.
+
 ## 2026-11-16 — Require evidence for relay shutdown; retain a conservative pilot
 
 - Mint ten-minute credentials, refresh before expiry and retain the 1,000-issuance pilot quota and 800 GB account-wide TURN high-water cutoff. Unknown usage and invalid/expired accounting periods fail closed. Never automatically infer a renewed billing allowance.
