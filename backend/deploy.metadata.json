@@ -73,6 +73,11 @@
       "type": "plain_text",
       "name": "TURN_MAX_ACTIVE_CREDENTIALS",
       "text": "20"
+    },
+    {
+      "type": "plain_text",
+      "name": "VAPID_PUBLIC_KEY",
+      "text": "BC_g0dApS4KAFmgNhimVwQn2g9rjIk9QpZtkYIyB0id3CbkzXHAOnFtIqmkFEKHvvDBAvwa3ZINzcO_8BDXi0tY"
     }
   ]
 }

@@ -8,6 +8,16 @@ Use `bash tools/cf.sh` for the isolated CLI installed in .git/cloudflare-cli. It
 
 See [MULTIPLAYER_SETUP.md](../MULTIPLAYER_SETUP.md) for the single current rollout checklist and owner actions.
 
+## Optional accounts, confirmed rankings and invite notifications
+
+The social rollout enables existing passkeys on web and the new browser/PKCE handoff for Android. New routes `/auth/native/start`, `/auth/native/options`, `/auth/native/verify`, `/auth/native/exchange` keep account bearers out of deep links; sign-out invalidates pending handoffs. The hosted page uses the configured web origin/RP ID.
+
+`POST /matches/:id/result {settings,rounds}` accepts at most 500 compact `[pointerValueOrNull,guessOrNull]` tuples, recomputes the terminal outcome and requires matching submissions from both members. Incomplete/conflicting/extra-round transcripts do not count. Authenticated `/matches/:id/concede {}` can record only the caller's loss. An invite can link to a pending friend match and acceptance activates it. This is confirmed-result bookkeeping, not camera-proof anti-cheat; old local totals are not uploaded.
+
+`/notifications/config`, `/notifications/devices`, `/notifications/subscribe`, `/notifications/unsubscribe` are registered-account routes. Web Push uses public `VAPID_PUBLIC_KEY` and secret `VAPID_PRIVATE_KEY`; neither subscriptions nor private keys are exposed in profile/list responses. Endpoint vendors, HTTPS/ports, subscription lengths, ownership and a five-device limit are validated. `/notifications/revoke {id,token}` uses a device-scoped HMAC secret for pending opt-out after sign-out. Revoked/expired sessions, expired/accepted/declined invites and block/removal stop queued delivery. At most four device jobs dispatch per invocation; transient failures retry within invite lifetime. No room code or bearer is included in notifications.
+
+`FCM_SERVICE_ACCOUNT` is a private sender JSON secret. Android also needs its matching local Google app configuration and a rebuilt APK; without it the UI reports native push unavailable. `tools/configure-fcm.mjs` validates sender permission with FCM validate-only (no message sent), then configures the secret/local file without logging credentials. See ../PUSH_SETUP.md. Do not run pre-rollout relay diagnostic scripts against this enabled deployment.
+
 ## Run and verify
 
 Requires Node 22+ (the local adapter uses `node:sqlite`; Node may print its experimental-feature warning). From the repository root:

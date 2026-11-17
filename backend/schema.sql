@@ -28,3 +28,11 @@ CREATE TABLE IF NOT EXISTS turn_credentials(username TEXT PRIMARY KEY,key_id TEX
 CREATE TABLE IF NOT EXISTS turn_revocations(username TEXT PRIMARY KEY REFERENCES turn_credentials(username) ON DELETE CASCADE,status INTEGER NOT NULL,attempted INTEGER NOT NULL);
 
 CREATE TABLE IF NOT EXISTS turn_credential_slots(id TEXT PRIMARY KEY, expires INTEGER NOT NULL);
+
+CREATE TABLE IF NOT EXISTS match_results(match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE, player TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, digest TEXT NOT NULL, PRIMARY KEY(match_id,player));
+CREATE TABLE IF NOT EXISTS invite_matches(invite_id TEXT PRIMARY KEY REFERENCES invites(id) ON DELETE CASCADE, match_id TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS native_handoffs(id_hash TEXT PRIMARY KEY, creator TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, creator_session TEXT NOT NULL, action TEXT NOT NULL CHECK(action IN ('register','login')), challenge TEXT NOT NULL, expires INTEGER NOT NULL, verified_user TEXT REFERENCES users(id) ON DELETE CASCADE, grant_hash TEXT);
+CREATE TABLE IF NOT EXISTS push_devices(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,session_hash TEXT NOT NULL REFERENCES sessions(hash) ON DELETE CASCADE,platform TEXT NOT NULL CHECK(platform IN ('web','android')),address_hash TEXT NOT NULL UNIQUE,value TEXT NOT NULL,created INTEGER NOT NULL,revoke_hash TEXT);
+CREATE INDEX IF NOT EXISTS push_devices_user ON push_devices(user_id);
+CREATE TABLE IF NOT EXISTS push_outbox(id TEXT PRIMARY KEY,device_id TEXT NOT NULL REFERENCES push_devices(id) ON DELETE CASCADE,invite_id TEXT NOT NULL REFERENCES invites(id) ON DELETE CASCADE,attempts INTEGER NOT NULL DEFAULT 0,next_attempt INTEGER NOT NULL,UNIQUE(device_id,invite_id));
+CREATE INDEX IF NOT EXISTS push_outbox_due ON push_outbox(next_attempt);

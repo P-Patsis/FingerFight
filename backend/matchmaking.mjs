@@ -23,6 +23,7 @@ async function state(db,user,client){
  const own=await ticket(db,user,client);await q(db,'UPDATE queue_tickets SET expires=? WHERE player=? AND client=?',now()+90,user,client).run();
  if(!own.pair_id)return{state:own.ready?'waiting':'preparing',peer:own.peer};
  const pair=await q(db,'SELECT p.*,m.host,m.guest,m.settings,m.state match_state FROM queue_pairs p JOIN matches m ON m.id=p.id WHERE p.id=?',own.pair_id).first();
+ if(pair&&pair.state!=='cancelled'&&pair.match_state==='done')return{state:'finished',peer:own.peer};
  need(pair&&pair.state!=='cancelled'&&pair.match_state!=='abandoned'&&pair.match_state!=='done'&&pair.expires>now(),409,'The other player left; start another search');
  if(pair.state==='connected')await q(db,"UPDATE queue_pairs SET expires=? WHERE id=? AND state='connected' AND expires>?",now()+120,pair.id,now()).run();
  const role=pair.host===user?'host':'guest';
