@@ -5,7 +5,7 @@
 The new build adds optional passkey sign-in, accepted friends, linked invitations, mutually confirmed friend rankings and per-device notification controls. Native passkeys use the system browser and a one-use PKCE-bound return grant. Guest play remains available. Website push is configured; native background push requires the owner Firebase configuration described in [PUSH_SETUP.md](PUSH_SETUP.md). The FCM SDK defaults to no auto-registration/analytics collection, and availability is gated on both packaged and server configuration. OS delivery and native passkey prompts still need physical-device acceptance.
 
 
-Final APK 0.2.0/code 11 builds in 3m56s; package/version, bundled source/plugins/model/music and Android v2 signature verify. Delivered to phone Downloads/FingerFight-0.2.0-debug.apk, 21,388,118 bytes, SHA-256 `8a50cce5de99d6774b350aba93af954763cd821a8d29c9846aada5a541cd5501`; Downloads checksum matches.
+Final APK 0.2.0/code 11 builds in 3m22s; package/version, bundled source/plugins/model/music and Android v2 signature verify. Delivered to phone Downloads/FingerFight-0.2.0-debug.apk, 21,388,118 bytes, SHA-256 `c55c16dc58090c38025e927ea12f7ffefc98af1bbc2baea5cae24e6b189324a1`; Downloads checksum matches.
 
 Capacitor 8 packages the game and its hand-tracking model locally in Android System WebView. It is separate from Cloudflare, which now runs the shared guest matchmaking API and TURN relay. The APK does not load the game from GitHub Pages; it shares the same backend with website players.
 
