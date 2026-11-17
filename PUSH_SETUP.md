@@ -12,6 +12,12 @@ For sending, create a dedicated service account with the **Firebase Cloud Messag
 
 Tell the agent the project ID and the exact downloaded filenames. The terminal shares this phone's Downloads folder, so named files can be read directly without pasting credentials. After the private sender key is safely stored as a Worker secret, remove the shared-Downloads copy yourself; keep a private backup if needed.
 
+## Dashboard transfer when Android blocks Downloads reads
+
+Owner reports `fingerfight-invite-sender` service account created with the requested messaging role. Verify sending access during acceptance; its credential is still pending.
+
+Use Google Cloud IAM service accounts for project `fingerfight-830b2`, open the sender account, Keys → Add key → Create new key → JSON. Keep that private file out of chat. Open it on the phone and copy its entire JSON into Cloudflare Worker `fingerfight-api` → Settings → Variables and Secrets → Add, type Secret, name `FCM_SERVICE_ACCOUNT`, then deploy. Existing TURN secrets stay unchanged. Ensure the Firebase Cloud Messaging API is enabled in that Google project. This transfers the sender directly into encrypted server storage without requiring Termux to read the shared download. Do not claim sender authentication or device delivery verified merely because the secret exists. Rebuild Android after confirming server configuration.
+
 ## Operator configuration
 
 `node tools/configure-fcm.mjs <google-services.json path> <service-account.json path>` validates that both belong to the same project, requires the debug app client, checks the RSA key, obtains a scoped OAuth token, and performs an FCM **validate-only** request (no notification sent). It then copies app configuration into the ignored Android path and stores the sender JSON in encrypted Worker secret **FCM_SERVICE_ACCOUNT**. It never logs credentials and refuses silently switching an already configured project.
