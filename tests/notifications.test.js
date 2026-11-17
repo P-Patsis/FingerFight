@@ -16,5 +16,5 @@ test('pending revocation can finish after logout without retaining an account be
  const f=fixture();f.api.user=null;const n=new InviteNotifications(f.api,{...f,native:false});n.save({owner:'old-account',id:crypto.randomUUID(),revokeToken:'r'.repeat(43),enabled:false,pendingDisable:true});await n.sync();assert.ok(f.calls.some(x=>x.path==='/notifications/revoke'));assert.equal(n.state().pendingDisable,false);
 });
 test('unsupported native push remains unavailable and never calls registration',async()=>{
- const f=fixture(),plugin={addListener(){return Promise.resolve({remove(){}});},requestPermissions(){throw new Error('must not prompt');}};const n=new InviteNotifications(f.api,{...f,native:true,plugin,nativeConfigured:()=>false});await n.load();assert.equal(n.available,false);await assert.rejects(()=>n.enable(),/not available/);
+ let unregisters=0;const f=fixture(),plugin={addListener(){return Promise.resolve({remove(){}});},requestPermissions(){throw new Error('must not prompt');},unregister(){unregisters++;}};const n=new InviteNotifications(f.api,{...f,native:true,plugin,serviceWorker:{ready:new Promise(()=>{})},nativeConfigured:()=>false});await n.load();assert.equal(n.available,false);await assert.rejects(()=>n.enable(),/not available/);await n.disable();assert.equal(unregisters,0);assert.equal(n.state().pendingDisable,false);
 });

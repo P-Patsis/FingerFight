@@ -38,10 +38,10 @@ export class InviteNotifications {
  }
  disable(){if(this.disabling)return this.disabling;const job=(async()=>{if(this.enabling)await this.enabling.catch(()=>{});return this.disableNow();})();this.disabling=job;const clear=()=>{if(this.disabling===job)this.disabling=null;};job.then(clear,clear);return job;}
  async disableNow(){
-  const state=this.state();let stopped=false;
+  const state=this.state();let stopped=!state.id;
   if(state.id&&state.revokeToken)try{await this.api.request('/notifications/revoke','POST',{id:state.id,token:state.revokeToken});stopped=true;}catch{}
   else if(state.id&&state.owner===this.api.user?.id)try{await this.api.request('/notifications/unsubscribe','POST',{id:state.id});stopped=true;}catch{}
-  if(this.native)try{await this.push().unregister();}catch{}
+  if(this.native){if(this.nativeConfigured())try{await this.push().unregister();}catch{}}
   else try{const registration=await this.serviceWorker?.ready,subscription=await registration?.pushManager?.getSubscription();if(!subscription||await subscription.unsubscribe())stopped=true;}catch{}
   this.save({...state,enabled:false,pendingDisable:!stopped});if(!stopped)throw new Error('Notification removal will finish when you are online');
  }
