@@ -8,7 +8,7 @@ export function validateAssignment(state){
  return p;
 }
 export class Matchmaker{
- constructor(service,{storage=globalThis.sessionStorage,pollMs=2000,timeout=120000}={}){this.service=service;this.storage=storage;this.pollMs=pollMs;this.timeout=timeout;this.client=null;this.stopped=false;this.timer=null;this.lastLease=0;this.storageKey='ff-search:'+service.base;}
+ constructor(service,{storage=globalThis.sessionStorage,pollMs=2000,timeout=120000,renewMs=20000}={}){this.service=service;this.storage=storage;this.pollMs=pollMs;this.timeout=timeout;this.renewMs=renewMs;this.client=null;this.stopped=false;this.timer=null;this.lastLease=0;this.storageKey='ff-search:'+service.base;}
  async cancel(){this.stopped=true;clearTimeout(this.timer);const client=this.client;this.client=null;if(!client)return;try{await this.pendingJoin;}catch{}try{if(this.storage?.getItem(this.storageKey)===client)this.storage.removeItem(this.storageKey);}catch{}try{await this.service.request('/queue/cancel','POST',{client});}catch{ /* cancellation is also covered by the server lease */ }}
  async start(name,{openPeer,onPair,connect,onStatus=()=>{},onRelay=()=>{}}){
   this.stopped=false;
@@ -33,9 +33,9 @@ export class Matchmaker{
  }
  renew(client,onStatus){
   this.timer=setTimeout(async()=>{if(this.stopped||client!==this.client)return;
-   try{await this.service.request('/queue/poll','POST',{client});this.lastLease=Date.now();this.onRelay?.(await this.service.prepareRelay());}
+   try{const state=await this.service.request('/queue/poll','POST',{client});if(state.state==='finished'){await this.cancel();return;}this.lastLease=Date.now();this.onRelay?.(await this.service.prepareRelay());}
    catch(e){if([401,403,409].includes(e.status)||Date.now()-this.lastLease>90000){await this.cancel();onStatus('Matchmaking session ended. Finish this game, then search again.');return;}}
    if(!this.stopped)this.renew(client,onStatus);
-  },20000);this.timer.unref?.();
+  },this.renewMs);this.timer.unref?.();
  }
 }

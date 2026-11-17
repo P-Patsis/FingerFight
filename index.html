@@ -72,11 +72,11 @@
   <section id="social" class="screen" hidden>
     <button id="socialBack" class="btn ghost">Back</button><h2>Account &amp; friends</h2>
     <p id="socialIdentity"></p><input id="socialName" maxlength="24" aria-label="Account display name" placeholder="Display name">
-    <div class="row center"><button id="accountCreate" class="btn">Create passkey account</button><button id="accountLogin" class="btn">Sign in with passkey</button><button id="accountLogout" class="btn ghost" hidden>Sign out</button><button id="accountDelete" class="btn ghost" hidden>Delete account</button></div>
-    <div class="row"><input id="friendCode" maxlength="12" aria-label="Friend code" placeholder="Friend code"><button id="friendAdd" class="btn">Add friend</button></div>
-    <button id="socialRefresh" class="btn ghost">Refresh</button>
+    <div class="row center"><button id="accountCreate" class="btn">Create passkey account</button><button id="accountLogin" class="btn">Sign in with passkey</button><button id="accountCopyCode" class="btn ghost" hidden>Copy friend code</button><button id="accountSaveName" class="btn ghost" hidden>Save name</button><button id="accountLogout" class="btn ghost" hidden>Sign out</button><button id="accountDelete" class="btn ghost" hidden>Delete account</button></div>
+    <div id="socialMembers" hidden><div class="row"><input id="friendCode" maxlength="12" aria-label="Friend code" placeholder="Friend code"><button id="friendAdd" class="btn">Add friend</button></div>
+    <button id="inviteNotify" class="btn ghost" hidden>Enable invite notifications</button><button id="socialRefresh" class="btn ghost">Refresh</button>
     <h3>Friends</h3><div id="socialFriends"></div><h3>Invitations</h3><div id="socialInvites"></div>
-    <h3>Blocked players</h3><div id="socialBlocks"></div><h3 id="socialBoardTitle">Friend leaderboard</h3><div id="socialBoard"></div><p id="socialMsg" class="msg" role="status"></p>
+    <h3>Blocked players</h3><div id="socialBlocks"></div><h3 id="socialBoardTitle">Friend leaderboard</h3><div id="socialBoard"></div><p class="hint">New online matches count after both players confirm the result.</p></div><p id="socialMsg" class="msg" role="status"></p>
   </section>
 
   <!-- ===== Store (cosmetics: browse, preview, unlock, equip) ===== -->
@@ -224,7 +224,7 @@
   <section id="over" class="screen" hidden>
     <div class="topbar"><button id="overLeave" class="btn small danger">← Leave room</button></div>
     <h2 id="overTitle" class="logo small">K.O.</h2>
-    <p id="overText" class="tag"></p>
+    <p id="matchRecordStatus" class="msg" role="status" hidden></p><p id="overText" class="tag"></p>
     <div id="collage" class="collage" hidden></div>
     <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-label="Advertisement space">Advertisement</div>
     <div id="overStyleSlot" hidden></div>

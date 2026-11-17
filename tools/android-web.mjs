@@ -1,5 +1,5 @@
 // Assemble only the public game shell, never the backend or repository files.
-import { mkdir, copyFile, readFile, writeFile, cp, rm } from 'node:fs/promises';
+import { mkdir, copyFile, readFile, writeFile, cp, rm, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { shellFiles } from './stamp.mjs';
 const out = new URL('../dist/android-web/', import.meta.url);
@@ -30,7 +30,8 @@ await writeFile(main, (await readFile(main, 'utf8')).replace("if (typeof navigat
 console.log('Android web shell assembled; local hand model; no service worker.');
 
 await copyFile(new URL('../node_modules/@capacitor/core/dist/capacitor.js', import.meta.url), new URL('vendor/capacitor.js', out));
-await copyFile(new URL('android-runtime.js', import.meta.url), new URL('js/android-runtime.js', out));
+let pushConfigured=false;try{await access(new URL('../android/app/google-services.json',import.meta.url));pushConfigured=true;}catch{}
+await writeFile(new URL('js/android-runtime.js',out),'window.FF_ANDROID_PUSH_CONFIGURED = '+pushConfigured+';\n'+await readFile(new URL('android-runtime.js',import.meta.url),'utf8'));
 const index = new URL('index.html', out);
 await writeFile(index, (await readFile(index, 'utf8')).replace('</body>', '<script src="vendor/capacitor.js"></script><script type="module" src="js/android-runtime.js"></script></body>'));
 

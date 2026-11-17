@@ -59,7 +59,7 @@ test('the camera test screen opens and closes without a camera (simulator), leav
 test('updated clients ship STUN without a reusable TURN password and require the authenticated backend', async () => {
   const fresh = await import('../js/ice.js?fresh');
   assert.equal(fresh.hasRelay(),false);assert.deepEqual(fresh.turnServers(),[]);assert.ok(fresh.STUN_SERVERS.length>=2);
-  const config=await import('../js/service-config.js');assert.equal(new URL(config.API_URL).protocol,'https:');assert.equal(config.ACCOUNTS_ENABLED,false);
+  const config=await import('../js/service-config.js');assert.equal(new URL(config.API_URL).protocol,'https:');assert.equal(config.ACCOUNTS_ENABLED,true);
 });
 test('relay refresh updates active ICE and future dials while preserving relay-only policy and the data channel',()=>{
  const l=new Link({}, {relay:true});let seen,closed=false;

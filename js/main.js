@@ -43,6 +43,9 @@ import { fighterSVG, backgroundHTML, BACKGROUNDS, GESTURE_NAMES } from './fighte
 import { isRudeMessage as looksRude, loadTuning } from './gestures.js';
 import { createDebugPanel } from './debug.js';
 import { hasRelay } from './ice.js';
+import {submitMatchResult,MATCH_ID,mergeScoreRounds} from './match-results.js';
+import {InviteNotifications} from './notifications.js';
+import {completeNativeSignIn} from './native-auth.js';
 
 const missingIds = [];
 /** A missing element must not stop the whole script (every handler after it would stay dead); it is reported on screen instead. */
@@ -75,6 +78,7 @@ let camBusy = false, camAutoFailed = false;   // auto-start: one attempt per roo
 let game = null;                        // see logic.js newGame()
 let round = null;                       // the round in progress
 let streak = { side: null, n: 0 };      // consecutive landed hits by one side (combo pulse)
+let scoreRounds=[];
 let fightLog = [];                       // every resolved round of this game, for the final collage
 let inGame = false;
 const wake = createWakeLock();                 // screen stays on while the game screen is showing
@@ -82,7 +86,9 @@ let idle = newIdle();                          // consecutive rounds each player
 let token = 0;                          // bumped to cancel pending timeouts from an old round or game
 let bannerTimer = null;
 
+let socialController=null;
 let privateRelayTimer=null;
+let serverMatchId=null,friendOpponentId=null,serverMatchUsed=false,serverStartBusy=false;
 let computer=null,customiseReturn='menu',editingMatch=false,camPreparation=null,storePreviewId=null,storePreviewColor=null;
 let matchKind = null;                   // 'private' (friends, long code) | 'random' (strangers: puppet/skeleton only)
 let roomCodeRaw = '';                   // the private match code, without dashes
@@ -151,6 +157,7 @@ globalThis.addEventListener?.('popstate', () => {
 });
 
 function show(id) {
+  if(id!=='social')socialController?.close();
   if (tryOn.on || tryOn.busy) stopTryOn();                // the try-on camera never outlives its screen
   if (cust.on && id !== currentScreen) {leaveCust();editingMatch=false;}           // and the Profile's customise mode ends with the Profile
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
@@ -316,8 +323,14 @@ function closeMatchCustomise(){
 }
 $('overCustomise').onclick=openMatchCustomise;
 renderWho();
-const service=new Service(API_URL),social=initSocial(service,{getName:()=>myName(),onBack:()=>show('menu'),invite:async target=>{await $('createBtn').onclick();if(!roomCodeRaw)throw new Error('Could not open a room');await service.request('/invites','POST',{target,code:roomCodeRaw});$('lobbyMsg').textContent='Invitation sent. You will approve your friend when they join.';},join:async code=>{$('codeInput').value=code;await $('joinBtn').onclick();}});
-$('accountBtn').hidden=!ACCOUNTS_ENABLED||!service.enabled||globalThis.Capacitor?.isNativePlatform?.()===true;$('accountBtn').onclick=()=>{show('social');social.open();};
+const service=new Service(API_URL);
+const notifications=new InviteNotifications(service,{onInvite:id=>{if(inGame||!['menu','social'].includes(currentScreen)){showBanner('FRIEND INVITE','Open Account & friends after this match.',3500);return;}show('social');void social.open();}});
+const social=initSocial(service,{getName:()=>myName(),onBack:()=>show('menu'),invite:async target=>{await $('createBtn').onclick();if(!roomCodeRaw)throw new Error('Could not open a room');try{const tracked=await service.request('/matches','POST',{opponent:target,settings});serverMatchId=tracked.id;friendOpponentId=target;await service.request('/invites','POST',{target,code:roomCodeRaw,match:tracked.id});$('lobbyMsg').textContent='Invitation sent. You will approve your friend when they join.';}catch(e){$('lobbyMsg').textContent=e.message||'Could not send invitation';throw e;}},join:async(code,id)=>{$('codeInput').value=code;await $('joinBtn').onclick();if(id)adoptTrackedMatch(id);},leaderboards:true,notifications});socialController=social;
+globalThis.addEventListener?.('online',()=>{void notifications.sync().catch(()=>{});});
+if(notifications.state().pendingDisable)void notifications.sync().catch(()=>{});
+$('accountBtn').hidden=!ACCOUNTS_ENABLED||!service.enabled;$('accountBtn').onclick=()=>{show('social');social.open();};
+globalThis.addEventListener?.('ff-app-url',async event=>{try{if(await completeNativeSignIn(service,event.detail?.url)){if(!inGame){show('social');social.open();}}}catch(e){$('socialMsg').textContent=e.message||'Could not sign in';}});
+if(location.hash==='#account'||/^#invite=[a-f0-9-]{36}$/.test(location.hash)){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>{show('social');void social.open();},0);}
 
 function menuMsg(text, err = false) {
   $('menuMsg').textContent = text;
@@ -503,7 +516,7 @@ async function findQueuedOpponent() {
     await finder.start(myName(),{
       openPeer:async (peer,iceServers)=>{if(!active())throw new Error('Search cancelled');link=makeLink(true,iceServers);await link.host(peer);if(!active())throw new Error('Search cancelled');},
       onPair:pair=>{
-        if(!active())throw new Error('Search cancelled');me=pair.role;names={host:'',guest:''};names[me]=myName();settings=normalizeSettings(pair.settings);
+        if(!active())throw new Error('Search cancelled');me=pair.role;serverMatchId=pair.id;names={host:'',guest:''};names[me]=myName();settings=normalizeSettings(pair.settings);
         link.expectPair(pair);if(me==='guest')link.setToken(newToken());
         paired=new Promise(resolve=>{if(me==='host')hostWaiter=resolve;else matchWaiter=resolve;});
         menuMsg('Opponent found. Connecting…');
@@ -613,14 +626,14 @@ const SESSION_KEY = 'ff-session';
 const SESSION_MAX_AGE = 3 * 60 * 1000;     // long enough to reload the page or switch apps, short enough to never be stale
 function saveSession() {
   if (matchKind !== 'private' || !me || (me === 'guest' && !link?.token)) return;
-  store.set(SESSION_KEY, JSON.stringify({ role: me, code: roomCodeRaw, token: link?.token || null, names, t: Date.now() }));
+  store.set(SESSION_KEY, JSON.stringify({ role: me, code: roomCodeRaw, token: link?.token || null, names,serverMatchId,friendOpponentId,serverMatchUsed,t: Date.now() }));
 }
 function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ } updateRejoin(); }
 function loadSession() {
   try {
     const x = JSON.parse(store.get(SESSION_KEY) || 'null');
     if (!x || (x.role !== 'host' && x.role !== 'guest') || x.code?.length !== CODE_LEN || (x.token ? !validToken(x.token) : x.role !== 'host') || Date.now() - x.t > SESSION_MAX_AGE) return null;
-    return { role: x.role, code: cleanCode(x.code), token: x.token || null, names: { host: sanitizeName(x.names?.host, 20), guest: sanitizeName(x.names?.guest, 20) } };
+    return { role: x.role, code: cleanCode(x.code), token: x.token || null, names: { host: sanitizeName(x.names?.host, 20), guest: sanitizeName(x.names?.guest, 20) },serverMatchId:MATCH_ID.test(x.serverMatchId||'')?x.serverMatchId:null,friendOpponentId:MATCH_ID.test(x.friendOpponentId||'')?x.friendOpponentId:null,serverMatchUsed:!!x.serverMatchUsed };
   } catch { return null; }
 }
 function updateRejoin() {
@@ -654,7 +667,7 @@ function backToLobby(msg, keepGuest = false, keepReady = false) {
   releaseCamera();
   editingMatch=false;customiseReturn='menu';
   round = null; inGame = false; game = null; autoStarted = false; opponentGone = false;
-  fightLog = []; streak = { side: null, n: 0 };
+  fightLog = [];scoreRounds=[]; streak = { side: null, n: 0 };
   idle = newIdle();
   if (!keepGuest) { names.guest = ''; pendingGuest = null; guestToken = null; }
   if (!keepReady || matchKind!=='computer') ready = { host: matchKind==='computer'&&camReady, guest:matchKind==='computer' };      // keepReady: both cameras are already enabled, so nobody could ready up again
@@ -678,10 +691,10 @@ function onReconnected() {
     if (!round?.resolved) game.round = Math.max(0, (round?.n || game.round) - 1);
     token++;
     round = null; releaseCamera();
-    send({ t: 'sync', health: game.health, round: game.round });
+    send({ t: 'sync', health: game.health, round: game.round,scoreRounds });
     later(1500, nextRound);
   } else if (inGame && game?.over) {
-    send({ t: 'sync', health: game.health, round: game.round, over: true, winner: game.winner });
+    send({ t: 'sync', health: game.health, round: game.round, over: true, winner: game.winner,scoreRounds });
   }
 }
 
@@ -690,6 +703,7 @@ function applySync(m) {
   const hp = v => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
   const h = hp(m.health?.host), g = hp(m.health?.guest);
   if (h === null || g === null || !Number.isInteger(m.round) || m.round < 0 || m.round > 999) return;
+  scoreRounds=mergeScoreRounds(scoreRounds,m.scoreRounds,settings,m.round);
   game.health = { host: h, guest: g };
   game.round = m.round;
   renderHp('host'); renderHp('guest');
@@ -706,7 +720,7 @@ $('rejoinBtn').onclick = async () => {
   const x = loadSession();
   if (!x) { updateRejoin(); return; }
   resetAll();
-  matchKind = 'private'; me = x.role; names = { ...x.names }; roomCodeRaw = x.code;
+  matchKind = 'private'; me = x.role; names = { ...x.names }; roomCodeRaw = x.code;serverMatchId=x.serverMatchId;friendOpponentId=x.friendOpponentId;serverMatchUsed=x.serverMatchUsed;
   menuMsg('Rejoining…');
   const attempt=token;let servers;
   try{servers=await preparePrivateRelay();}catch(e){if(attempt!==token)return;menuMsg(e.message||'Could not prepare multiplayer.',true);resetAll();return;}
@@ -810,6 +824,7 @@ function onMessage(m) {
       if (me !== 'guest' || !names.host || editingMatch || !ready.guest || !camReady) break;
       settings = normalizeSettings(m.settings);
       startGame();
+      if(matchKind==='private'&&m.matchId)adoptTrackedMatch(m.matchId);
       break;
     case 'sync':                                    // guest: the host's view of the fight after a reconnect
       if (me !== 'guest' || !inGame || !game) break;
@@ -1017,7 +1032,7 @@ $('shareBtn').onclick = async () => {
 $('leaveBtn').onclick = () => { if (askLeave(currentScreen)) leave(); };
 $('gameMenuBtn').onclick=()=>{$('gameMenu').hidden=!$('gameMenu').hidden;};
 $('gameResume').onclick=()=>{$('gameMenu').hidden=true;};
-$('gameForfeit').onclick=()=>{if(!askLeave('game'))return;send({t:'forfeit',n:round?.n||0});if(inGame&&game&&!game.over)endOfMatch(false);clearSession();resetAll();show('menu');menuMsg('Match forfeited.');};
+$('gameForfeit').onclick=()=>{if(!askLeave('game'))return;send({t:'forfeit',n:round?.n||0});if(serverMatchId&&service.enabled)void service.request('/matches/'+serverMatchId+'/concede','POST',{}).catch(()=>{});if(inGame&&game&&!game.over)endOfMatch(false);clearSession();resetAll();show('menu');menuMsg('Match forfeited.');};
 $('overLeave').onclick = () => { if (askLeave(currentScreen)) leave(); };
 $('camBtn').onclick = enableCamera;
 
@@ -1068,9 +1083,16 @@ async function enableCameraNow() {
   renderLobby();
 }
 
-function launchMatch(){
+async function launchMatch(){
   if(me!=='host'||editingMatch||cust.on||!ready.host||!ready.guest||!link?.open)return;
-  stopTryOn();send({t:'start',settings});startGame();
+  if(serverStartBusy)return;const attempt=token,room=link;
+  if(matchKind==='private'&&friendOpponentId&&serverMatchUsed){
+    const pendingStart={};serverStartBusy=pendingStart;
+    try{const next=await service.request('/matches','POST',{opponent:friendOpponentId,settings});if(token!==attempt||link!==room)return;serverMatchId=next.id;}
+    catch{if(token!==attempt||link!==room)return;serverMatchId=null;}finally{if(serverStartBusy===pendingStart)serverStartBusy=false;}
+    if(!ready.host||!ready.guest||editingMatch||cust.on)return;
+  }
+  stopTryOn();send({t:'start',settings,...(serverMatchId?{matchId:serverMatchId}:{})});startGame();
 }
 $('startBtn').onclick=()=>{
   if(editingMatch||cust.on||tryOn.on||tryOn.busy){$('custDone').onclick();renderLobby();return;}
@@ -1694,15 +1716,25 @@ $('storeClear').onclick = () => { inv.clear(); syncStyle(); };
 // ---------------------------------------------------------------------------------------------
 // Game
 // ---------------------------------------------------------------------------------------------
+function adoptTrackedMatch(id){
+  if(!service.enabled||!MATCH_ID.test(id||''))return;const room=link,currentGame=game;
+  void service.request('/matches/'+id).then(async result=>{
+    if(link!==room||game!==currentGame)return;const record=result.match;
+    if(record.guest!==service.user?.id||!['pending','active'].includes(record.state))return;
+    if(record.state==='pending')await service.request('/matches/'+id+'/accept','POST',{accept:true});
+    if(link!==room||game!==currentGame)return;serverMatchId=id;friendOpponentId=record.host;serverMatchUsed=!!game;saveSession();
+  }).catch(()=>{});
+}
 function startGame() {
   setGen({ sd: newSeed() });                          // a new painting for every match: my seed, sent with each picture, so the opponent draws the same one
-  saveSession();
+  serverMatchUsed=true;saveSession();
   token++;
   inGame = true;
+  $('matchRecordStatus').hidden=true;$('matchRecordStatus').textContent='';
   game = newGame(settings);
   if(matchKind==='computer')computer?.start();
   round = null;
-  fightLog = []; streak = { side: null, n: 0 };
+  fightLog = [];scoreRounds=[]; streak = { side: null, n: 0 };
   setScene();
   for (const side of ['host', 'guest']) {
     const f = fighterEl(side);
@@ -1952,6 +1984,15 @@ function endOfMatch(won) {
   if (!game || game.statsDone) return;
   game.statsDone = true;
   matchStats().recordMatch(won);
+  if(matchKind!=='computer'&&serverMatchId&&game.over&&game.winner){
+    const id=serverMatchId,currentGame=game,st=$('matchRecordStatus');st.hidden=false;st.textContent='Saving match result…';
+    void submitMatchResult(service,id,settings,scoreRounds).then(async result=>{
+      if(game!==currentGame||serverMatchId!==id)return;
+      st.textContent=result?.confirmed?'Result saved':'Waiting for opponent confirmation';
+      if(!result?.confirmed){await sleep(1800);const saved=await service.request('/matches/'+id);if(game===currentGame&&serverMatchId===id&&saved.match?.state==='done')st.textContent='Result saved';}
+    }).catch(()=>{if(game===currentGame&&serverMatchId===id)st.textContent='This result could not be saved online';});
+  }
+
 }
 
 /** The finger limit for the round on screen (the host's setting, lower later in the match when "fewer fingers" is on). */
@@ -1974,6 +2015,7 @@ function tryResolve() {
   if (pointer === me) { if (!reveal.noHand) matchStats().recordShown(reveal.count); }          // what I held up
   else if (guessMsg.guess !== null) matchStats().recordGuess(guessMsg.guess);                  // what I guessed
   fightLog.push({ n: round.n, pointer, reveal, guessMsg, reason: result.reason });
+  scoreRounds[round.n-1]=[reveal.noHand?null:reveal.count,guessMsg.guess];
   const before = { ...game.health };
   game = applyResult(game, result);
   // anti-grief: both phones see the same two messages, so both reach the same verdict
@@ -2189,6 +2231,8 @@ $('againBtn').onclick = () => {
 // Reset
 // ---------------------------------------------------------------------------------------------
 function resetAll() {
+  serverMatchId=null;friendOpponentId=null;serverMatchUsed=false;serverStartBusy=false;
+  $('matchRecordStatus').hidden=true;$('matchRecordStatus').textContent='';
   clearInterval(privateRelayTimer);privateRelayTimer=null;
   deadlines.clear();roundTick=null;
   const oldQueue=queueSearch;queueSearch=null;if(oldQueue)queueCleanup=Promise.all([queueCleanup,oldQueue.cancel()]).then(()=>{});
@@ -2196,7 +2240,7 @@ function resetAll() {
   inGame = false;
   round = null;
   game = null;
-  fightLog = []; streak = { side: null, n: 0 };
+  fightLog = [];scoreRounds=[]; streak = { side: null, n: 0 };
   fx.clearFx();
   releaseCamera();
   if (link) { link.closed = true; try { link.close(); } catch { /* ignore */ } }

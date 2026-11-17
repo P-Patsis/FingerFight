@@ -25,3 +25,6 @@ artifacts/*.apk
 # Upload bundles and private signing material
 artifacts/*.aab
 *.jks
+
+# Firebase app configuration is supplied locally; server keys remain Worker secrets.
+android/app/google-services.json

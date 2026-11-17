@@ -20,7 +20,7 @@ for(const first of ['controller','opponent'])test('game controller uses the shar
   await import('../../js/main.js?queue-controller-'+first);
   const mine=first==='controller'?browser.byId.get('randomBtn').onclick():null;
   if(mine)await until(()=>network.size===1,'controller registers first',5000);
-  assert.equal(browser.byId.get('accountBtn').hidden,true,'guest matching does not enable the separately gated social rollout');
+  assert.equal(browser.byId.get('accountBtn').hidden,false,'optional accounts are available alongside guest matching');
   const service=new Service('https://api.test');opponent=new Matchmaker(service,{pollMs:100});
   const other=opponent.start('Other player',{
    openPeer:async (id,iceServers)=>{otherLink=new Link({onOpen:()=>{if(pair?.role==='guest')otherLink.send({t:'hello',v:2,kind:'random',name:'Other player',token:otherLink.token,pair:otherLink.pairProof()});},onMessage:m=>{got.push(m);if(m.t==='hello'){otherLink.setToken(m.token);otherLink.send({t:'welcome',v:2,kind:'random',name:'Other player',yourName:m.name,settings:{},ready:false,pair:otherLink.pairProof()});}}},{relay:true,iceServers});await otherLink.host(id);},

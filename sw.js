@@ -2,9 +2,9 @@
 //  - this site's files: network first (so an update arrives at once), the cached copy when offline
 //  - the hand-tracking library and model (big, versioned URLs): cache first, so they download only once
 // Match traffic is WebRTC, which a service worker never sees.
-const VERSION = 'ff-8058da00';
+const VERSION = 'ff-35d1cd60';
 const HEAVY_CACHE = 'ff-heavy';           // the 17 MB hand model lives in its own cache, so a site update never makes it download again
-const SHELL = ['js/special-skins.js', 'js/vanish-bg.js', 'js/vanish-engine.js', 'js/cloak.js', 'js/handfx.js', 'assets/skins/comic.json', 'assets/skins/elemental.json', 'assets/skins/chameleon.json', 'assets/skins/ghost.json', 'assets/items/knuckleclaws.json', './', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
+const SHELL = ['account.html','js/account-page.js','js/passkey.js','js/native-auth.js','js/notifications.js','js/match-results.js','js/special-skins.js', 'js/vanish-bg.js', 'js/vanish-engine.js', 'js/cloak.js', 'js/handfx.js', 'assets/skins/comic.json', 'assets/skins/elemental.json', 'assets/skins/chameleon.json', 'assets/skins/ghost.json', 'assets/items/knuckleclaws.json', './', 'index.html', 'css/style.css', 'vendor/peerjs.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
   'js/main.js', 'js/preview-motion.js', 'js/dev-tools.js', 'js/round-clock.js', 'js/preferences.js', 'js/panel-scroll.js', 'js/logic.js', 'js/net.js', 'js/relay-renewal.js', 'js/hands.js', 'js/avatars.js', 'js/fighters.js',
   'js/gestures.js', 'js/audio.js', 'js/fx.js', 'js/debug.js', 'js/ice.js', 'js/names.js',
   'js/wake.js', 'js/stats.js', 'js/looks.js', 'js/colorpick.js', 'js/generated.js', 'js/puppet.js', 'js/skins.js', 'js/layers.js', 'js/particles.js', 'js/element-motion.js', 'js/charge.js', 'js/element-body.js', 'js/fit.js', 'js/computer.js', 'js/service-config.js', 'js/service.js', 'js/matchmaking.js', 'js/social.js', 'js/cosmetics.js',
@@ -49,4 +49,24 @@ self.addEventListener('fetch', e => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req).then(r => r || caches.match('index.html'))));
+});
+
+// Friend invites only. A tap opens the inbox; it never accepts a match automatically.
+const inviteIdOK=id=>typeof id==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id);
+self.addEventListener('push',event=>{
+ event.waitUntil((async()=>{
+  let data;try{data=event.data?.json();}catch{return;}
+  if(data?.type!=='friend-invite'||!inviteIdOK(data.inviteId))return;
+  const name=typeof data.name==='string'?data.name.slice(0,24):'A friend';
+  await self.registration.showNotification('Finger Fight',{body:name+' invited you to play',icon:new URL('icons/icon-192.png',self.registration.scope).href,tag:'invite-'+data.inviteId,data:{inviteId:data.inviteId}});
+ })());
+});
+self.addEventListener('notificationclick',event=>{
+ event.notification.close();const id=event.notification.data?.inviteId;if(!inviteIdOK(id))return;
+ event.waitUntil((async()=>{
+  const target=new URL('./',self.registration.scope);target.hash='invite='+id;
+  const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  const existing=windows.find(client=>{try{const url=new URL(client.url);return url.origin===target.origin&&url.pathname.startsWith(target.pathname)&&!url.pathname.endsWith('account.html');}catch{return false;}});
+  if(existing){await existing.focus();existing.postMessage({type:'friend-invite',inviteId:id});}else await self.clients.openWindow(target.href);
+ })());
 });
