@@ -1,5 +1,12 @@
 # Finger Fight: decisions
 
+## 2026-11-16 — Optional identity and invite notifications across web and Android
+
+- Keep guest play independent. Use existing passkeys on the website. On Android use a browser-hosted passkey ceremony and a five-minute initiating handoff; return a one-minute, one-use PKCE-bound grant through a fixed deep link. Keep bearer tokens out of URLs and persist the resulting app session locally. No unimplemented native Credential Manager/Digital Asset Links dependency is required for this browser flow.
+- Friend rankings count server-recomputed terminal transcripts only after both authenticated participants agree; explicit authenticated concession can record its own loss. Keep gameplay timing/P2P hand rendering independent of result submission. Never upload old local win totals or label these camera-verified/cheat-proof scores.
+- Push is optional per device/account: no permission prompt on app launch, accepted-friend invitations only, no room code or account credential in a push, user taps Join separately. Web Push uses the WebCrypto-compatible RFC 8291/8292 library on Workers. Android uses the official Capacitor FCM plugin; disable default auto-init and analytics collection, and gate availability on both app and server configuration. FCM requires owner Firebase configuration; do not fake native delivery or replace it with periodic foreground polling.
+- Bound outbox work to four device deliveries per dispatch and recheck expiry/friendship/blocks. Avoid arbitrary outbound URLs and redirects. Revoke per-device delivery on logout/delete; use a device-scoped HMAC revoke secret for pending opt-out after sign-out instead of storing an old account token.
+
 ## 2026-11-16 — Use documented billing semantics for guarded pilot; withdraw premature escalation
 
 - Treat post-expiry connection acceptance as an enforcement observation, not proof of billable overshoot. Provider documentation explicitly separates billing/analytics cessation from delayed disconnect. Requiring immediate connection rejection as a prerequisite for any pilot was too strong. No owner support case is required to proceed. Preserve evidence and uncertainty; no independent billing-stop, instant-revocation or guaranteed-zero-charge claim.

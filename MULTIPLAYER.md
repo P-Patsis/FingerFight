@@ -2,6 +2,8 @@
 
 ## What currently ships
 
+The 0.2.0 update enables optional accounts and accepted friends on web/Android, friend invitations and server-recomputed, mutually confirmed match rankings. Notifications remain optional per device; browser Web Push is configured and Android FCM awaits owner configuration. See PUSH_SETUP.md. Guest matchmaking remains independent.
+
 Android runs its bundled copy of the game in Capacitor, at `https://localhost`. It does not open or send gameplay to the GitHub website. Website players load that same game from GitHub Pages. Both use PeerJS's public `0.peerjs.com` service to introduce peers, then exchange encrypted WebRTC data-channel messages.
 
 Private matches use a long random room code and allow direct connections, with TURN as a fallback. Random matches enforce TURN-only connections to hide the opponent's IP; updated clients receive temporary Cloudflare TURN credentials from the authenticated API. Provider secrets stay on the Worker. Old ExpressTURN credentials remain only for legacy clients until migration is accepted. Relay/network availability still affects whether a match connects.
@@ -36,7 +38,7 @@ Worker fingerfight-api and D1 fingerfight-prod are deployed through the approved
 
 Next acceptance: updated APK versus refreshed browser/second updated APK, Wi-Fi versus mobile data, including a match over ten minutes, background/reconnect, cancellation and rematch. Old ExpressTURN retirement follows successful acceptance. No support case or further owner token setup is required.
 
-Queue allocation records are not verified game results. The existing game still scores peer messages; the separately tested commit/reveal API is not yet wired to the round controller. Verified leaderboard UI stays disabled. Native passkey accounts remain hidden until Credential Manager/Digital Asset Links integration is implemented; native guest matching works independently. Browser passkey/friends features retain their existing deployment gates.
+Queue allocation alone does not credit wins. The game still resolves peer hand messages locally, then both participants submit a compact terminal round transcript. The server recomputes it and credits a match only when both agree; a participant may also explicitly concede its own loss. Rankings are friend-scoped and are labelled confirmed, not camera-verified or cheat-proof. Completed scored queue matches close their lease without a disconnect warning. Native account sign-in uses a hosted browser ceremony and one-use PKCE grant; permanent bearer tokens never enter the deep link. Accounts can be deleted after recent passkey authentication.
 
 ## Verification
 

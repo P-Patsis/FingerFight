@@ -2,6 +2,10 @@
 
 The guarded common backend is enabled. Website/APK 0.1.9 use the same guest queue and managed TURN credentials. Do not retire the old ExpressTURN credentials until the owner accepts updated physical clients.
 
+## Account/social update
+
+Optional accounts, friends, linked private invites and confirmed friend rankings are enabled in the 0.2.0 client update. The server recomputes terminal transcripts and requires both players' agreement rather than trusting uploaded win totals. Browser sign-in and the Android PKCE handoff passed deployed software-authenticator tests; actual OS prompts still need review. Web Push keys are configured, permission is only requested on explicit opt-in, and native FCM remains unavailable until owner Firebase configuration is supplied. See PUSH_SETUP.md. No new Cloudflare token or paid Workers upgrade is needed.
+
 ## Verified
 
 - Scoped project-local Cloudflare CLI login, Worker fingerfight-api and D1 fingerfight-prod; no paid Workers upgrade.

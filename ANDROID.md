@@ -1,8 +1,15 @@
 # Android prototype
 
+## Accounts/social update — 0.2.0, code 11
+
+The new build adds optional passkey sign-in, accepted friends, linked invitations, mutually confirmed friend rankings and per-device notification controls. Native passkeys use the system browser and a one-use PKCE-bound return grant. Guest play remains available. Website push is configured; native background push requires the owner Firebase configuration described in [PUSH_SETUP.md](PUSH_SETUP.md). The FCM SDK defaults to no auto-registration/analytics collection, and availability is gated on both packaged and server configuration. OS delivery and native passkey prompts still need physical-device acceptance.
+
+
+Final APK 0.2.0/code 11 builds in 3m56s; package/version, bundled source/plugins/model/music and Android v2 signature verify. Delivered to phone Downloads/FingerFight-0.2.0-debug.apk, 21,388,118 bytes, SHA-256 `8a50cce5de99d6774b350aba93af954763cd821a8d29c9846aada5a541cd5501`; Downloads checksum matches.
+
 Capacitor 8 packages the game and its hand-tracking model locally in Android System WebView. It is separate from Cloudflare, which now runs the shared guest matchmaking API and TURN relay. The APK does not load the game from GitHub Pages; it shares the same backend with website players.
 
-Current delivered debug APK: version code 10 / `0.1.9-prototype`, in phone Downloads as `FingerFight-0.1.9-debug.apk`. Build, v2 signature, package contents, model/music and networking source checks pass. Size 19,652,553 bytes; SHA-256 `bd8f7448ee38d498f74ca22ad0cf86f95fc2396a42b5911cae53ee317f18515b`. Game tests 413/413, backend tests 32/32. Physical-device WebRTC/camera/FPS acceptance remains open.
+Previous delivered debug APK: version code 10 / `0.1.9-prototype`, in phone Downloads as `FingerFight-0.1.9-debug.apk`. Build, v2 signature, package contents, model/music and networking source checks pass. Size 19,652,553 bytes; SHA-256 `bd8f7448ee38d498f74ca22ad0cf86f95fc2396a42b5911cae53ee317f18515b`. Game tests 413/413, backend tests 32/32. Physical-device WebRTC/camera/FPS acceptance remains open.
 
 The common API is enabled at https://fingerfight-api.fingerfight-ppatsis.workers.dev. Updated Android and website players share one random queue. Old APKs use the previous queue. Server-issued TURN credentials request a ten-minute TTL and refresh through explicit ICE renewal; permanent provider secrets remain on the server. See [MULTIPLAYER.md](MULTIPLAYER.md) and [MULTIPLAYER_SETUP.md](MULTIPLAYER_SETUP.md) for verified guards and limits.
 
@@ -27,7 +34,7 @@ Output: `artifacts/FingerFight-debug.apk`. Package: `io.github.ppatsis.fingerfig
 
 The packager copies the service-worker shell allowlist and the five existing music tracks, bundles pinned MediaPipe 0.10.14 and the checksum-verified existing model, disables service workers in the native copy, and adapts safe-area CSS to Capacitor SystemBars. It never copies backend files. Android loads bundled assets from secure `https://localhost`; it does not load the Pages site remotely. Browser files are unchanged. Android updates require a new APK, later Play updates.
 
-Camera permission is requested when camera use starts. No microphone permission. Backgrounding releases the existing camera; resuming nudges reconnect but does not silently restart it. Back uses existing leave confirmation/history, and exits at the menu. Local app data is separate from browser/PWA data. Existing passkey configuration is for the website origin; native accounts require a separate tested Credential Manager/Digital Asset Links integration before enabling them.
+Camera permission is requested when camera use starts. No microphone permission. Backgrounding releases the existing camera; resuming nudges reconnect but does not silently restart it. Back uses existing leave confirmation/history, and exits at the menu. Local app data is separate from browser/PWA data. Existing passkey configuration is for the website origin; native accounts now use the hosted browser passkey/PKCE flow rather than claiming an unimplemented native Credential Manager/Digital Asset Links integration.
 
 ## Real phone acceptance checks (must not be inferred from a successful build)
 
