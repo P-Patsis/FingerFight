@@ -4,7 +4,7 @@ Accounts and friends work independently of notifications. Browser/PWA Web Push i
 
 ## Owner Firebase step
 
-Open https://console.firebase.google.com/ and select an existing FingerFight project or create one. Cloud Messaging itself is a no-cost Firebase service; a paid Workers upgrade is not needed. Google Analytics is not needed for invite delivery and is disabled in this app.
+Owner selected project **fingerfight-830b2**: https://console.firebase.google.com/project/fingerfight-830b2/overview . Android app configuration and sender credential are still pending. Cloud Messaging itself is a no-cost Firebase service; a paid Workers upgrade is not needed. Google Analytics is not needed for invite delivery and is disabled in this app.
 
 Register an Android app with package **io.github.ppatsis.fingerfight.debug** for the current testing APK. Download its **google-services.json**. Before a Play release, also register **io.github.ppatsis.fingerfight** in the same project and include that client configuration. These are application configuration files, not the server's private key.
 
