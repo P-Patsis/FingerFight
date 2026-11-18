@@ -1,5 +1,12 @@
 # Finger Fight: progress
 
+## 2026-11-18 — Fix browser fetch receiver, account-screen contrast and settings label
+
+- Owner reported `Failed to execute fetch on Window: Illegal invocation` from passkey creation, private match creation and random search. Shared `Service.request` called an unbound Window fetch as a Service method. Bind the supplied/default fetch to `globalThis` at construction so browser/WebView requests retain the proper receiver.
+- Existing queue/controller tests replaced `Service.request` and missed the transport bug. They now exercise the real client with a browser-style fetch receiver check, in-memory API and both queue roles, plus private room creation. Added signup/relay coverage for default and injected transports. Targeted checks 4/4 pass; original controller regression failed before the fix. This is a JS/browser-receiver model, not an actual device passkey/PeerJS acceptance claim.
+- Account & friends now has an opaque dark theme background and dark native form controls, keeping white text readable over the bright arena. Removed the entire parenthetical explanation from Hide rude gestures. No camera, rig, particle, match rules or multiplayer protocol changes. SW cache restamped; Android 0.2.2/code 13 includes the existing Firebase configuration.
+- Full tests: 427/427 game/client and 43/43 backend pass. Published implementation a7da37b; Pages succeeded and all 19 checked public files match, including service, index, CSS and SW. APK 0.2.2/code 13 built in 3m33s. Actual packaged Service, account contrast CSS, shortened label, Firebase flag, assets and v2 signature verify; same update certificate as 0.2.1. Delivered Downloads/FingerFight-0.2.2-debug.apk, 21,339,049 bytes, SHA-256 `b5a9df9d32ebb7a6923e23108c7c858390cdf0367becaafc2814a7f18961f9a3`; copied checksum matches. Physical phone contrast, passkey prompts and match entry require owner acceptance after installation.
+
 ## 2026-11-18 — Native Firebase push configured; APK 0.2.1 delivered
 
 - Owner created the dedicated Firebase sender and deployed `FCM_SERVICE_ACCOUNT` directly as a Cloudflare encrypted secret. No private key was pasted in chat, retrieved, printed or committed. Live authenticated `/notifications/config` now reports Android push configured, alongside Web Push. This validates configuration recognition, not Google sender authorisation or OS delivery.

@@ -1,5 +1,13 @@
 # Android prototype
 
+## Account/multiplayer transport hotfix — 0.2.2, code 13
+
+Fixes the browser/WebView fetch receiver error that blocked passkey signup, private rooms and random matching. Account & friends has an opaque dark background, and Hide rude gestures has no parenthetical explanation. Full tests: 427/427 game/client, 43/43 backend. The controller tests now exercise real Service requests with browser receiver checks rather than replacing the method.
+
+APK 0.2.2/code 13 built in 3m33s. Actual packaged Service, account contrast CSS, shortened label, Firebase flag, assets and v2 signature verify; same update certificate as 0.2.1. Delivered Downloads/FingerFight-0.2.2-debug.apk, 21,339,049 bytes, SHA-256 `b5a9df9d32ebb7a6923e23108c7c858390cdf0367becaafc2814a7f18961f9a3`; copied checksum matches.
+
+Website implementation a7da37b is published and all 19 checked files match. Phone UI, passkey prompts, real matches and notification delivery still need device acceptance.
+
 ## Native invite notifications — 0.2.1, code 12
 
 Firebase Android configuration for project `fingerfight-830b2` is included locally, and the live API recognises its encrypted sender configuration. This build enables native invitation-notification opt-in in Account & friends. Permission is requested only after the user enables it. The private service-account key stays server-side.

@@ -1,5 +1,10 @@
 # Finger Fight: decisions
 
+## 2026-11-18 — Preserve browser receiver semantics in transport tests
+
+- Bind the API transport to the browser global, including injected transports. Native browser functions must not inherit the Service instance as their receiver. Exercise the actual Service request path in queue/controller integration tests; mock only fetch/server I/O and enforce browser-compatible receiver semantics, rather than replacing the method under test.
+- Give Account & friends an opaque app-theme background so arena colours cannot determine text contrast. Keep the existing layout and scope native dark form-control styling to that screen.
+
 ## 2026-11-16 — Optional identity and invite notifications across web and Android
 
 - Keep guest play independent. Use existing passkeys on the website. On Android use a browser-hosted passkey ceremony and a five-minute initiating handoff; return a one-minute, one-use PKCE-bound grant through a fixed deep link. Keep bearer tokens out of URLs and persist the resulting app session locally. No unimplemented native Credential Manager/Digital Asset Links dependency is required for this browser flow.
