@@ -1,5 +1,11 @@
 # Finger Fight: progress
 
+## 2026-11-18 — Configure supplied Google Web client ID
+
+- Added the owner's public Web OAuth client ID to the deployed Worker and backend/deploy.metadata.json so subsequent deployments preserve it. No client secret required or stored. Existing APK 0.2.5 reads availability from the API; no rebuild/reinstall needed for this configuration change.
+- Focused Google verification/PKCE/replay/profile-preservation tests: 2/2 pass; backend bundle rebuilt. Existing public variables reconciled before deployment; all four TURN/usage/VAPID/FCM encrypted bindings preserved. Live availability/start/options and deployed binding verification recorded after deployment; synthetic device profile removed. Actual Google user sign-in is not claimed.
+- Owner still needs to authorize JavaScript origin `https://fingerfight-api.fingerfight-ppatsis.workers.dev` on the supplied Web OAuth client in Google Cloud Credentials, keeping existing entries. No Google Cloud admin connector is available to make that setting here. Then test Friends → Account & sync → Continue with Google on the phone; confirm browser return and preservation of friends. A server-side request to the Google button endpoint returned 403 and does not establish successful browser-origin authorization.
+
 ## 2026-11-18 — Friends without compulsory sign-in; simpler invitations (0.2.5)
 
 - Device profiles can add friends from private/random lobbies, the live match menu and results. Private peers exchange expiring room-bound contact cards, not session credentials; random opponents resolve through their authenticated server match. Requests require explicit acceptance. Friends screen works without a passkey. Existing identity, block, invite-expiry, rate-limit and confirmed-score checks remain in force.

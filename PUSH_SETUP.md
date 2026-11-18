@@ -49,3 +49,9 @@ The implemented GSI browser flow needs a public **Web application OAuth client I
 Set public Worker variable GOOGLE_CLIENT_ID to that client ID and also preserve it as a plain_text binding in backend/deploy.metadata.json for subsequent deployments. The client checks /auth/methods and hides Google while unconfigured. The API verifies fixed Google JWKS signatures, exact audience/issuer/nonce and expiry, then returns a short-lived one-use PKCE grant through the system browser/custom scheme (Android) or strict-origin popup message (web). No email/photo is retained. Google provider authorization and real browser sign-in still require owner acceptance; do not label Google active merely because code tests pass.
 
 Before public Google rollout, check Google Auth Platform Branding/Audience for the correct Finger Fight app name, support email, homepage/privacy links and intended external audience. Test with a second Google account as well as the owner; do not confuse owner-only testing with public availability. Official setup reference: https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
+
+## Google server configuration — 2026-11-18
+
+The owner-supplied Web client ID is now configured as the public GOOGLE_CLIENT_ID binding and preserved in backend/deploy.metadata.json. APK 0.2.5 fetches this setting from the server, so this change needs no new APK. Keep the Web client secret in Google; this integration does not use it.
+
+Remaining owner setting: https://console.cloud.google.com/apis/credentials?project=fingerfight-830b2 → select the matching Web OAuth client → Authorized JavaScript origins → add `https://fingerfight-api.fingerfight-ppatsis.workers.dev` → Save. Keep existing entries; no path or trailing slash. Live API availability/start/options can be verified independently, but do not claim real Google sign-in accepted until this origin is authorized and browser/phone acceptance succeeds.

@@ -78,6 +78,11 @@
       "type": "plain_text",
       "name": "VAPID_PUBLIC_KEY",
       "text": "BC_g0dApS4KAFmgNhimVwQn2g9rjIk9QpZtkYIyB0id3CbkzXHAOnFtIqmkFEKHvvDBAvwa3ZINzcO_8BDXi0tY"
+    },
+    {
+      "type": "plain_text",
+      "name": "GOOGLE_CLIENT_ID",
+      "text": "290142621854-dn5m2bo187gqhvjn016tljr43b32a560.apps.googleusercontent.com"
     }
   ]
 }
