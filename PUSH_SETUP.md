@@ -37,3 +37,13 @@ APK 0.2.3 advertises validated `launcherSafe` support and uses a stable activity
 Physical permission prompts and receipt cannot be inferred from a compiled APK or mocked push-service test.
 
 References: https://firebase.google.com/products/cloud-messaging ; https://firebase.google.com/docs/cloud-messaging/send/v1-api ; https://firebase.google.com/docs/cloud-messaging/android/get-started ; https://capacitorjs.com/docs/apis/push-notifications
+
+## 0.2.5 device profiles
+
+Notifications no longer require registering a passkey: a saved device profile can opt in from Friends → Invitation notifications (On/Off). Accepted friendship, invite expiry, blocks and device-scoped revocation still apply. Allow permission only when switching On; switching Off unregisters delivery. No permission prompt on launch. Clearing app data can lose an unlinked device identity; optional account linking provides recovery.
+
+## Optional Google sign-in setup
+
+The implemented GSI browser flow needs a public **Web application OAuth client ID**, not the TURN API token, FCM private sender key or Firebase API key. In Firebase project fingerfight-830b2, enable Authentication → Sign-in method → Google and select a support email. Obtain the associated Web client ID from Google Cloud → APIs & Services → Credentials. In that Web OAuth client, authorize JavaScript origin `https://fingerfight-api.fingerfight-ppatsis.workers.dev`. The current GSI callback flow does not need a redirect URI or client secret.
+
+Set public Worker variable GOOGLE_CLIENT_ID to that client ID and also preserve it as a plain_text binding in backend/deploy.metadata.json for subsequent deployments. The client checks /auth/methods and hides Google while unconfigured. The API verifies fixed Google JWKS signatures, exact audience/issuer/nonce and expiry, then returns a short-lived one-use PKCE grant through the system browser/custom scheme (Android) or strict-origin popup message (web). No email/photo is retained. Google provider authorization and real browser sign-in still require owner acceptance; do not label Google active merely because code tests pass.

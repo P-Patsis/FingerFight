@@ -13,7 +13,7 @@ export class InviteNotifications {
  save(value){try{this.storage?.setItem(this.key,JSON.stringify(value));}catch{}}
  get enabled(){const s=this.state();return !!s.enabled&&s.owner===this.api.user?.id;}
  get available(){const c=this.capabilities;return !!c&&(this.native?c.androidPush&&this.nativeConfigured():!!(c.webPush&&this.notification&&this.serviceWorker&&globalThis.PushManager));}
- async load(){if(!this.api.user?.registered)return{available:false,enabled:false};this.capabilities=await this.api.request('/notifications/config');return{available:this.available,enabled:this.enabled};}
+ async load(){if(!this.api.user?.id)return{available:false,enabled:false};this.capabilities=await this.api.request('/notifications/config');return{available:this.available,enabled:this.enabled};}
  async androidToken(){
   const push=this.push();return new Promise(async(resolve,reject)=>{
    let registration,error,settled=false;const done=async(value,failure)=>{if(settled)return;settled=true;clearTimeout(timer);await Promise.allSettled([registration?.remove(),error?.remove()]);failure?reject(failure):resolve(value);};
@@ -23,7 +23,7 @@ export class InviteNotifications {
  }
  enable(options={}){if(this.disabling)return this.disabling;if(this.enabling)return this.enabling;const job=this.enableNow(options);this.enabling=job;const clear=()=>{if(this.enabling===job)this.enabling=null;};job.then(clear,clear);return job;}
  async enableNow({ask=true}={}){
-  if(!this.api.user?.registered)throw new Error('Sign in to enable invite notifications');
+  if(!this.api.user?.id)throw new Error('Open Friends to set up this device first');
   const owner=this.api.user.id,c=this.capabilities;if(!c||(this.native?!c.androidPush||!this.nativeConfigured():!c.webPush||!this.notification||!this.serviceWorker||!globalThis.PushManager))throw new Error('Invite notifications are not available on this device yet');
   const permission=this.native?(ask?await this.push().requestPermissions():await this.push().checkPermissions()).receive:(ask?await this.notification.requestPermission():this.notification.permission);
   if(permission!=='granted')throw new Error('Notifications are blocked. You can allow them in your device or browser settings.');

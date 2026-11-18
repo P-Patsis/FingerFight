@@ -1,3 +1,5 @@
+import {MatchFriends} from './match-friends.js';
+import {FriendInvites} from './friend-invites.js';
 import { API_URL, ACCOUNTS_ENABLED } from './service-config.js';
 import { bindStickyScroll, revealStickyControl } from './panel-scroll.js';
 import { initialFavourites } from './preferences.js';
@@ -45,7 +47,7 @@ import { createDebugPanel } from './debug.js';
 import { hasRelay } from './ice.js';
 import {submitMatchResult,MATCH_ID,mergeScoreRounds} from './match-results.js';
 import {InviteNotifications} from './notifications.js';
-import {completeNativeSignIn} from './native-auth.js';
+import {completeNativeSignIn,cancelNativeSignIn} from './native-auth.js';
 
 const missingIds = [];
 /** A missing element must not stop the whole script (every handler after it would stay dead); it is reported on screen instead. */
@@ -300,6 +302,7 @@ function renderProfile() {
   $('countryHint').textContent = flagEmoji(profile.country);
   renderWho();
 }
+$('nameInput').onchange=()=>{if(service.user)void service.updateName(myName()).catch(()=>{});};
 $('nameInput').oninput = () => { store.set('ff-name', sanitizeName($('nameInput').value)); renderProfile(); };
 $('flagBtn').onclick = () => { profile.flag = !profile.flag; store.set('ff-flag', profile.flag ? '1' : '0'); renderProfile(); };
 $('countryInput').oninput = e => {
@@ -325,13 +328,32 @@ $('overCustomise').onclick=openMatchCustomise;
 renderWho();
 const service=new Service(API_URL);
 const notifications=new InviteNotifications(service,{onInvite:id=>{if(inGame||!['menu','social'].includes(currentScreen)){showBanner('FRIEND INVITE','Open Account & friends after this match.',3500);return;}show('social');void social.open();}});
-const social=initSocial(service,{getName:()=>myName(),onBack:()=>show('menu'),invite:async target=>{await $('createBtn').onclick();if(!roomCodeRaw)throw new Error('Could not open a room');try{const tracked=await service.request('/matches','POST',{opponent:target,settings});serverMatchId=tracked.id;friendOpponentId=target;await service.request('/invites','POST',{target,code:roomCodeRaw,match:tracked.id});$('lobbyMsg').textContent='Invitation sent. You will approve your friend when they join.';}catch(e){$('lobbyMsg').textContent=e.message||'Could not send invitation';throw e;}},join:async(code,id)=>{$('codeInput').value=code;await $('joinBtn').onclick();if(id)adoptTrackedMatch(id);},leaderboards:true,notifications});socialController=social;
+let peerContactCard=null,myContactCard=null;
+function syncIdentity(user){if(!user?.name)return;$('nameInput').value=user.name;store.set('ff-name',user.name);renderWho();}
+function refreshMatchFriends(){const name=me&&matchKind!=='computer'?names[other(me)]:null;matchFriends.set(name?{name,...(matchKind==='random'?{match:serverMatchId}:{room:roomCodeRaw,card:peerContactCard})}:null);$('inviteFriendsBtn').hidden=matchKind!=='private'||me!=='host'||!!names.guest||!!pendingGuest;}
+const matchFriends=new MatchFriends(service,{getName:()=>myName(),onChanged:()=>send({t:'friend-update'}),onResolved:result=>{
+ if(matchKind==='private'&&serverMatchId&&friendOpponentId&&result.other!==friendOpponentId){const old=serverMatchId;serverMatchId=null;friendOpponentId=null;serverMatchUsed=false;void service.request('/matches/'+old+'/cancel','POST',{}).catch(()=>{});saveSession();}
+}});
+matchFriends.bind(['lobbyAddFriend','gameAddFriend','overAddFriend'].map($),['lobbyFriendMsg','gameFriendMsg','overFriendMsg'].map($));
+async function sharePrivateContact(){
+ if(matchKind!=='private'||!link||!names.host||!names.guest||!service.enabled)return;
+ const room=link,code=roomCodeRaw,owner=service.user?.id;
+ try{if(!myContactCard||myContactCard.room!==code||myContactCard.owner!==owner||Date.now()-myContactCard.at>6*3600000){const r=await service.request('/contacts/card','POST',{room:code});if(link!==room||roomCodeRaw!==code)return;myContactCard={room:code,owner,at:Date.now(),card:r.card};}if(link===room&&roomCodeRaw===code)send({t:'contact',card:myContactCard.card});}catch{ /* Match creation/counting remain independent of social availability. */ }
+}
+async function inviteFriend(target,reuse=false){
+ if(!reuse)await $('createBtn').onclick();
+ if(matchKind!=='private'||me!=='host'||!roomCodeRaw||names.guest||pendingGuest)throw new Error('Create an empty private room first');
+ const room=link,code=roomCodeRaw;let mid,invitation;
+ try{const tracked=await service.request('/matches','POST',{opponent:target,settings});mid=tracked.id;if(link!==room||roomCodeRaw!==code)throw new Error('Room changed; try again');invitation=await service.request('/invites','POST',{target,code,match:mid});if(link!==room||roomCodeRaw!==code)throw new Error('Room changed; try again');serverMatchId=mid;friendOpponentId=target;serverMatchUsed=false;saveSession();const result={id:invitation.id,target,match:mid};friendInvites.remember(result);$('lobbyMsg').textContent='Invitation sent. Approve your friend when they join.';return result;}catch(e){if(invitation)void service.request('/invites/'+invitation.id,'DELETE').catch(()=>{});if(mid)void service.request('/matches/'+mid+'/cancel','POST',{}).catch(()=>{});if(link===room)$('lobbyMsg').textContent=e.message||'Could not send invitation';throw e;}
+}
+const friendInvites=new FriendInvites(service,{getName:()=>myName(),getRoom:()=>matchKind==='private'&&me==='host'&&!names.guest&&!pendingGuest?{code:roomCodeRaw}:null,send:target=>inviteFriend(target,true),onCancel:sent=>{if(serverMatchId===sent.match){serverMatchId=null;friendOpponentId=null;serverMatchUsed=false;saveSession();}}});
+const social=initSocial(service,{getName:()=>myName(),onIdentity:syncIdentity,onBack:()=>{cancelNativeSignIn();show('menu');},invite:target=>inviteFriend(target),join:async(code,id)=>{$('codeInput').value=code;await $('joinBtn').onclick();if(id)adoptTrackedMatch(id);},leaderboards:true,notifications});socialController=social;
 globalThis.addEventListener?.('online',()=>{void notifications.sync().catch(()=>{});});
 const refreshInviteDevice=()=>{if(notifications.state().pendingDisable||notifications.enabled)void notifications.sync().catch(()=>{});};
 globalThis.addEventListener?.('ff-native-ready',refreshInviteDevice,{once:true});
 if(!notifications.native||typeof globalThis.FF_ANDROID_PUSH_CONFIGURED==='boolean')refreshInviteDevice();
 $('accountBtn').hidden=!ACCOUNTS_ENABLED||!service.enabled;$('accountBtn').onclick=()=>{show('social');social.open();};
-globalThis.addEventListener?.('ff-app-url',async event=>{try{if(await completeNativeSignIn(service,event.detail?.url)){if(!inGame){show('social');social.open();}}}catch(e){$('socialMsg').textContent=e.message||'Could not sign in';}});
+globalThis.addEventListener?.('ff-app-url',async event=>{try{if(await completeNativeSignIn(service,event.detail?.url)){syncIdentity(service.user);if(!inGame){show('social');social.open();}}}catch(e){$('socialMsg').textContent=e.message||'Could not sign in';}});
 if(location.hash==='#account'||/^#invite=[a-f0-9-]{36}$/.test(location.hash)){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>{show('social');void social.open();},0);}
 
 function menuMsg(text, err = false) {
@@ -393,6 +415,7 @@ function cleanupLink(only) {
 }
 
 $('computerBtn').onclick=async()=>{
+  cancelNativeSignIn();
   sfx.unlock();resetAll();clearSession();matchKind='computer';me='host';names={host:myName(),guest:'Computer'};settings=freshSettings();
   await loadCatalog();
   if(matchKind!=='computer')return;
@@ -402,6 +425,7 @@ $('computerBtn').onclick=async()=>{
 
 // ---- private match: a long unique code to share
 $('createBtn').onclick = async () => {
+  cancelNativeSignIn();
   sfx.unlock();
   resetAll();
   matchKind = 'private';
@@ -430,6 +454,7 @@ $('createBtn').onclick = async () => {
 };
 
 $('joinBtn').onclick = async () => {
+  cancelNativeSignIn();
   sfx.unlock();
   const code = cleanCode($('codeInput').value);
   if (code.length !== CODE_LEN) { menuMsg('A match code has ' + CODE_LEN + ' letters and digits. Paste the whole code.', true); return; }
@@ -541,6 +566,7 @@ async function findQueuedOpponent() {
 }
 
 $('randomBtn').onclick = async () => {
+  cancelNativeSignIn();
   sfx.unlock();
   if(service.enabled)return findQueuedOpponent();
   if (hideIp && !hasRelay()) {      // relay-only needs a TURN relay (see ice.js); without one a random match could never connect
@@ -651,6 +677,7 @@ function netBadge(text) {
 
 /** Private room, host side: the guest left or vanished. The room stays open with a free seat instead of being thrown away. */
 function hostSeatFreed(reason) {
+  peerContactCard=null;matchFriends.clear();
   if (me !== 'host' || matchKind !== 'private' || !link) return;
   const who = names.guest || 'Your opponent';
   names.guest = ''; ready = { host: false, guest: false }; pendingGuest = null; guestToken = null; netBadge('');
@@ -718,6 +745,7 @@ function applySync(m) {
 }
 
 $('rejoinBtn').onclick = async () => {
+  cancelNativeSignIn();
   sfx.unlock();
   const x = loadSession();
   if (!x) { updateRejoin(); return; }
@@ -738,7 +766,7 @@ $('rejoinBtn').onclick = async () => {
   }
   $('roomCode').textContent = formatCode(x.code);
   refreshPrivateRelay(link);enterLobby();
-  if (x.role === 'guest') { send({ t: 'rejoined' }); send({ t: 'ready', ready: ready.guest }); }
+  if (x.role === 'guest') { void sharePrivateContact(); send({ t: 'rejoined' }); send({ t: 'ready', ready: ready.guest }); }
   else menuMsg('');
   saveSession();
 };
@@ -755,6 +783,7 @@ function acceptGuest(name) {
   saveSession();
   send({ t: 'welcome', v: PROTOCOL, kind: matchKind, name: names.host, yourName: name, flag: myFlag(), settings, ready: ready.host, pair: link?.pairProof?.() });
   hostWaiter?.(true);
+  void sharePrivateContact();refreshMatchFriends();
   renderLobby();
 }
 
@@ -769,6 +798,12 @@ $('rejectBtn').onclick = () => {
 
 function onMessage(m) {
   switch (m.t) {
+    case 'contact':
+      if(matchKind==='private'&&names.host&&names.guest&&typeof m.card==='string'&&/^[A-Za-z0-9_-]{43}$/.test(m.card)&&m.card!==peerContactCard){peerContactCard=m.card;refreshMatchFriends();void matchFriends.refresh();}
+      break;
+    case 'friend-update':
+      if(names.host&&names.guest&&matchKind!=='computer')void matchFriends.refresh();
+      break;
     case 'bye':
       if (me === 'host' && matchKind === 'private' && link) { link.freeSeat(); hostSeatFreed('left'); }     // the guest left on purpose: free the seat at once
       else onLinkClosed('left');
@@ -777,7 +812,8 @@ function onMessage(m) {
       if (!me || matchKind !== 'private' || !names.host || !names.guest || (inGame && game && !game.over)) break;
       backToLobby(names[other(me)] + ' went back to the lobby. Change anything you like, then press ready.', true, true);
       break;
-    case 'rejoined':                                // host: the guest reloaded their page, so their side of any fight is gone
+    case 'rejoined':
+      void sharePrivateContact();                                // host: the guest reloaded their page, so their side of any fight is gone
       if (me === 'host' && inGame && !game?.over) { send({ t: 'abort' }); backToLobby('The fight was cancelled because ' + (names.guest || 'your opponent') + ' reloaded their page. Press ready to start again.', true); }
       break;
     case 'abort':                                   // guest: the host reloaded (or cancelled): back to the lobby, seats kept
@@ -810,6 +846,7 @@ function onMessage(m) {
       send({ t: 'ready', ready: ready.guest });
       saveSession();
       matchWaiter?.(true);
+      void sharePrivateContact();refreshMatchFriends();
       renderLobby();
       break;
     case 'settings':
@@ -973,6 +1010,7 @@ function syncStyle() {
 }
 
 function renderLobby() {
+  refreshMatchFriends();
   const random = matchKind === 'random';
   $('privateBox').hidden = !(matchKind === 'private' && me === 'host');
   $('randomNote').hidden = !random;
@@ -2233,6 +2271,7 @@ $('againBtn').onclick = () => {
 // Reset
 // ---------------------------------------------------------------------------------------------
 function resetAll() {
+  peerContactCard=null;myContactCard=null;matchFriends.clear();friendInvites.reset();
   serverMatchId=null;friendOpponentId=null;serverMatchUsed=false;serverStartBusy=false;
   $('matchRecordStatus').hidden=true;$('matchRecordStatus').textContent='';
   clearInterval(privateRelayTimer);privateRelayTimer=null;

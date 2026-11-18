@@ -669,3 +669,6 @@ canvas[data-rotate-preview="true"]:active {cursor:grabbing;}
 
 /* Account lists stay readable on phones and constrain action buttons to their row. */
 #social{max-width:680px;margin-inline:auto;background:var(--bg);color:var(--ink);color-scheme:dark}#social .social-row{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;padding:.65rem 0;border-bottom:1px solid #ffffff18}#social .social-row>span{flex:1 1 150px;overflow-wrap:anywhere}#social #socialName{max-width:100%;min-width:0}#social #inviteNotify{margin-block:.6rem}
+
+/* Friends actions stay compact on both phone and desktop. */
+#social details{margin-block:12px;padding:12px;border:1px solid #ffffff26;border-radius:12px}#social summary{cursor:pointer;font-weight:700}#social details>p{line-height:1.4}#social #inviteNotify{margin:0;flex:0 0 auto;min-width:64px}#inviteNotifyRow>span{flex:1}#friendInvitePicker{width:100%;padding:12px;border:1px solid #ffffff26;border-radius:12px;box-sizing:border-box}#friendInvitePicker .social-row>span{flex:1;min-width:0;overflow-wrap:anywhere}#friendInviteMsg:empty{display:none}#lobbyFriendMsg,#gameFriendMsg,#overFriendMsg{font-size:.9rem;line-height:1.35}#social .btn{white-space:normal}

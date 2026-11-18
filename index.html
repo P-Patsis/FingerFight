@@ -34,7 +34,7 @@
     <button id="randomBtn" class="btn">Find a random opponent</button>
     <button id="cancelBtn" class="btn ghost" hidden>Cancel search</button>
     <p id="menuMsg" class="msg" role="status"></p>
-    <button id="accountBtn" class="btn ghost" hidden>Account &amp; friends</button>
+    <button id="accountBtn" class="btn ghost" hidden>Friends</button>
     <button id="profileBtn" class="btn ghost">Profile &amp; settings</button>
     <div class="row center">
       <button id="storeBtn" class="btn ghost">Store</button>
@@ -70,13 +70,24 @@
   </section>
 
   <section id="social" class="screen" hidden>
-    <button id="socialBack" class="btn ghost">Back</button><h2>Account &amp; friends</h2>
-    <p id="socialIdentity"></p><input id="socialName" maxlength="24" aria-label="Account display name" placeholder="Display name">
-    <div class="row center"><button id="accountCreate" class="btn">Create passkey account</button><button id="accountLogin" class="btn">Sign in with passkey</button><button id="accountCopyCode" class="btn ghost" hidden>Copy friend code</button><button id="accountSaveName" class="btn ghost" hidden>Save name</button><button id="accountLogout" class="btn ghost" hidden>Sign out</button><button id="accountDelete" class="btn ghost" hidden>Delete account</button></div>
-    <div id="socialMembers" hidden><div class="row"><input id="friendCode" maxlength="12" aria-label="Friend code" placeholder="Friend code"><button id="friendAdd" class="btn">Add friend</button></div>
-    <button id="inviteNotify" class="btn ghost" hidden>Enable invite notifications</button><button id="socialRefresh" class="btn ghost">Refresh</button>
-    <h3>Friends</h3><div id="socialFriends"></div><h3>Invitations</h3><div id="socialInvites"></div>
-    <h3>Blocked players</h3><div id="socialBlocks"></div><h3 id="socialBoardTitle">Friend leaderboard</h3><div id="socialBoard"></div><p class="hint">New online matches count after both players confirm the result.</p></div><p id="socialMsg" class="msg" role="status"></p>
+    <button id="socialBack" class="btn ghost">Back</button><h2>Friends</h2>
+    <p id="socialIdentity"></p><button id="accountCopyCode" class="btn small ghost" hidden>Copy friend code</button>
+    <div id="socialMembers" hidden>
+      <h3>Invitations</h3><div id="socialInvites"></div>
+      <h3>Friends</h3><div id="socialFriends"></div>
+      <div id="inviteNotifyRow" class="set"><span>Invitation notifications</span><button id="inviteNotify" class="toggle" role="switch" aria-checked="false">Off</button></div>
+      <details><summary>Add using a friend code</summary><div class="row"><input id="friendCode" maxlength="12" aria-label="Friend code" placeholder="Friend code"><button id="friendAdd" class="btn small">Add friend</button></div></details>
+      <button id="socialRefresh" class="btn small ghost">Refresh</button>
+      <h3 id="socialBoardTitle">Friend leaderboard</h3><div id="socialBoard"></div>
+      <details><summary>Blocked players</summary><div id="socialBlocks"></div></details>
+    </div>
+    <details id="accountOptions" class="card"><summary>Account &amp; sync</summary>
+      <p id="socialAccountInfo" class="hint">Sign-in is optional. Keep your friends when switching devices.</p>
+      <button id="accountGoogle" class="btn" hidden>Continue with Google</button>
+      <details id="passkeyOptions"><summary>Other sign-in options</summary><div class="row center"><button id="accountCreate" class="btn small">Create a passkey</button><button id="accountLogin" class="btn small ghost">Use a passkey</button></div></details>
+      <div class="row center"><button id="accountLogout" class="btn small ghost" hidden>Sign out</button><button id="accountDelete" class="btn small ghost" hidden>Delete account</button></div>
+    </details>
+    <p id="socialMsg" class="msg" role="status"></p>
   </section>
 
   <!-- ===== Store (cosmetics: browse, preview, unlock, equip) ===== -->
@@ -122,8 +133,11 @@
         <div id="roomCode" class="room-code">----</div>
         <button id="copyBtn" class="btn small">Copy code</button>
         <button id="shareBtn" class="btn small ghost">Share link</button>
+        <button id="inviteFriendsBtn" class="btn small ghost">Invite friend</button>
       </div>
     </div>
+    <div id="friendInvitePicker" class="card" hidden><div class="row"><b>Invite a friend</b><button id="friendInviteClose" class="btn small ghost">Close</button></div><div id="friendInviteList"></div><button id="friendInviteCancel" class="btn small ghost" hidden>Cancel invitation</button><p id="friendInviteMsg" class="msg" role="status"></p></div>
+    <button id="lobbyAddFriend" class="btn small ghost" hidden>Add friend</button><p id="lobbyFriendMsg" class="msg" role="status"></p>
     <p id="randomNote" class="msg" hidden>Random opponent.</p>
     <div class="card" id="joinPrompt" hidden>
       <div id="joinText"></div>
@@ -192,7 +206,7 @@
   <!-- ===== Game ===== -->
   <section id="game" class="screen" hidden>
     <button id="gameMenuBtn" class="game-menu-btn btn small ghost" type="button" aria-label="Match menu">☰</button>
-    <div id="gameMenu" class="game-menu card" hidden><button id="gameResume" class="btn" type="button">Continue match</button><button id="gameForfeit" class="btn danger" type="button">Forfeit and leave</button><p class="fine">Round timers keep running while this menu is open.</p></div>
+    <div id="gameMenu" class="game-menu card" hidden><button id="gameResume" class="btn" type="button">Continue match</button><button id="gameAddFriend" class="btn ghost" hidden>Add friend</button><p id="gameFriendMsg" class="msg" role="status"></p><button id="gameForfeit" class="btn danger" type="button">Forfeit and leave</button><p class="fine">Round timers keep running while this menu is open.</p></div>
     <div id="top" class="panel opp">
       <div class="hud"><span class="pname" id="topName"></span><div class="hp" id="topHp"></div></div>
       <div class="content" id="topContent"></div>
@@ -228,6 +242,7 @@
     <div id="collage" class="collage" hidden></div>
     <div id="adSlot" class="ad-slot" data-slot="end-banner" aria-label="Advertisement space">Advertisement</div>
     <div id="overStyleSlot" hidden></div>
+    <button id="overAddFriend" class="btn ghost" hidden>Add friend</button><p id="overFriendMsg" class="msg" role="status"></p>
     <button id="overCustomise" class="btn ghost">Customise puppet</button>
     <button id="againBtn" class="btn big">Play again</button>
     <button id="settingsBtn" class="btn">Back to lobby (change settings)</button>
