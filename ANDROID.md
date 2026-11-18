@@ -1,5 +1,17 @@
 # Android prototype
 
+## Rotating puppet icons — 0.2.3, code 14
+
+48 packaged native icon variants reuse the existing rig: 8 skins × 0–5 fingers. Both skin and count change on each selection. Open the app once, then return home to schedule the first random selection. A persisted JobScheduler job targets an hourly cycle with 15-minute flex; Android battery management and launcher caching can delay updates. Visible play defers the change until a due background catch-up. Force-stop pauses jobs until the app is reopened. No network/camera work or new dependency is involved in rotation.
+
+The real MainActivity/deep-link target stays enabled. API 33+ component changes are atomic; older versions enable the new alias before disabling the old one. Jobs are serialized to avoid duplicate entries when periodic and catch-up runs overlap. New-APK notifications use a stable OPEN_INVITES activity action after capability refresh; old APK notifications keep their existing routing. All private server bindings were preserved.
+
+Final APK 0.2.3/code 14 built in 3m22s; actual bundled source, all 144 legacy/adaptive/foreground resources, 48 compiled aliases with one default, native classes and synchronized rotation, Firebase flag and v2 update signature verify. Downloads/FingerFight-0.2.3-debug.apk: 21,673,153 bytes, SHA-256 `999d0490c4326f930d4662d7f6a7308e45e0a5cf9ff5ea94e1c1e2ebbc2eeefb`; copied checksum matches.
+
+Verified: 431/431 client/game and 44/44 backend tests, plus 3/3 final JVM/manifest/geometry checks. Reviewed artifacts/launcher-icons-review.png from the actual rig; native curves retain full precision. Phone launcher masks, themed icons, cache refresh, home shortcut retention, icon rotation over time, notification taps after a rotation, passkey return and match survival remain physical acceptance checks.
+
+Regenerate assets with `node tools/launcher-icons.mjs`; then `python3 tools/raster_review.py artifacts/launcher-icons-review.svg` regenerates the reviewed PNG. Resource/manifest/catalog generation is byte-for-byte idempotent. Keep alias names stable across upgrades.
+
 ## Account/multiplayer transport hotfix — 0.2.2, code 13
 
 Fixes the browser/WebView fetch receiver error that blocked passkey signup, private rooms and random matching. Account & friends has an opaque dark background, and Hide rude gestures has no parenthetical explanation. Full tests: 427/427 game/client, 43/43 backend. The controller tests now exercise real Service requests with browser receiver checks rather than replacing the method.

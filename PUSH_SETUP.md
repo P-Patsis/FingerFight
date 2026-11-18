@@ -1,10 +1,10 @@
 # Invite notifications — current setup
 
-Accounts and friends work independently of notifications. Browser/PWA Web Push is configured on the Worker. Users explicitly enable it in Account & friends. Android Firebase configuration is now recognised by the live Worker. Configured APK 0.2.2/code 13 is delivered in phone Downloads; physical delivery acceptance is pending; foreground polling is not used as a substitute for background push.
+Accounts and friends work independently of notifications. Browser/PWA Web Push is configured on the Worker. Users explicitly enable it in Account & friends. Android Firebase configuration is now recognised by the live Worker. Configured APK 0.2.3/code 14 is delivered in phone Downloads; physical delivery acceptance is pending; foreground polling is not used as a substitute for background push.
 
 ## Owner Firebase step
 
-Owner selected project **fingerfight-830b2**: https://console.firebase.google.com/project/fingerfight-830b2/overview . Android testing app configuration is validated and saved locally in the ignored build path. Owner deployed the sender credential directly as encrypted Worker secret `FCM_SERVICE_ACCOUNT`; live authenticated configuration reports Android push ready. Google sender authorisation and device delivery are not proved by that flag. Configured APK 0.2.2/code 13 has been built, packaged-resource/signature/source verified and copied with matching checksum to phone Downloads. Cloud Messaging itself is a no-cost Firebase service; a paid Workers upgrade is not needed. Google Analytics is not needed for invite delivery and is disabled in this app.
+Owner selected project **fingerfight-830b2**: https://console.firebase.google.com/project/fingerfight-830b2/overview . Android testing app configuration is validated and saved locally in the ignored build path. Owner deployed the sender credential directly as encrypted Worker secret `FCM_SERVICE_ACCOUNT`; live authenticated configuration reports Android push ready. Google sender authorisation and device delivery are not proved by that flag. Configured APK 0.2.3/code 14 has been built, packaged-resource/signature/source verified and copied with matching checksum to phone Downloads. Cloud Messaging itself is a no-cost Firebase service; a paid Workers upgrade is not needed. Google Analytics is not needed for invite delivery and is disabled in this app.
 
 Register an Android app with package **io.github.ppatsis.fingerfight.debug** for the current testing APK. Download its **google-services.json**. Before a Play release, also register **io.github.ppatsis.fingerfight** in the same project and include that client configuration. These are application configuration files, not the server's private key.
 
@@ -25,6 +25,8 @@ Use Google Cloud IAM service accounts for project `fingerfight-830b2`, open the 
 Refresh the existing project Cloudflare CLI login first if necessary (`bash tools/cf.sh auth whoami`; do not print its credential file). Rebuild/deliver Android after configuration: its package flag is generated from the presence of the local Google configuration. A server secret alone does not configure an installed APK.
 
 ## Acceptance
+
+APK 0.2.3 advertises validated `launcherSafe` support and uses a stable activity click action so icon aliases can rotate without invalidating new notification taps. Prior opt-ins refresh silently on native readiness; older APKs keep the legacy route. Include tapping an invitation after an icon change in device acceptance.
 
 - Sign in, enable invite notifications and grant OS/browser permission. No permission should be requested merely by launching the game or creating an account.
 - An accepted friend sends an invite; check foreground and closed-app delivery. No private room code or bearer token is in the push.

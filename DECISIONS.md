@@ -1,5 +1,10 @@
 # Finger Fight: decisions
 
+## 2026-11-18 — Local native launcher icon rotation
+
+- Use a finite, packaged set of activity-alias icons from actual puppet rig geometry, not a fake web favicon timer. Keep alias names stable across upgrades. Target an hourly battery-managed JobScheduler cycle, accepting OS/launcher delays; defer while visible and catch up after leaving. Keep the real activity/deep links enabled and preserve one launcher entry during switching. No WorkManager dependency, exact alarms, new network traffic or per-frame work.
+- Route supported-APK push taps directly to a stable activity action, independently of the current alias. Gate the FCM click_action on a strictly validated per-device capability so older APK notifications remain compatible. Refresh existing opt-ins silently after native readiness; never prompt on startup.
+
 ## 2026-11-18 — Preserve browser receiver semantics in transport tests
 
 - Bind the API transport to the browser global, including injected transports. Native browser functions must not inherit the Service instance as their receiver. Exercise the actual Service request path in queue/controller integration tests; mock only fetch/server I/O and enforce browser-compatible receiver semantics, rather than replacing the method under test.
