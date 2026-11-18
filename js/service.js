@@ -3,7 +3,7 @@ import {encode,decode,credentialJSON,passkeyOptions} from './passkey.js';
 import {isNative,startNativeSignIn,cancelNativeSignIn} from './native-auth.js';
 export class Service{
  constructor(base,{fetch=globalThis.fetch,storage=globalThis.localStorage,credentials=globalThis.navigator?.credentials}={}){
-  this.base=base?.replace(/\/$/,'')||'';this.fetch=fetch;this.storage=storage;this.credentials=credentials;this.token=null;this.user=null;
+  this.base=base?.replace(/\/$/,'')||'';this.fetch=fetch.bind(globalThis);this.storage=storage;this.credentials=credentials;this.token=null;this.user=null;
   if(this.base){const u=new URL(this.base);if(u.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(u.hostname))throw new Error('Backend requires HTTPS');try{const s=JSON.parse(storage?.getItem('ff-session:'+this.base)||'null');if(s?.token){this.token=s.token;this.user=s.user;}}catch{ /* unavailable storage */ }}
  }
  get enabled(){return !!this.base;}

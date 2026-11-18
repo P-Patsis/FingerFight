@@ -12,9 +12,15 @@ import {installBrowser,until,sleep,network} from '../../tests/harness.js';
 for(const first of ['controller','opponent'])test('game controller uses the shared queue with '+first+' searching first',async()=>{
  const browser=installBrowser('?sim=1'),DB=openDB();
  globalThis.Capacitor={isNativePlatform:()=>first==='controller'};DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp({relay:relayConfig}),env={DB,ALLOWED_ORIGINS:'https://localhost',TURN_SERVERS_JSON:JSON.stringify([{urls:'turn:test.invalid:3478',username:'test',credential:'temporary'}])};
- const enabled=Object.getOwnPropertyDescriptor(Service.prototype,'enabled'),request=Service.prototype.request;
+ const enabled=Object.getOwnPropertyDescriptor(Service.prototype,'enabled'),assetFetch=globalThis.fetch;
  Object.defineProperty(Service.prototype,'enabled',{get:()=>true,configurable:true});
- Service.prototype.request=async function(path,method='GET',data){const r=await app.fetch(new Request('https://api.test'+path,{method,headers:{Origin:'https://localhost','Content-Type':'application/json',...(this.token?{Authorization:'Bearer '+this.token}:{})},...(data===undefined?{}:{body:JSON.stringify(data)})}),env);const result=await r.json();if(!r.ok){const e=new Error(result.error);e.status=r.status;throw e;}return result;};
+ // Preserve the real HTTP client; browser fetch rejects a Service instance as its receiver.
+ globalThis.fetch=async function(url,options){
+  if(this!==globalThis&&this!==undefined)throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+  if(!String(url).startsWith('https://api.test')&&!String(url).startsWith('https://fingerfight-api.'))return assetFetch(url,options);
+  const headers=new Headers(options?.headers);headers.set('Origin','https://localhost');
+  return app.fetch(new Request('https://api.test'+new URL(url).pathname,{...options,headers}),env);
+ };
  let opponent,otherLink,pair;const got=[];
  try{
   await import('../../js/main.js?queue-controller-'+first);
@@ -37,5 +43,10 @@ for(const first of ['controller','opponent'])test('game controller uses the shar
   browser.byId.get('cancelBtn').onclick();
   const cancelledBy=Date.now()+5000;let tickets;do{tickets=(await DB.prepare('SELECT count(*) n FROM queue_tickets').first()).n;if(tickets)await sleep(20);}while(tickets&&Date.now()<cancelledBy);
   assert.equal(tickets,0,'wait for the real asynchronous cancellation response, not a fixed sleep');
- }finally{await opponent?.cancel();otherLink?.close();network.clear();Object.defineProperty(Service.prototype,'enabled',enabled);Service.prototype.request=request;delete globalThis.Capacitor;DB.close();}
+  // Exercise private-room creation through the same real Service client after returning to the menu.
+  await browser.byId.get('createBtn').onclick();
+  assert.ok(browser.visible().includes('lobby'),browser.byId.get('menuMsg').textContent);
+  assert.ok(browser.byId.get('roomCode').textContent.length>0,'private room receives a shareable code');
+  browser.byId.get('cancelBtn').onclick();
+ }finally{await opponent?.cancel();otherLink?.close();network.clear();Object.defineProperty(Service.prototype,'enabled',enabled);globalThis.fetch=assetFetch;delete globalThis.Capacitor;DB.close();}
 });
