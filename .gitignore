@@ -31,3 +31,5 @@ android/app/google-services.json
 
 # Intermediate flattened icon review; native vectors and the reviewed PNG are tracked.
 artifacts/launcher-icons-review.svg
+
+artifacts/startup-review.svg

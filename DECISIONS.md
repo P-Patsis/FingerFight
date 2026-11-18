@@ -1,5 +1,10 @@
 # Finger Fight: decisions
 
+## 2026-11-18 — Keep native startup artwork aligned with the launcher
+
+- On API 31+, clear the hardcoded splash icon so Android resolves the launched activity/alias icon; provide app-name branding through the system branding-image attribute. Use a composed puppet/name mark on older supported Android versions and preserve the post-splash app theme. Prefer native version-qualified resources over a second splash activity, JS loading blocker or artificial delay.
+- Keep the startup wordmark original and code-generated, and guard the theme parent chains in tests so a launcher artwork update cannot silently leave the old splash reference behind.
+
 ## 2026-11-18 — Local native launcher icon rotation
 
 - Use a finite, packaged set of activity-alias icons from actual puppet rig geometry, not a fake web favicon timer. Keep alias names stable across upgrades. Target an hourly battery-managed JobScheduler cycle, accepting OS/launcher delays; defer while visible and catch up after leaving. Keep the real activity/deep links enabled and preserve one launcher entry during switching. No WorkManager dependency, exact alarms, new network traffic or per-frame work.

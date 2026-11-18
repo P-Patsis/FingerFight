@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Null removes the old forced icon, allowing Android to resolve the launching alias. -->
+    <style name="AppTheme.LaunchModern" parent="AppTheme.LaunchBase">
+        <item name="windowSplashScreenAnimatedIcon">@null</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@null</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/startup_name</item>
+    </style>
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.LaunchModern" />
+</resources>

@@ -15,4 +15,5 @@ const launcherCatalog = readFileSync(new URL('../android/app/src/main/java/io/gi
 const launcherNames = [...launcherCatalog.matchAll(/"([a-z]+_[0-5])"/g)].map(m => m[1]);
 assert.equal(launcherNames.length, 48, 'Launcher variant catalog');
 for (const name of launcherNames) for (const file of ['res/drawable/puppet_' + name + '.xml', 'res/mipmap-anydpi-v21/launcher_' + name + '.xml', 'res/mipmap-anydpi-v26/launcher_' + name + '.xml']) assert.ok(entries.includes(file), 'Missing launcher resource: ' + file);
+for (const name of ['startup_mark','startup_name']) assert.ok(entries.includes('res/drawable/'+name+'.xml'), 'Missing startup artwork: '+name);
 console.log('APK contents verified.');

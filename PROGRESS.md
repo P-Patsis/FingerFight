@@ -1,5 +1,11 @@
 # Finger Fight: progress
 
+## 2026-11-18 — Replace stale startup image and add the app name (0.2.4 delivered)
+
+- Owner correctly reported the launcher update left the old startup image visible: the launch theme still forced @drawable/fingerfight. Replaced that reference with a new puppet-and-FINGER FIGHT mark for API 24–30. Android 12+ clears both explicit splash-icon overrides, allowing the framework to use the launching alias icon, and displays a 200×80dp native FINGER FIGHT branding image. Android 13+ requests icon_preferred. Direct activity launches use the app's puppet icon fallback.
+- Generated the original arcade wordmark and composed legacy mark from the existing puppet vector, with no font/image dependency. Previewed artifacts/startup-review.png from the generated vector paths; this is an artwork review, not a physical startup screenshot. No splash timer, overlay, extra activity or artificial loading delay was added; 60-minute icon rotation is unchanged.
+- Focused native lifecycle/theme/launcher/notification checks: 12/12 pass. New theme-resolution regression covers API 24/31/33 parent chains, removal of the old image and preservation of the post-launch app theme. APK checker now requires both startup resources. APK 0.2.4/code 15 built in 3m25s. Actual bundled source, startup artwork, API-qualified compiled theme parent chains/null overrides/branding/icon preference, existing 48 icon variants and v2 update signature verify. Downloads/FingerFight-0.2.4-debug.apk: 21,673,549 bytes; SHA-256 `1789549dfbc7417001de7432fdd6c95a23ea72bc6e5ebe5c0679988e5c7fd4f9`; copied checksum matches. Generator output is byte-for-byte idempotent. Physical cold-start artwork/name legibility on the phone remains an acceptance check.
+
 ## 2026-11-18 — Rotating Android puppet launcher icons (0.2.3 delivered)
 
 - Generated 48 native vector icons from the existing rig: Cartoon, Robot, Neon, Paw, Dragon, Frog, Duck and Golden hand, each holding 0–5 fingers. Each rotation changes both skin and count. No AI/raster asset dependency; existing skin paths stay intact, including curved paths, with affine transforms decomposed into Android vector groups. Adaptive icons include legacy API 24–25 vector fallbacks and safe-area margins.

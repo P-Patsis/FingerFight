@@ -33,3 +33,13 @@ test('debug signing stays within FingerFight', () => {
   assert.match(gradle, /storeFile file\("\.\.\/\.\.\/\.android-tools\/debug.keystore"\)/);
   assert.doesNotMatch(gradle, /\.\.\/\.\.\/\.\.\/\.android-tools/);
 });
+test('startup themes show puppet/name artwork on older Android and launcher artwork plus branding on Android 12+',()=>{
+ const styles=new Map();
+ const overlay=path=>{for(const m of read(path).matchAll(/<style name="([^"]+)" parent="([^"]+)"\s*(?:\/>|>([\s\S]*?)<\/style>)/g))styles.set(m[1],{parent:m[2],items:Object.fromEntries([...(m[3]||'').matchAll(/<item name="([^"]+)">([^<]+)<\/item>/g)].map(x=>[x[1],x[2]]))});};
+ const resolve=(name,seen=new Set())=>{if(!styles.has(name))return{};assert.ok(!seen.has(name),'theme parent cycle');seen.add(name);const s=styles.get(name);return{...resolve(s.parent,seen),...s.items};};
+ overlay('android/app/src/main/res/values/styles.xml');let theme=resolve('AppTheme.NoActionBarLaunch');assert.equal(theme.windowSplashScreenAnimatedIcon,'@drawable/startup_mark');assert.equal(theme.postSplashScreenTheme,'@style/AppTheme.NoActionBar');
+ overlay('android/app/src/main/res/values-v31/styles.xml');theme=resolve('AppTheme.NoActionBarLaunch');assert.equal(theme.windowSplashScreenAnimatedIcon,'@null');assert.equal(theme['android:windowSplashScreenAnimatedIcon'],'@null');assert.equal(theme['android:windowSplashScreenBrandingImage'],'@drawable/startup_name');
+ overlay('android/app/src/main/res/values-v33/styles.xml');theme=resolve('AppTheme.NoActionBarLaunch');assert.equal(theme['android:windowSplashScreenBehavior'],'icon_preferred');assert.equal(theme['android:windowSplashScreenBrandingImage'],'@drawable/startup_name');
+ for(const path of ['android/app/src/main/res/drawable/startup_mark.xml','android/app/src/main/res/drawable/startup_name.xml']){const art=read(path);assert.match(art,/Finger Fight startup artwork/);assert.match(art,/android:pathData=/);}
+ assert.doesNotMatch(read('android/app/src/main/res/values/styles.xml'),/@drawable\/fingerfight/);
+});

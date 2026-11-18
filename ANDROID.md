@@ -1,5 +1,13 @@
 # Android prototype
 
+## Startup puppet and app name — 0.2.4, code 15
+
+Removed the separate old splash drawable reference. API 24–30 uses a new puppet + FINGER FIGHT vector mark; API 31+ leaves the icon to Android's launching activity/alias resolution and adds a native 200×80dp FINGER FIGHT branding image. API 33+ prefers displaying the icon. Direct activity entry uses the app puppet fallback. No added startup delay, loading overlay, extra activity or dependency. Hourly icon rotation is unchanged.
+
+APK 0.2.4/code 15 built in 3m25s. Actual bundled source, startup artwork, API-qualified compiled theme parent chains/null overrides/branding/icon preference, existing 48 icon variants and v2 update signature verify. Downloads/FingerFight-0.2.4-debug.apk: 21,673,549 bytes; SHA-256 `1789549dfbc7417001de7432fdd6c95a23ea72bc6e5ebe5c0679988e5c7fd4f9`; copied checksum matches. Generator output is byte-for-byte idempotent.
+
+Focused lifecycle/theme/launcher/notification tests: 12/12 pass. Reviewed artifacts/startup-review.png from generated paths; actual cold-start appearance still needs phone review. Regenerate with `node tools/startup-art.mjs` after regenerating launcher artwork, and `python3 tools/raster_review.py artifacts/startup-review.svg` for the contact-sheet PNG.
+
 ## Rotating puppet icons — 0.2.3, code 14
 
 48 packaged native icon variants reuse the existing rig: 8 skins × 0–5 fingers. Both skin and count change on each selection. Open the app once, then return home to schedule the first random selection. A persisted JobScheduler job targets an hourly cycle with 15-minute flex; Android battery management and launcher caching can delay updates. Visible play defers the change until a due background catch-up. Force-stop pauses jobs until the app is reopened. No network/camera work or new dependency is involved in rotation.
