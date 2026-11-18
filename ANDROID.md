@@ -1,8 +1,16 @@
 # Android prototype
 
+## Native invite notifications — 0.2.1, code 12
+
+Firebase Android configuration for project `fingerfight-830b2` is included locally, and the live API recognises its encrypted sender configuration. This build enables native invitation-notification opt-in in Account & friends. Permission is requested only after the user enables it. The private service-account key stays server-side.
+
+APK 0.2.1/code 12 built in 3m45s. Actual APK contents, packaged native-push flag, Firebase project/app/sender resources, merged permissions/auto-init defaults and Android v2 signature verify; certificate matches 0.2.0. Delivered to phone Downloads/FingerFight-0.2.1-debug.apk, 21,339,029 bytes, SHA-256 `205be539589e6efc429b1d99fe5d06c32092fd9836f22dd96ba2308a65b89193`; Downloads checksum matches. Google sender authorisation and actual foreground/background receipt still require physical invitation acceptance tests.
+
+The previous 0.2.0 APK does not contain this Firebase configuration.
+
 ## Accounts/social update — 0.2.0, code 11
 
-The new build adds optional passkey sign-in, accepted friends, linked invitations, mutually confirmed friend rankings and per-device notification controls. Native passkeys use the system browser and a one-use PKCE-bound return grant. Guest play remains available. Website push is configured; native background push requires the owner Firebase configuration described in [PUSH_SETUP.md](PUSH_SETUP.md). The FCM SDK defaults to no auto-registration/analytics collection, and availability is gated on both packaged and server configuration. OS delivery and native passkey prompts still need physical-device acceptance.
+This earlier build added optional passkey sign-in, accepted friends, linked invitations, mutually confirmed friend rankings and per-device notification controls. Native passkeys use the system browser and a one-use PKCE-bound return grant. Guest play remains available. Website push is configured; native background push requires the owner Firebase configuration described in [PUSH_SETUP.md](PUSH_SETUP.md). The FCM SDK defaults to no auto-registration/analytics collection, and availability is gated on both packaged and server configuration. OS delivery and native passkey prompts still need physical-device acceptance.
 
 
 Final APK 0.2.0/code 11 builds in 3m22s; package/version, bundled source/plugins/model/music and Android v2 signature verify. Delivered to phone Downloads/FingerFight-0.2.0-debug.apk, 21,388,118 bytes, SHA-256 `c55c16dc58090c38025e927ea12f7ffefc98af1bbc2baea5cae24e6b189324a1`; Downloads checksum matches.

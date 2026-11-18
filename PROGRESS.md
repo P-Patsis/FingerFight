@@ -1,5 +1,12 @@
 # Finger Fight: progress
 
+## 2026-11-18 — Native Firebase push configured; APK 0.2.1 delivered
+
+- Owner created the dedicated Firebase sender and deployed `FCM_SERVICE_ACCOUNT` directly as a Cloudflare encrypted secret. No private key was pasted in chat, retrieved, printed or committed. Live authenticated `/notifications/config` now reports Android push configured, alongside Web Push. This validates configuration recognition, not Google sender authorisation or OS delivery.
+- Reran the deployed social smoke: passkey signup/login, guest-token rotation, native PKCE/one-use grant, friends, invitation acceptance, confirmed results/ranking, block and deletion pass; temporary accounts removed. No real notifications sent. Android lifecycle/config/notification checks: 7/7 pass.
+- Android app configuration already matches `fingerfight-830b2` and `io.github.ppatsis.fingerfight.debug`; version 0.2.1/code 12 includes the packaged native push flag enabled. Previous Downloads 0.2.0 stays available. Physical notification permission, registration and foreground/background invite receipt remain owner acceptance steps; no hand/rig/render/network protocol changes.
+- APK 0.2.1/code 12 built in 3m45s. Actual APK contents, packaged native-push flag, Firebase project/app/sender resources, merged permissions/auto-init defaults and Android v2 signature verify; certificate matches 0.2.0. Delivered to phone Downloads/FingerFight-0.2.1-debug.apk, 21,339,029 bytes, SHA-256 `205be539589e6efc429b1d99fe5d06c32092fd9836f22dd96ba2308a65b89193`; Downloads checksum matches.
+
 ## 2026-11-17 — Optional accounts, friends, confirmed rankings and opt-in invite push
 
 - Enabled account/friends UI for website and Android; persistent sign-in, friend codes/copying, acceptance/removal, invites, block/report and account deletion. Native passkeys use the hosted browser plus a one-use PKCE-bound grant: no account bearer token in the callback URL and no native RP/Digital Asset Links claim. Hosted auth page is precached; Android deep link and Browser plugin prepared.

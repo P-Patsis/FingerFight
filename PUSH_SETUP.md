@@ -1,10 +1,10 @@
 # Invite notifications — current setup
 
-Accounts and friends work independently of notifications. Browser/PWA Web Push is configured on the Worker. Users explicitly enable it in Account & friends. Android background delivery is implemented but unavailable until an owner Firebase project is configured; there is no fake foreground-polling substitute.
+Accounts and friends work independently of notifications. Browser/PWA Web Push is configured on the Worker. Users explicitly enable it in Account & friends. Android Firebase configuration is now recognised by the live Worker. Configured APK 0.2.1/code 12 is delivered in phone Downloads; physical delivery acceptance is pending; foreground polling is not used as a substitute for background push.
 
 ## Owner Firebase step
 
-Owner selected project **fingerfight-830b2**: https://console.firebase.google.com/project/fingerfight-830b2/overview . Android testing app configuration is validated and saved locally in the ignored build path. The sender credential and configured APK rebuild are still pending. Cloud Messaging itself is a no-cost Firebase service; a paid Workers upgrade is not needed. Google Analytics is not needed for invite delivery and is disabled in this app.
+Owner selected project **fingerfight-830b2**: https://console.firebase.google.com/project/fingerfight-830b2/overview . Android testing app configuration is validated and saved locally in the ignored build path. Owner deployed the sender credential directly as encrypted Worker secret `FCM_SERVICE_ACCOUNT`; live authenticated configuration reports Android push ready. Google sender authorisation and device delivery are not proved by that flag. Configured APK 0.2.1/code 12 has been built, packaged-resource/signature/source verified and copied with matching checksum to phone Downloads. Cloud Messaging itself is a no-cost Firebase service; a paid Workers upgrade is not needed. Google Analytics is not needed for invite delivery and is disabled in this app.
 
 Register an Android app with package **io.github.ppatsis.fingerfight.debug** for the current testing APK. Download its **google-services.json**. Before a Play release, also register **io.github.ppatsis.fingerfight** in the same project and include that client configuration. These are application configuration files, not the server's private key.
 
@@ -14,9 +14,9 @@ Tell the agent the project ID and the exact downloaded filenames. The terminal s
 
 ## Dashboard transfer when Android blocks Downloads reads
 
-Owner reports `fingerfight-invite-sender` service account created with the requested messaging role. Verify sending access during acceptance; its credential is still pending.
+Owner reports `fingerfight-invite-sender` service account created with the requested messaging role. Owner has deployed its credential directly into the encrypted Worker secret. Verify sending access during physical acceptance.
 
-Use Google Cloud IAM service accounts for project `fingerfight-830b2`, open the sender account, Keys → Add key → Create new key → JSON. Keep that private file out of chat. Open it on the phone and copy its entire JSON into Cloudflare Worker `fingerfight-api` → Settings → Variables and Secrets → Add, type Secret, name `FCM_SERVICE_ACCOUNT`, then deploy. Existing TURN secrets stay unchanged. Ensure the Firebase Cloud Messaging API is enabled in that Google project. This transfers the sender directly into encrypted server storage without requiring Termux to read the shared download. Do not claim sender authentication or device delivery verified merely because the secret exists. Rebuild Android after confirming server configuration.
+Use Google Cloud IAM service accounts for project `fingerfight-830b2`, open the sender account, Keys → Add key → Create new key → JSON. Keep that private file out of chat. Open it on the phone and copy its entire JSON into Cloudflare Worker `fingerfight-api` → Settings → Variables and Secrets → Add, type Secret, name `FCM_SERVICE_ACCOUNT`, then deploy. Existing TURN secrets stay unchanged. Ensure the Firebase Cloud Messaging API is enabled in that Google project. This transfers the sender directly into encrypted server storage without requiring Termux to read the shared download. Do not claim sender authentication or device delivery verified merely because the secret exists. The configured Android build is delivered; complete physical permission/token/invite delivery acceptance next.
 
 ## Operator configuration
 
