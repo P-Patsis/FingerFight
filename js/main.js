@@ -327,7 +327,9 @@ const service=new Service(API_URL);
 const notifications=new InviteNotifications(service,{onInvite:id=>{if(inGame||!['menu','social'].includes(currentScreen)){showBanner('FRIEND INVITE','Open Account & friends after this match.',3500);return;}show('social');void social.open();}});
 const social=initSocial(service,{getName:()=>myName(),onBack:()=>show('menu'),invite:async target=>{await $('createBtn').onclick();if(!roomCodeRaw)throw new Error('Could not open a room');try{const tracked=await service.request('/matches','POST',{opponent:target,settings});serverMatchId=tracked.id;friendOpponentId=target;await service.request('/invites','POST',{target,code:roomCodeRaw,match:tracked.id});$('lobbyMsg').textContent='Invitation sent. You will approve your friend when they join.';}catch(e){$('lobbyMsg').textContent=e.message||'Could not send invitation';throw e;}},join:async(code,id)=>{$('codeInput').value=code;await $('joinBtn').onclick();if(id)adoptTrackedMatch(id);},leaderboards:true,notifications});socialController=social;
 globalThis.addEventListener?.('online',()=>{void notifications.sync().catch(()=>{});});
-if(notifications.state().pendingDisable)void notifications.sync().catch(()=>{});
+const refreshInviteDevice=()=>{if(notifications.state().pendingDisable||notifications.enabled)void notifications.sync().catch(()=>{});};
+globalThis.addEventListener?.('ff-native-ready',refreshInviteDevice,{once:true});
+if(!notifications.native||typeof globalThis.FF_ANDROID_PUSH_CONFIGURED==='boolean')refreshInviteDevice();
 $('accountBtn').hidden=!ACCOUNTS_ENABLED||!service.enabled;$('accountBtn').onclick=()=>{show('social');social.open();};
 globalThis.addEventListener?.('ff-app-url',async event=>{try{if(await completeNativeSignIn(service,event.detail?.url)){if(!inGame){show('social');social.open();}}}catch(e){$('socialMsg').textContent=e.message||'Could not sign in';}});
 if(location.hash==='#account'||/^#invite=[a-f0-9-]{36}$/.test(location.hash)){history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>{show('social');void social.open();},0);}

@@ -1,0 +1,242 @@
+[
+  {
+    "name": "cartoon_0",
+    "skin": "cartoon",
+    "count": 0
+  },
+  {
+    "name": "cartoon_1",
+    "skin": "cartoon",
+    "count": 1
+  },
+  {
+    "name": "cartoon_2",
+    "skin": "cartoon",
+    "count": 2
+  },
+  {
+    "name": "cartoon_3",
+    "skin": "cartoon",
+    "count": 3
+  },
+  {
+    "name": "cartoon_4",
+    "skin": "cartoon",
+    "count": 4
+  },
+  {
+    "name": "cartoon_5",
+    "skin": "cartoon",
+    "count": 5
+  },
+  {
+    "name": "robot_0",
+    "skin": "robot",
+    "count": 0
+  },
+  {
+    "name": "robot_1",
+    "skin": "robot",
+    "count": 1
+  },
+  {
+    "name": "robot_2",
+    "skin": "robot",
+    "count": 2
+  },
+  {
+    "name": "robot_3",
+    "skin": "robot",
+    "count": 3
+  },
+  {
+    "name": "robot_4",
+    "skin": "robot",
+    "count": 4
+  },
+  {
+    "name": "robot_5",
+    "skin": "robot",
+    "count": 5
+  },
+  {
+    "name": "neon_0",
+    "skin": "neon",
+    "count": 0
+  },
+  {
+    "name": "neon_1",
+    "skin": "neon",
+    "count": 1
+  },
+  {
+    "name": "neon_2",
+    "skin": "neon",
+    "count": 2
+  },
+  {
+    "name": "neon_3",
+    "skin": "neon",
+    "count": 3
+  },
+  {
+    "name": "neon_4",
+    "skin": "neon",
+    "count": 4
+  },
+  {
+    "name": "neon_5",
+    "skin": "neon",
+    "count": 5
+  },
+  {
+    "name": "paw_0",
+    "skin": "paw",
+    "count": 0
+  },
+  {
+    "name": "paw_1",
+    "skin": "paw",
+    "count": 1
+  },
+  {
+    "name": "paw_2",
+    "skin": "paw",
+    "count": 2
+  },
+  {
+    "name": "paw_3",
+    "skin": "paw",
+    "count": 3
+  },
+  {
+    "name": "paw_4",
+    "skin": "paw",
+    "count": 4
+  },
+  {
+    "name": "paw_5",
+    "skin": "paw",
+    "count": 5
+  },
+  {
+    "name": "dragon_0",
+    "skin": "dragon",
+    "count": 0
+  },
+  {
+    "name": "dragon_1",
+    "skin": "dragon",
+    "count": 1
+  },
+  {
+    "name": "dragon_2",
+    "skin": "dragon",
+    "count": 2
+  },
+  {
+    "name": "dragon_3",
+    "skin": "dragon",
+    "count": 3
+  },
+  {
+    "name": "dragon_4",
+    "skin": "dragon",
+    "count": 4
+  },
+  {
+    "name": "dragon_5",
+    "skin": "dragon",
+    "count": 5
+  },
+  {
+    "name": "frog_0",
+    "skin": "frog",
+    "count": 0
+  },
+  {
+    "name": "frog_1",
+    "skin": "frog",
+    "count": 1
+  },
+  {
+    "name": "frog_2",
+    "skin": "frog",
+    "count": 2
+  },
+  {
+    "name": "frog_3",
+    "skin": "frog",
+    "count": 3
+  },
+  {
+    "name": "frog_4",
+    "skin": "frog",
+    "count": 4
+  },
+  {
+    "name": "frog_5",
+    "skin": "frog",
+    "count": 5
+  },
+  {
+    "name": "duck_0",
+    "skin": "duck",
+    "count": 0
+  },
+  {
+    "name": "duck_1",
+    "skin": "duck",
+    "count": 1
+  },
+  {
+    "name": "duck_2",
+    "skin": "duck",
+    "count": 2
+  },
+  {
+    "name": "duck_3",
+    "skin": "duck",
+    "count": 3
+  },
+  {
+    "name": "duck_4",
+    "skin": "duck",
+    "count": 4
+  },
+  {
+    "name": "duck_5",
+    "skin": "duck",
+    "count": 5
+  },
+  {
+    "name": "goldhand_0",
+    "skin": "goldhand",
+    "count": 0
+  },
+  {
+    "name": "goldhand_1",
+    "skin": "goldhand",
+    "count": 1
+  },
+  {
+    "name": "goldhand_2",
+    "skin": "goldhand",
+    "count": 2
+  },
+  {
+    "name": "goldhand_3",
+    "skin": "goldhand",
+    "count": 3
+  },
+  {
+    "name": "goldhand_4",
+    "skin": "goldhand",
+    "count": 4
+  },
+  {
+    "name": "goldhand_5",
+    "skin": "goldhand",
+    "count": 5
+  }
+]

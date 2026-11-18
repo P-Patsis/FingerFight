@@ -18,3 +18,9 @@ test('pending revocation can finish after logout without retaining an account be
 test('unsupported native push remains unavailable and never calls registration',async()=>{
  let unregisters=0;const f=fixture(),plugin={addListener(){return Promise.resolve({remove(){}});},requestPermissions(){throw new Error('must not prompt');},unregister(){unregisters++;}};const n=new InviteNotifications(f.api,{...f,native:true,plugin,serviceWorker:{ready:new Promise(()=>{})},nativeConfigured:()=>false});await n.load();assert.equal(n.available,false);await assert.rejects(()=>n.enable(),/not available/);await n.disable();assert.equal(unregisters,0);assert.equal(n.state().pendingDisable,false);
 });
+test('native opt-in advertises the stable notification route without changing permission behavior',async()=>{
+ const f=fixture();let listeners={},prompts=0,unregistered=0;
+ const plugin={async addListener(name,fn){listeners[name]=fn;return{remove(){delete listeners[name];}};},async requestPermissions(){prompts++;return{receive:'granted'};},async createChannel(){},async register(){listeners.registration({value:'native-token'});},async unregister(){unregistered++;}};
+ const n=new InviteNotifications(f.api,{...f,native:true,plugin,nativeConfigured:()=>true});n.capabilities={androidPush:true};
+ await n.enable();assert.equal(prompts,1);assert.equal(f.calls.find(c=>c.path==='/notifications/subscribe').data.launcherSafe,true);await n.disable();assert.equal(unregistered,1);
+});

@@ -14,7 +14,7 @@ test('Android lifecycle closes camera on background and Back preserves game conf
   });
   listeners.appStateChange({ isActive: false });
   listeners.appStateChange({ isActive: true });
-  assert.deepEqual(events, ['pagehide', 'online']);
+  assert.deepEqual(events, ['ff-native-ready', 'pagehide', 'online']);
   listeners.backButton(); assert.equal(back, 1); assert.equal(exits, 0);
   history.state = null; listeners.backButton(); assert.equal(exits, 1);
 });

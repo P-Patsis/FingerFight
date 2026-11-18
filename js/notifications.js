@@ -30,7 +30,7 @@ export class InviteNotifications {
   const previous=this.state(),id=previous.owner===this.api.user.id&&UUID.test(previous.id||'')?previous.id:crypto.randomUUID();let subscription;
   try{
    let payload;
-   if(this.native){await this.push().createChannel({id:'friend-invites',name:'Friend invitations',description:'Invitations to play Finger Fight',importance:3,visibility:0});payload={id,platform:'android',token:await this.androidToken()};}
+   if(this.native){await this.push().createChannel({id:'friend-invites',name:'Friend invitations',description:'Invitations to play Finger Fight',importance:3,visibility:0});payload={id,platform:'android',token:await this.androidToken(),launcherSafe:true};}
    else{const registration=await this.serviceWorker.ready;subscription=await registration.pushManager.getSubscription();if(subscription&&previous.owner&&previous.owner!==this.api.user.id){await subscription.unsubscribe();subscription=null;}subscription=subscription||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyBytes(c.webPushPublicKey)});payload={id,platform:'web',subscription:subscription.toJSON()};}
    if(this.api.user?.id!==owner)throw new Error('Account changed. Try enabling notifications again.');
    const result=await this.api.request('/notifications/subscribe','POST',payload);if(this.api.user?.id!==owner){await this.api.request('/notifications/revoke','POST',{id:result.id||id,token:result.revokeToken}).catch(()=>{});throw new Error('Account changed. Try enabling notifications again.');}this.save({id:result.id||id,owner:this.api.user.id,enabled:true,revokeToken:result.revokeToken});return true;

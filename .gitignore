@@ -28,3 +28,6 @@ artifacts/*.aab
 
 # Firebase app configuration is supplied locally; server keys remain Worker secrets.
 android/app/google-services.json
+
+# Intermediate flattened icon review; native vectors and the reviewed PNG are tracked.
+artifacts/launcher-icons-review.svg

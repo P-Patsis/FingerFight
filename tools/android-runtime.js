@@ -12,3 +12,5 @@ App.addListener('backButton', () => {
 const accountUrl=url=>{if(typeof url==='string')window.dispatchEvent(new CustomEvent('ff-app-url',{detail:{url}}));};
 App.addListener('appUrlOpen',({url})=>accountUrl(url));
 if(App.getLaunchUrl)App.getLaunchUrl().then(result=>accountUrl(result?.url)).catch(()=>{});
+
+window.dispatchEvent(new Event('ff-native-ready'));
