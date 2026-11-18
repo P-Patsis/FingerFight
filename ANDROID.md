@@ -4,6 +4,8 @@
 
 Adds device friends without mandatory sign-in, Add friend in lobby/game menu/results, invitations into the current private room, automatic Profile name saving and an invitation-notification On/Off switch. Google sign-in code is packaged but remains hidden pending public OAuth client setup; passkeys remain optional. Startup/launcher rotation unchanged. Physical friend flow and notification delivery need phone acceptance.
 
+- APK 0.2.5/code 16 built successfully (final Gradle build 3m04s). Actual package/version, bundled current HTML/CSS/JS including both new friend modules, Firebase push capability, native plugins and v2 signature verified; signing certificate matches 0.2.4. Delivered Downloads/FingerFight-0.2.5-debug.apk: 21,681,759 bytes, SHA-256 `316e0983d746de72142a4d7d2cf09cadc39f809fbb902962f0076db57c4a3c9b`; copied checksum matches. Phone layout/notification receipt and real Google browser acceptance remain pending.
+
 ## Startup puppet and app name — 0.2.4, code 15
 
 Removed the separate old splash drawable reference. API 24–30 uses a new puppet + FINGER FIGHT vector mark; API 31+ leaves the icon to Android's launching activity/alias resolution and adds a native 200×80dp FINGER FIGHT branding image. API 33+ prefers displaying the icon. Direct activity entry uses the app puppet fallback. No added startup delay, loading overlay, extra activity or dependency. Hourly icon rotation is unchanged.
