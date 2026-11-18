@@ -24,3 +24,4 @@ test('native opt-in advertises the stable notification route without changing pe
  const n=new InviteNotifications(f.api,{...f,native:true,plugin,nativeConfigured:()=>true});n.capabilities={androidPush:true};
  await n.enable();assert.equal(prompts,1);assert.equal(f.calls.find(c=>c.path==='/notifications/subscribe').data.launcherSafe,true);await n.disable();assert.equal(unregistered,1);
 });
+test('switching identity revokes the old device opt-in without prompting the new profile',async()=>{const f=fixture(),n=new InviteNotifications(f.api,{...f,native:false});n.save({owner:'previous-profile',id:crypto.randomUUID(),revokeToken:'r'.repeat(43),enabled:true});await n.sync();assert.equal(n.state().enabled,false);assert.ok(f.calls.some(c=>c.path==='/notifications/revoke'));assert.ok(!f.calls.includes('permission'));});

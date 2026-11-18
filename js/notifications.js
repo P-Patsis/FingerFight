@@ -45,5 +45,5 @@ export class InviteNotifications {
   else try{const registration=await this.serviceWorker?.ready,subscription=await registration?.pushManager?.getSubscription();if(!subscription||await subscription.unsubscribe())stopped=true;}catch{}
   this.save({...state,enabled:false,pendingDisable:!stopped});if(!stopped)throw new Error('Notification removal will finish when you are online');
  }
- async sync(){const state=this.state();if(state.pendingDisable)return this.disable();if(state.owner!==this.api.user?.id)return;if(state.enabled){await this.load();return this.enable({ask:false});}}
+ async sync(){const state=this.state();if(state.pendingDisable)return this.disable();if(state.owner!==this.api.user?.id){if(state.enabled)return this.disable();return;}if(state.enabled){await this.load();return this.enable({ask:false});}}
 }
