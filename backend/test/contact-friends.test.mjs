@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {openDB} from '../sqlite.mjs';
+import {createApp} from '../worker.mjs';
+async function setup(){const DB=openDB();DB.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));const app=createApp(),env={DB};const call=async(path,token,data,method='POST')=>{const r=await app.fetch(new Request('https://api.test'+path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(method==='GET'?{}:{body:JSON.stringify(data||{})})}),env);return{status:r.status,body:await r.json()};};const users=[];for(const name of ['Alice','Bob','Other'])users.push((await call('/players/session',null,{name})).body);return{DB,call,users};}
+const room='ABCDEFGHJKLMNPQR';
+test('device profiles can add the actual private opponent with explicit mutual acceptance, without sign-in',async()=>{const s=await setup();try{const[a,b]=s.users;assert.equal(a.user.registered,false);const ca=await s.call('/contacts/card',a.token,{room}),cb=await s.call('/contacts/card',b.token,{room});assert.equal(ca.status,200);assert.equal((await s.call('/friends',a.token,null,'GET')).status,200);
+ assert.equal((await s.call('/friends/from-match',a.token,{card:cb.body.card,room:'ZZZZZZZZZZZZZZZZ'})).status,410);
+ const sent=await s.call('/friends/from-match',a.token,{card:cb.body.card,room});assert.equal(sent.body.status,'pending');assert.equal(sent.body.other,b.user.id);
+ const before=await s.call('/friends/from-match',b.token,{card:ca.body.card,room,request:false});assert.equal(before.body.incoming,true);assert.equal(before.body.status,'pending');
+ const accepted=await s.call('/friends/from-match',b.token,{card:ca.body.card,room});assert.equal(accepted.body.status,'accepted');assert.equal((await s.call('/friends/from-match',a.token,{card:cb.body.card,room})).body.status,'accepted');assert.equal((await s.DB.prepare('SELECT count(*) n FROM friends').first()).n,1);
+ assert.equal((await s.call('/me',a.token,null,'GET')).body.user.registered,false);
+ }finally{s.DB.close();}});
+test('match friend requests reject outsiders, expired cards and blocks',async()=>{const s=await setup();try{const[a,b,c]=s.users,id=crypto.randomUUID();await s.DB.prepare("INSERT INTO matches(id,host,guest,settings,hp_host,hp_guest,state,created) VALUES(?,?,?,'{}',2,2,'active',1)").bind(id,a.user.id,b.user.id).run();assert.equal((await s.call('/friends/from-match',c.token,{match:id})).status,404);assert.equal((await s.call('/friends/from-match',a.token,{match:id})).body.other,b.user.id);const card=(await s.call('/contacts/card',b.token,{room})).body.card;await s.DB.prepare('UPDATE contact_cards SET expires=1').run();assert.equal((await s.call('/friends/from-match',a.token,{card,room})).status,410);await s.call('/blocks',b.token,{target:a.user.id});assert.equal((await s.call('/friends/from-match',a.token,{match:id})).status,403);
+ }finally{s.DB.close();}});
+test('active guest session renews near expiry without changing its identity or requiring account recovery',async()=>{const s=await setup();try{const[a]=s.users;await s.DB.prepare('UPDATE sessions SET expires=? WHERE user_id=?').bind(Math.floor(Date.now()/1000)+100,a.user.id).run();const me=await s.call('/me',a.token,null,'GET');assert.equal(me.body.user.id,a.user.id);assert.equal(me.body.user.registered,false);assert.ok((await s.DB.prepare('SELECT expires FROM sessions WHERE user_id=?').bind(a.user.id).first()).expires>Date.now()/1000+29*86400);assert.equal((await s.call('/me',a.token,{confirm:true},'DELETE')).status,200);
+ }finally{s.DB.close();}});

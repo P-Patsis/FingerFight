@@ -36,3 +36,9 @@ CREATE TABLE IF NOT EXISTS push_devices(id TEXT PRIMARY KEY,user_id TEXT NOT NUL
 CREATE INDEX IF NOT EXISTS push_devices_user ON push_devices(user_id);
 CREATE TABLE IF NOT EXISTS push_outbox(id TEXT PRIMARY KEY,device_id TEXT NOT NULL REFERENCES push_devices(id) ON DELETE CASCADE,invite_id TEXT NOT NULL REFERENCES invites(id) ON DELETE CASCADE,attempts INTEGER NOT NULL DEFAULT 0,next_attempt INTEGER NOT NULL,UNIQUE(device_id,invite_id));
 CREATE INDEX IF NOT EXISTS push_outbox_due ON push_outbox(next_attempt);
+
+CREATE TABLE IF NOT EXISTS contact_cards(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,room_hash TEXT NOT NULL,expires INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS contact_cards_expiry ON contact_cards(expires);
+
+CREATE TABLE IF NOT EXISTS google_identities(subject TEXT PRIMARY KEY,user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS google_handoffs(hash TEXT PRIMARY KEY,creator TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,creator_session TEXT NOT NULL,challenge TEXT NOT NULL,nonce TEXT NOT NULL,platform TEXT NOT NULL,action TEXT NOT NULL,expires INTEGER NOT NULL,subject TEXT,grant_hash TEXT);

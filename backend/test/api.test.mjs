@@ -37,9 +37,9 @@ test('server scores committed/revealed rounds exactly once; third parties and fa
  assert.equal((await s.call('/matches/'+mid+'/turn','POST',{round:1,value:3,nonce:nonceB},b.token)).status,409);const board=await s.call('/leaderboard','GET',undefined,a.token);assert.equal(board.body.leaderboard.find(u=>u.id===b.user.id).wins,1);assert.equal(board.body.leaderboard.some(u=>u.id===c.user.id),false);
  assert.equal((await s.call('/leaderboard','POST',{wins:999},a.token)).status,404);
  }finally{s.DB.close();}});
-test('body bounds, rate limits, guest restrictions and recent-auth account deletion are enforced',async()=>{
+test('body bounds, rate limits, device profiles and recent-auth account deletion are enforced',async()=>{
  const s=setup();try{
- const g=await s.call('/auth/guest','POST',{name:'Guest'});assert.equal((await s.call('/friends','GET',undefined,g.body.token)).status,403);assert.equal((await s.call('/me','DELETE',{confirm:true},g.body.token)).status,403);
+ const g=await s.call('/auth/guest','POST',{name:'Guest'});assert.equal((await s.call('/friends','GET',undefined,g.body.token)).status,200);assert.equal((await s.call('/me','DELETE',{confirm:true},g.body.token)).status,200);
  for(let i=0;i<4;i++)assert.equal((await s.call('/auth/guest','POST',{})).status,201);assert.equal((await s.call('/auth/guest','POST',{})).status,429);
  const huge=await s.app.fetch(new Request('https://api.test/auth/guest',{method:'POST',headers:{Origin:ORIGIN,'CF-Connecting-IP':'other'},body:'x'.repeat(20001)}),s.env);assert.equal(huge.status,413);
  const a=await s.user('Alice');assert.equal((await s.call('/me','DELETE',{confirm:true},a.token)).status,200);assert.equal((await s.call('/me','GET',undefined,a.token)).status,401);
@@ -49,7 +49,7 @@ test('passkey challenge expiry and embedded origin checks reject invalid registr
  const s=setup();try{const guest=await s.call('/auth/guest','POST',{name:'Guest'}),t=guest.body.token;
  const expired=await s.call('/auth/register/options','POST',{},t);await s.DB.prepare('UPDATE challenges SET expires=0 WHERE id=?').bind(expired.body.id).run();const a=await authenticator();assert.equal((await s.call('/auth/register/verify','POST',{id:expired.body.id,response:await a.register(expired.body.options.challenge)},t)).status,400);
  const wrong=await s.call('/auth/register/options','POST',{},t),evil=await authenticator('p-patsis.github.io','https://evil.example');assert.equal((await s.call('/auth/register/verify','POST',{id:wrong.body.id,response:await evil.register(wrong.body.options.challenge)},t)).status,401);
- assert.equal((await s.call('/auth/login/verify','POST',{})).status,400);assert.equal((await s.call('/reports','POST',{},t)).status,403);
+ assert.equal((await s.call('/auth/login/verify','POST',{})).status,400);assert.equal((await s.call('/reports','POST',{},t)).status,400);
  }finally{s.DB.close();}});
 
 test('browser API client completes real passkey signup/login, friendship and a two-player committed match',async()=>{

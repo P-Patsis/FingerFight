@@ -18,7 +18,7 @@ export async function handleNativeAuth(path,db,data,env,webauthn,issue){
   need(clean(data,['handoff','code','verifier'])&&/^[A-Za-z0-9_-]{43}$/.test(data.handoff)&&/^[A-Za-z0-9_-]{43}$/.test(data.code)&&/^[A-Za-z0-9_-]{43,128}$/.test(data.verifier),400);
   const row=await q(db,'DELETE FROM native_handoffs WHERE id_hash=? AND grant_hash=? AND challenge=? AND expires>? AND verified_user IS NOT NULL RETURNING *',await hash(data.handoff),await hash(data.code),await hash(data.verifier),now()).first();need(row,401,'Sign-in expired or could not be verified');
   const user=await q(db,'SELECT * FROM users WHERE id=? AND registered=1',row.verified_user).first();need(user,401,'Account no longer exists');
-  await q(db,'DELETE FROM sessions WHERE hash=?',row.creator_session).run();return issue(db,user,true);
+  if(row.creator===user.id)await q(db,'DELETE FROM sessions WHERE hash=?',row.creator_session).run();return issue(db,user,true);
  }
  need(clean(data,path.endsWith('/options')?['handoff']:['handoff','id','response'])&&/^[A-Za-z0-9_-]{43}$/.test(data.handoff),400);
  const key=await hash(data.handoff),h=await q(db,'SELECT * FROM native_handoffs WHERE id_hash=? AND expires>? AND grant_hash IS NULL',key,now()).first();need(h,401,'Sign-in request expired');
