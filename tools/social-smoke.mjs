@@ -19,6 +19,8 @@ try{
  const rb=await call('/auth/native/exchange',{handoff:hb.body.handoff,code:vb.body.code,verifier},null,'POST','https://localhost');assert.equal(rb.status,200);const B=rb.body;checks.nativeBrowserHandoffAndPKCE=true;
  assert.equal((await call('/auth/native/exchange',{handoff:hb.body.handoff,code:vb.body.code,verifier},null,'POST','https://localhost')).status,401);checks.nativeGrantOneUse=true;
  const config=await call('/notifications/config',undefined,A.token,'GET');assert.equal(config.status,200);assert.equal(config.body.webPush,true);checks.webPushConfigured=true;checks.androidPushConfigured=config.body.androidPush;
+ if(config.body.androidPush){const device=crypto.randomUUID();assert.equal((await call('/notifications/subscribe',{id:device,platform:'android',token:'setup-validation-only-'+crypto.randomUUID(),launcherSafe:true},A.token)).status,200);assert.equal((await call('/notifications/unsubscribe',{id:device},A.token)).status,200);checks.launcherSafeNativeSubscription=true;}
+
  const friend=await call('/friends',{code:B.user.code},A.token);assert.equal(friend.status,201);assert.equal((await call('/friends/'+friend.body.id,{accept:true},B.token,'PATCH')).status,200);checks.friendAcceptance=true;
  const settings=normalizeSettings({hits:1}),match=await call('/matches',{opponent:B.user.id,settings},A.token);assert.equal(match.status,201);
  const invitation=await call('/invites',{target:B.user.id,code:'ABCDEFGHJKLMNPQR',match:match.body.id},A.token);assert.equal(invitation.status,201);const accepted=await call('/invites/'+invitation.body.id,{accept:true},B.token,'PATCH');assert.equal(accepted.status,200);assert.equal(accepted.body.match,match.body.id);checks.linkedInviteAccepted=true;

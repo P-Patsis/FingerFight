@@ -37,3 +37,19 @@ test('friend invite outbox is bounded, encrypted, respects blocks and removes re
 test('FCM is unavailable without server credentials and invalid native tokens are refused',async()=>{
  const s=await setup();try{const [a]=s.users,config=await s.call('/notifications/config',a.token,null,'GET');assert.equal(config.body.androidPush,false);assert.equal(config.body.webPush,true);assert.equal((await s.call('/notifications/subscribe',a.token,{id:crypto.randomUUID(),platform:'android',token:'not-a-token'})).status,503);assert.ok(!JSON.stringify(config.body).includes(s.env.VAPID_PRIVATE_KEY));}finally{s.DB.close();}
 });
+test('native capability is constrained; notification taps use a stable activity only for supporting APKs',async()=>{
+ const s=await setup(),original=globalThis.fetch;try{
+  const pair=await crypto.subtle.generateKey({name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['sign','verify']);
+  const pem='-----BEGIN PRIVATE KEY-----\n'+Buffer.from(await crypto.subtle.exportKey('pkcs8',pair.privateKey)).toString('base64')+'\n-----END PRIVATE KEY-----';
+  s.env.FCM_SERVICE_ACCOUNT=JSON.stringify({project_id:'test-project',client_email:'sender@test-project.iam.gserviceaccount.com',private_key:pem});
+  const id=crypto.randomUUID(),token='testing-fcm-token'.repeat(3),a=s.users[0];
+  assert.equal((await s.call('/notifications/subscribe',a.token,{id,platform:'android',token,launcherSafe:'arbitrary-action'})).status,400);
+  assert.equal((await s.call('/notifications/subscribe',a.token,{id,platform:'web',subscription:s.sub,launcherSafe:true})).status,400);
+  assert.equal((await s.call('/notifications/subscribe',a.token,{id,platform:'android',token,launcherSafe:true})).status,200);
+  const stored=await s.DB.prepare('SELECT value FROM push_devices WHERE id=?').bind(id).first();assert.equal(JSON.parse(stored.value).launcherSafe,true);
+  const messages=[];globalThis.fetch=async(url,options)=>{if(url==='https://oauth2.googleapis.com/token')return Response.json({access_token:'test-oauth'});assert.match(url,/^https:\/\/fcm.googleapis.com/);messages.push(JSON.parse(options.body));return Response.json({name:'sent-test'});};
+  const row={platform:'android',value:stored.value,invite_id:crypto.randomUUID(),name:'Alice',expires:Math.floor(Date.now()/1000)+600};
+  assert.equal((await sendPush(s.env,row)).ok,true);assert.equal(messages[0].message.android.notification.click_action,'io.github.ppatsis.fingerfight.OPEN_INVITES');
+  assert.equal((await sendPush(s.env,{...row,value:JSON.stringify({token})})).ok,true);assert.equal(messages[1].message.android.notification.click_action,undefined);
+ }finally{globalThis.fetch=original;s.DB.close();}
+});
