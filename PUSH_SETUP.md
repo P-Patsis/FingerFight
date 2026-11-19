@@ -55,3 +55,5 @@ Before public Google rollout, check Google Auth Platform Branding/Audience for t
 The owner-supplied Web client ID is now configured as the public GOOGLE_CLIENT_ID binding and preserved in backend/deploy.metadata.json. APK 0.2.5 fetches this setting from the server, so this change needs no new APK. Keep the Web client secret in Google; this integration does not use it.
 
 Remaining owner setting: https://console.cloud.google.com/apis/credentials?project=fingerfight-830b2 → select the matching Web OAuth client → Authorized JavaScript origins → add `https://fingerfight-api.fingerfight-ppatsis.workers.dev` → Save. Keep existing entries; no path or trailing slash. Live API availability/start/options can be verified independently, but do not claim real Google sign-in accepted until this origin is authorized and browser/phone acceptance succeeds.
+
+2026-11-19: Owner confirmed saving the authorized JavaScript origin on the matching Web client. Proceed with real phone sign-in acceptance; no APK reinstall is required. Google account selection, app return and preservation of friends remain unverified until exercised.

@@ -1,5 +1,9 @@
 # Finger Fight: progress
 
+## 2026-11-19 — Owner saved Google authorized origin
+
+- Owner confirmed adding the Worker origin to the matching Google Web OAuth client. Server configuration is already deployed; APK 0.2.5 requires no reinstall. Actual Google browser sign-in, return to the app and preservation of friends still need owner phone acceptance. A server-side Google button probe cannot substitute for that browser ceremony.
+
 ## 2026-11-18 — Configure supplied Google Web client ID
 
 - Added the owner's public Web OAuth client ID to the deployed Worker and backend/deploy.metadata.json so subsequent deployments preserve it. No client secret required or stored. Existing APK 0.2.5 reads availability from the API; no rebuild/reinstall needed for this configuration change.
